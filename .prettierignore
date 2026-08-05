@@ -1,2 +1,6 @@
 # Generated bundles should not be formatted
 /KoLmafia/scripts/
+/dist/
+
+# Legacy scratch file (syntax drift / excluded from tsconfig)
+theSea.ts
