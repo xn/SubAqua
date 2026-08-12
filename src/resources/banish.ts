@@ -41,12 +41,22 @@ export const banishSources: BanishSource[] = [
 
 type BanishRecord = { monster: Monster; banisher: string };
 
+/**
+ * Design note (deliberate spec deviation): the spec names libram's
+ * getBanishedMonsters(), but its banisher-name → Item|Skill mapping cannot
+ * represent all four of our sources faithfully — "Heartstone" resolves via
+ * toItem to the Heartstone ITEM, silently returning the wrong source kind
+ * for a skill-based banish. So we parse mafia's banishedMonsters pref
+ * directly with the ash's literal-prefix matching (iotm.ash banished(),
+ * :1096-1100) — same data, faithful semantics. Record format: flat
+ * colon-separated triplets monster:banisher:turn.
+ */
 function banishRecords(): BanishRecord[] {
   const parts = get("banishedMonsters").split(":");
   const records: BanishRecord[] = [];
   for (let i = 0; i + 1 < parts.length; i += 3) {
     if (!parts[i]) continue;
-    records.push({ monster: toMonster(parts[i]), banisher: parts[i + 1] ?? "" });
+    records.push({ monster: toMonster(parts[i]), banisher: parts[i + 1] });
   }
   return records;
 }
