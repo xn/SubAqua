@@ -22,7 +22,7 @@ export type CombatActions = (typeof myActions)[number];
 export class CombatStrategy extends BaseCombatStrategy.withActions(myActions) {}
 
 /**
- * Defaults when no combat resource is allocated (resource layer arrives in Phase 2).
+ * Defaults when the resources layer provides nothing for an action.
  * Degradations are deliberate and explicit per spec §2: banish, the ignore family,
  * killItem, yellowRay and forceItems all degrade to kill; freeRun is taffy-or-nothing;
  * killFree ABORTS (a task that requires a free kill must be given one).

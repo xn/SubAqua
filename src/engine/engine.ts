@@ -4,6 +4,7 @@ import {
   Engine as BaseEngine,
   EngineOptions,
   Outfit,
+  OutfitSpec,
   outfitSlots,
 } from "grimoire-kolmafia";
 import {
@@ -11,6 +12,7 @@ import {
   canEquip,
   equip,
   equippedAmount,
+  Familiar,
   haveEquipped,
   Item,
   Location,
@@ -21,6 +23,7 @@ import {
   $familiar,
   $item,
   $items,
+  $skill,
   $slot,
   get,
   have,
@@ -29,6 +32,11 @@ import {
   undelay,
   uneffect,
 } from "libram";
+
+import { pickBanishSource } from "../resources/banish";
+import { selectFreeKill, selectYellowRay } from "../resources/freekill";
+import { selectFreeRun } from "../resources/freerun";
+import { forceGranted, saberAllowedAt } from "../resources/saber";
 
 import { CombatActions, MyActionDefaults } from "./combat";
 import {
@@ -45,6 +53,22 @@ function isUnderwaterTask(task: Task): boolean {
     (task.do instanceof Location && task.do.environment === "underwater") ||
     task.underwater === true
   );
+}
+
+// Resource.equip (src/resources/resource.ts) is typed Item | Familiar | OutfitSpec
+// | OutfitSpec[] to match grimoire's OutfitSpec.bonuses map key shape, but
+// Outfit.equip() only accepts grimoire's narrower Equippable (no bare
+// OutfitSpec[]). No ladder source currently populates equip with an array of
+// specs, so this narrows for the compiler without changing behavior.
+function equipResource(
+  outfit: Outfit,
+  equipment: Item | Familiar | OutfitSpec | OutfitSpec[],
+): void {
+  if (Array.isArray(equipment)) {
+    for (const spec of equipment) outfit.equip(spec);
+  } else {
+    outfit.equip(equipment);
+  }
 }
 
 export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
@@ -82,6 +106,49 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     }
 
     super.customize(task, outfit, combat, resources);
+
+    // Resolve abstract combat actions against the resource ladders (spec §2).
+    // Anything unresolved falls through to MyActionDefaults' explicit
+    // degradations — killFree still aborts by design when no source exists.
+    const location = task.do instanceof Location ? task.do : undefined;
+    if (combat.can("banish")) {
+      const banisher = pickBanishSource(location);
+      if (banisher) {
+        if (banisher.equip) outfit.equip(banisher.equip);
+        resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+      }
+    }
+    if (combat.can("killFree")) {
+      const source = selectFreeKill({ location });
+      if (source) {
+        if (source.equip) equipResource(outfit, source.equip);
+        resources.provide("killFree", { prepare: source.prepare, do: source.do });
+      }
+    }
+    if (combat.can("freeRun")) {
+      const source = selectFreeRun({ location });
+      if (source) {
+        if (source.equip) equipResource(outfit, source.equip);
+        resources.provide("freeRun", { prepare: source.prepare, do: source.do });
+      }
+    }
+    if (combat.can("yellowRay") || combat.can("forceItems")) {
+      const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
+      const ray = selectYellowRay();
+      if (ray) {
+        if (ray.equip) equipResource(outfit, ray.equip);
+        resources.provide(action, { do: ray.do });
+      } else if (
+        action === "forceItems" &&
+        (!location || saberAllowedAt(location)) &&
+        forceGranted("free", location)
+      ) {
+        // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
+        this.propertyManager.setChoice(1387, 3);
+        outfit.equip($item`Fourth of May Cosplay Saber`);
+        resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+      }
+    }
 
     // Breathing enforcement (spec §2/§8: mafia REFUSES underwater zones rather than
     // equipping for you — this is where the script does it).
