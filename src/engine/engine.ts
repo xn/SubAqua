@@ -26,7 +26,6 @@ import {
   have,
   Macro,
   PropertiesManager,
-  set,
   undelay,
   uneffect,
 } from "libram";
@@ -121,6 +120,10 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           clone.equips.delete(slot);
         }
       }
+      if (clone.familiar && !have(clone.familiar)) {
+        print(`Ignoring familiar ${clone.familiar}: not in terrarium`, "red");
+        clone.familiar = undefined;
+      }
       return clone;
     }
 
@@ -209,13 +212,6 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         1474: get("_juneCleaverSkips", 0) < 5 ? 4 : 2,
         1475: get("_juneCleaverSkips", 0) < 5 ? 4 : 1,
       });
-    }
-  }
-
-  override execute(task: Task): void {
-    super.execute(task);
-    if (get("lastChoice", 0) === 315) {
-      set("_subaqua_outpost_choices", get("_subaqua_outpost_choices", 0) + 1);
     }
   }
 

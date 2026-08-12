@@ -2,5 +2,6 @@ node_modules
 .DS_Store
 KoLmafia
 dist
-yarn-error.log.superpowers
+yarn-error.log
+.superpowers
 .claude

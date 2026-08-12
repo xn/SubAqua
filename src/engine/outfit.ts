@@ -26,11 +26,7 @@ export const familiarWaterBreathingEquipment = $items`das boot, little bitty bat
 
 /** Effects that grant breathing without gear (Driving Waterproofly covers familiar too). */
 export function hasBreathingEffect(): boolean {
-  return (
-    have($effect`Driving Waterproofly`) ||
-    have($effect`Wet Willied`) ||
-    booleanModifier("Adventure Underwater")
-  );
+  return have($effect`Driving Waterproofly`) || have($effect`Wet Willied`);
 }
 
 export function canBreatheUnderwater(): boolean {
