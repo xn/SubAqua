@@ -3,7 +3,10 @@
 **Date:** 2026-08-11
 **Status:** approved pending user review
 **Reference material:** `../UnderTheSea` (ash source of truth), `../pearlo` (domain docs:
-`CLAUDE.md`, `docs/sea-reference.md`, `docs/consumption-reference.md`, `docs/maximizer-reference.md`)
+`CLAUDE.md`, `docs/sea-reference.md`, `docs/consumption-reference.md`,
+`docs/maximizer-reference.md`), `../kolmafia` (mafia source ground truth — see §8), and the
+wiki page `11,037_Leagues_Under_the_Sea/Strategy` (see §9; fetch via MediaWiki API with a
+browser user agent)
 
 ## What SubAqua is
 
@@ -218,10 +221,13 @@ state:
   the filter callback matches it and casts the counter skill granted by the equipped weapon
   (bladeswitcher: bust/sweat/sack → Ball Bust/Sweat/Sack; balldodger: gain/loss/neutrality →
   Net Gain/Loss/Neutrality; netdragger: sling/rolls/runner → Blade Sling/Roller/Runner).
-  The ash's `reflectImminent()` mid-round `fight.php` refetch + sea-gel/unguent stall regime
-  becomes the *fallback only* (counter gear not yet in hand), parsing the round text the
-  callback already receives — no refetch on the common path. Stall invariants preserved:
-  every stall branch advances the round; free delevelers banned in stalls.
+  **Caveat (wiki strategy)**: the nine counter skills must first be *learned* by landing enough
+  critical hits with each weapon — so the primary kill plan stays the ash's spell route
+  (Saucegeyser with the lantern spell-damage coefficient maximize), with telegraph counters
+  used opportunistically when known, and the ash's sea-gel/unguent stall regime as the response
+  to a telegraphed big move we can't counter — parsing the round text the callback already
+  receives, no mid-round refetch. Stall invariants preserved: every stall branch advances the
+  round; free delevelers banned in stalls.
   `lastColosseumRoundWon` / `isMerkinGladiatorChampion` are mafia-maintained (wanderers
   excluded) and serve as `ready()`/`completed()`.
 - **Colosseum rules**: gladiators instakill-immune — all instakills skipped except Club 'Em Back
@@ -281,7 +287,11 @@ selected runplan with per-task completed status — doubles as a mid-run progres
 naturally.
 
 **Sim**: owned/missing supported IOTMs, skills, familiars; Hagnk's stock for route pulls; tier
-verdict. No purchases, turns, or server writes.
+verdict; plus the pre-ascension checklist from the wiki strategy guide — permanent sea zone
+unlocks (Dive Bar, Marinara Trench, Anemone Mine, Skate Park, Madness Reef), sushi-rolling mat
+installed, five unblemished pearls loaded in the codpiece, Deep Dark Visions permed (the
+dreadScroll3 source — effectively unobtainable in-run), underwater maps done. No purchases,
+turns, or server writes.
 
 **Relay**: `relay_subaqua.js` kept as-is; reflects `args.ts` automatically.
 
@@ -372,6 +382,51 @@ Outpost stashbox rotation (313–315), dreadscroll answer *solving* (703), seedf
 mining square choice, trainset/tot/baseball submissions listed above, codpiece gem choice, and
 all route/tier policy. `merkinQuestPath` is deliberately unmaintained in-path — gate on
 `isMerkinGladiatorChampion`/`isMerkinHighPriest`/`shubJigguwattDefeated`/`yogUrtDefeated`.
+
+## 9. Route constraints from the wiki strategy guide
+
+Source: [11,037 Leagues Under the Sea/Strategy] (fetched 2026-08-11 via the MediaWiki API with a
+browser UA — CloudFront blocks non-browser agents). Constraints that shape task design:
+
+- **Pearls are codpiece-smuggled, full stop.** The path requires five unblemished pearls; the
+  September 1st nerfs made most quest items unpullable, and the ash's route assumes the pearls
+  arrive pre-loaded (`UnderTheSea.ash:1024` — in-run resistance "only matters for farming
+  unblemished pearls and those are smuggled in via the codpiece"). SubAqua adds an explicit
+  **init guard**: count pearls across codpiece slots + inventory, abort at turn 0 with
+  instructions if short (better than the ash's silent wall at the center door). In-run pearl
+  farming is a possible future runplan, not current scope. In-run, pearls are popped out of the
+  codpiece to free slots for gems (BCZ, peridot, heartstone).
+- **Fishy ladder ordering**: the Skate Park war resolution with the **skate blade equipped**
+  grants 30 turns of Fishy once per day (the side quest is mandatory anyway) — it outranks the
+  fishy pipe (10) and the Brinier Deepers Lucky! (20) in `maintainFishy()`. The Monodent's
+  Summon a Wave can flood CyberRealm/a Shadow Rift for ~10 turns of Fishy off free fights.
+- **Damp old boot ordering trap**: the old SCUBA tank can only be bought from Big Brother
+  *before* the boot is turned in — and back-slot breathing is what frees hat+pants for the
+  sea cowboy hat + sea chaps during lasso training. The Old Guy task must sequence:
+  buy tank (if the outfit plan wants it) → turn in boot. (Elf Guard SCUBA tank is the
+  penalty-free softcore alternative.)
+- **Mining**: teflon ore never drops in rows 1–2 and only rarely row 3 — square selection from
+  `mineState3` prefers rows 4–6. Never `grandpa mine` (it adds a marine aquamarine sparkle
+  square that dilutes the teflon odds). Lodestone saves ~5 turns; minin' dynamite saves one.
+- **Ators Gonna Ate** (gymnasium NC): anomalous — it responds to combat-rate *increasers*, and
+  an active NC forcer is believed to *suppress* it. The gymnasium task must assert no NC force
+  is pending and may run +combat, inverting the usual NC-hunting outfit.
+- **Yog-Urt prep**: with three prayerbeads equipped, surviving ~2 rounds clears More Like a
+  Suckrament — sea gel + healscroll + waterlogged scroll suffice. Getting beaten up by Deep
+  Dark Visions is a sanctioned way to *lower* max HP toward the ≤311 guard.
+- **Shub-Jigguwatt weakens with each loss** — a retry ladder is viable, not just a failure
+  state. Delevel stock in-run: crayon shavings (4+ suffices), table tennis ball (Leprecondo),
+  Mer-kin mouthsoap, spare lasso/cowbell; a Comic Violence wish removes miss chance.
+- **Sneakmask/hidepaint are exempt from the −combat cap** — they stack past the usual limit for
+  outpost/grandpa NC hunting (why the route prizes them).
+- **Nautical Seaceress is a plain high-stats fight** (no gimmicks); Wet Crap For Sale stat
+  buffs are the in-path lever.
+- **Softcore pull exceptions** (still pullable post-nerf, complements mafia's blocklist):
+  shark jumper, scale-mail underwear, sea lasso, sea cowbell, Mer-kin knucklebone / wordquiz /
+  cheatsheet / prayerbeads.
+- **Monodent synergies** worth encoding: Talk to Some Fish halves lasso training (throw the
+  lasso both before *and* after casting); BCZ Refracted Gaze pairs with Talk to Some Fish so
+  the current monster's drops aren't lost.
 
 ## Flagged items
 
