@@ -1,6 +1,7 @@
-import { getCampground, getWorkshed, isTradeable, Item, print, storageAmount } from "kolmafia";
+import { getCampground, getWorkshed, isTradeable, print } from "kolmafia";
 import { $familiars, $item, $items, $skill, $skills, EternityCodpiece, get, have } from "libram";
 
+import { haveAnywhere } from "./lib";
 import { detectTier } from "./lib/tier";
 
 const supportedIotms = $items`Monodent of the Sea, The Eternity Codpiece, closed-circuit pay phone, 2002 Mr. Store Catalog, cursed monkey's paw, august scepter, Fourth of May Cosplay Saber, Peridot of Peril, blood cubic zirconia, Baseball Diamond, Heartstone, backup camera, Jurassic Parka, spring shoes, Everfull Dart Holster, Mayam Calendar, Leprecondo, Cincho de Mayo, McHugeLarge duffel bag, Apriling band helmet, April Shower Thoughts shield, bat wings, server room key, Time-Spinner, January's Garbage Tote, Powerful Glove, combat lover's locket, Lil' Doctor™ bag, mumming trunk, Kremlin's Greatest Briefcase, Cargo Cultist Shorts, Eight Days a Week Pill Keeper, Sept-Ember Censer, vampyric cloake, unwrapped knock-off retro superhero cape, Roman Candelabra, miniature crystal ball, latte lovers member's mug, V for Vivala mask, designer sweatpants, tearaway pants, autumn-aton, cosmic bowling ball`;
@@ -20,10 +21,6 @@ const catalogCovered = $items`pro skateboard, software glitch`;
 function checkRow(owned: boolean, label: string, note = ""): number {
   print(`${owned ? "✓" : "✗"} ${label}${note ? ` — ${note}` : ""}`, owned ? "blue" : "red");
   return owned ? 1 : 0;
-}
-
-function haveAnywhere(item: Item): boolean {
-  return have(item) || storageAmount(item) > 0;
 }
 
 export function printSimChecklist(): void {

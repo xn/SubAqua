@@ -1,5 +1,5 @@
-import { print } from "kolmafia";
-import { get } from "libram";
+import { Item, print, storageAmount } from "kolmafia";
+import { get, have } from "libram";
 
 import { args } from "../args";
 
@@ -13,4 +13,10 @@ export function debug(message: string): void {
  * user's own mafia preference as the default. */
 export function buyLimit(): number {
   return args.buyLimit ?? get("autoBuyPriceLimit");
+}
+
+/** Ash have_item(): owned anywhere useful — inventory/equipped (libram have)
+ * or still in Hagnk's. The resource ladders and sim share this definition. */
+export function haveAnywhere(item: Item): boolean {
+  return have(item) || storageAmount(item) > 0;
 }
