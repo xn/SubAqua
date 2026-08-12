@@ -18,12 +18,61 @@ export type ResourcePolicy = {
   /** Discretionary (non-reserved) pulls: low shiny farms instead of pulling
    * (UnderTheSea.ash:1738/1746/2937). */
   allowDiscretionaryPulls: boolean;
+  /** Leprecondo furniture priority by KoL furniture id (ash UTS:1062-1067);
+   * the init task installs the first four discovered. */
+  leprecondoLayout: number[];
+  /** Second Apriling section after the always-joined tuba (UTS:1076-1084);
+   * piccolo is only joined when the Chest Mimic is owned (checked in-task). */
+  aprilingSecond: "quad tom" | "piccolo";
+  /** 2002 Mr. Store credit spending (UTS:1093-1102): high banks free fights
+   * as 3 VHS tapes; others trade one for the pro skateboard (corral McTwist). */
+  catalogCredits: "vhs3" | "skateboard+vhs2";
+  /** Immediately dolphin-whistle back stolen outpost drops (prayerbeads,
+   * rusty rivet) — ash gates this on lowShiny (UTS:761-762); richer kits
+   * re-farm faster than they whistle. Corral drops are always whistled. */
+  whistleOutpostDrops: boolean;
+  /** Fishy pull-meal (cheapest pasta + Aldebaran sardines, UTS:816-829):
+   * ash gate is highShiny() || (lowShiny() && not pulled today) — mid falls
+   * through to the fish-sauce chew. */
+  fishyPullMeal: boolean;
 };
 
+/** Leprecondo priorities, ash UTS:1062-1067 (ids are KoL furniture ids;
+ * libram FURNITURE_PIECES maps id -> name). */
+const leprecondoHigh = [10, 11, 12, 24, 4, 5, 6];
+const leprecondoStd = [22, 24, 12, 11, 10, 4, 5, 6];
+
 const policies: Record<Tier, ResourcePolicy> = {
-  low: { freeKillMode: "full", allowClubEmBackInTime: false, allowDiscretionaryPulls: false },
-  mid: { freeKillMode: "full", allowClubEmBackInTime: true, allowDiscretionaryPulls: true },
-  high: { freeKillMode: "dartsOnly", allowClubEmBackInTime: false, allowDiscretionaryPulls: true },
+  low: {
+    freeKillMode: "full",
+    allowClubEmBackInTime: false,
+    allowDiscretionaryPulls: false,
+    leprecondoLayout: leprecondoStd,
+    aprilingSecond: "piccolo",
+    catalogCredits: "skateboard+vhs2",
+    whistleOutpostDrops: true,
+    fishyPullMeal: true,
+  },
+  mid: {
+    freeKillMode: "full",
+    allowClubEmBackInTime: true,
+    allowDiscretionaryPulls: true,
+    leprecondoLayout: leprecondoStd,
+    aprilingSecond: "piccolo",
+    catalogCredits: "skateboard+vhs2",
+    whistleOutpostDrops: false,
+    fishyPullMeal: false,
+  },
+  high: {
+    freeKillMode: "dartsOnly",
+    allowClubEmBackInTime: false,
+    allowDiscretionaryPulls: true,
+    leprecondoLayout: leprecondoHigh,
+    aprilingSecond: "quad tom",
+    catalogCredits: "vhs3",
+    whistleOutpostDrops: false,
+    fishyPullMeal: true,
+  },
 };
 
 export function policyForTier(tier: Tier): ResourcePolicy {

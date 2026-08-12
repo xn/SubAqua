@@ -20,8 +20,11 @@ import {
   totalFamiliarWeight,
 } from "libram";
 
-/** Single source of truth (spec §1: the old repo carried three copies of these). */
-export const waterBreathingEquipment = $items`The Crown of Ed the Undying, aerated diving helmet, crappy Mer-kin mask, Mer-kin gladiator mask, Mer-kin scholar mask, old SCUBA tank, Elf Guard SCUBA tank`;
+/** Single source of truth (spec §1: the old repo carried three copies of these).
+ * Path 55's default breather is the pants slot — really, really nice swimming
+ * trunks (ash swimmingTrunks() UTS:74-84) — leaving hat/back free. Trunks lead
+ * the list; the hat/back pieces matter while lasso-training pins the pants. */
+export const waterBreathingEquipment = $items`really\, really nice swimming trunks, The Crown of Ed the Undying, aerated diving helmet, crappy Mer-kin mask, Mer-kin gladiator mask, Mer-kin scholar mask, old SCUBA tank, Elf Guard SCUBA tank`;
 export const familiarWaterBreathingEquipment = $items`das boot, little bitty bathysphere`;
 
 /** Effects that grant breathing without gear (Driving Waterproofly covers familiar too). */
@@ -45,10 +48,11 @@ export function isTrainingLasso(): boolean {
 }
 
 const scubaTanks = $items`old SCUBA tank, Elf Guard SCUBA tank`;
+const trainingBlockedGear = $items`really\, really nice swimming trunks`;
 
 export function preferredBreathingGear(): Item[] {
   const gear = isTrainingLasso()
-    ? [...scubaTanks, ...waterBreathingEquipment]
+    ? [...scubaTanks, ...waterBreathingEquipment.filter((it) => !trainingBlockedGear.includes(it))]
     : [...waterBreathingEquipment];
   return gear.filter((item, idx, arr) => arr.indexOf(item) === idx);
 }
@@ -97,4 +101,11 @@ export function chooseFamiliar(): Familiar {
   const best = maxBy(candidates, "meat").familiar;
   print(`Best meat familiar underwater: ${best}`, "blue");
   return best;
+}
+
+/** Ash use_familiar("-combat") (UTS:349-355): Peace Turkey else Disgeist. */
+export function sneakFamiliar(): Familiar | undefined {
+  if (have($familiar`Peace Turkey`)) return $familiar`Peace Turkey`;
+  if (have($familiar`Disgeist`)) return $familiar`Disgeist`;
+  return undefined;
 }

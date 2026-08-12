@@ -68,7 +68,11 @@ export type ForcePurpose = "diver" | "healer" | "seaCow" | "researcher" | "free"
  * seaCowForce McTwist/opener skips are combat-context guards and live with
  * the Phase 3 combat builders, not here. */
 export function forceGranted(purpose: ForcePurpose, location?: Location): boolean {
-  if (location && !saberAllowedAt(location)) return false;
+  // The outpost saber ban protects turns_spent-gated progress from zero-turn
+  // Forces — but the healer Force is the ash's deliberate exception: its own
+  // gate is beads-only (iotm.ash healerForce():247-261, no zone test) and
+  // farmPrayerbeads pins the saber at the outpost (UTS:1684-1699).
+  if (location && purpose !== "healer" && !saberAllowedAt(location)) return false;
   switch (purpose) {
     case "diver":
       return diverHuntActive() && saberChargesLeft() > 0;
