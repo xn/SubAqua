@@ -4,3 +4,7 @@
 
 # Legacy scratch file (syntax drift / excluded from tsconfig)
 theSea.ts
+
+# SDD process scaffolding
+.superpowers/
+.claude/
