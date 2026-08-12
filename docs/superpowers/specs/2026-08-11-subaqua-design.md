@@ -6,9 +6,12 @@
 `CLAUDE.md`, `docs/sea-reference.md`, `docs/consumption-reference.md`,
 `docs/maximizer-reference.md`), `../kolmafia` (mafia source ground truth — see §8), the
 wiki page `11,037_Leagues_Under_the_Sea/Strategy` (see §9; fetch via MediaWiki API with a
-browser user agent), and `../loop` (the user's aftercore loop wrapping this content —
+browser user agent), `../loop` (the user's aftercore loop wrapping this content —
 battle-tested idioms, notably codpiece socketing in `src/tasks/thesea.ts` and pearl helpers in
-`src/tasks/pearl.ts`)
+`src/tasks/pearl.ts`), and **libram itself** (`node_modules/libram/dist/**` — read the source,
+not just the typings: the per-IOTM resource modules are battle-tested implementations of the
+mechanics our `resources/` layer builds on, the typed-preference unions are the authority on
+pref names, and before hand-writing any game interaction, check whether libram already ships it)
 
 ## What SubAqua is
 
