@@ -207,7 +207,8 @@ export function sneakEffects(): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`The Sonata of Sneakiness`)) effects.push($effect`The Sonata of Sneakiness`);
   if (have($skill`Smooth Movement`)) effects.push($effect`Smooth Movements`);
-  if (have($skill`Feel Lonely`) && get("_feelLonelyUsed") < 3) effects.push($effect`Feeling Lonely`);
+  if (have($skill`Feel Lonely`) && get("_feelLonelyUsed") < 3)
+    effects.push($effect`Feeling Lonely`);
   return effects;
 }
 
@@ -473,7 +474,9 @@ export function emergencyDiet(): void {
     use($item`astral six-pack`);
   }
   if (availableAmount($item`astral pilsner`) === 0) {
-    abort("Out of adventures and no more easy diet (astral pilsners exhausted). Eat/drink manually, then rerun.");
+    abort(
+      "Out of adventures and no more easy diet (astral pilsners exhausted). Eat/drink manually, then rerun.",
+    );
   }
   if (myInebriety() >= 14) {
     abort("Out of adventures and too drunk for another pilsner. Handle diet manually, then rerun.");
@@ -495,6 +498,7 @@ git add src/resources/fishy.ts && git commit -m "feat: fishy ladder, waterproofl
 ```
 
 ---
+
 ### Task 3: Engine per-turn duties and Force-purpose resolution
 
 **Files:**
@@ -760,8 +764,8 @@ import {
   set,
 } from "libram";
 
-import { haveAnywhere } from "../lib";
 import { Quest } from "../engine/task";
+import { haveAnywhere } from "../lib";
 import { currentPolicy } from "../resources/policy";
 import { discretionaryPull, pullSequence } from "../resources/pulls";
 import { summonsAvailable } from "../resources/summon";
@@ -905,8 +909,10 @@ export function initQuest(): Quest {
       {
         name: "Apriling",
         completed: () =>
-          !AprilingBandHelmet.have() || get("_aprilBandInstruments", 0) >= 2 ||
-          (policy.aprilingSecond === "piccolo" && !have($familiar`Chest Mimic`) &&
+          !AprilingBandHelmet.have() ||
+          get("_aprilBandInstruments", 0) >= 2 ||
+          (policy.aprilingSecond === "piccolo" &&
+            !have($familiar`Chest Mimic`) &&
             have($item`Apriling band tuba`)),
         do: (): void => {
           // Tuba always (the NC forcer); second instrument per policy
@@ -978,8 +984,13 @@ export function initQuest(): Quest {
           // (kramcoCoversScaleMail, IOTM:318-320); CMOI storage-only.
           for (const it of seaGearPulls) {
             if (have(it)) continue;
-            if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`)) continue;
-            if (it === $item`sea lasso` && summonsAvailable() >= 3 && have($familiar`Sword of S Words`))
+            if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
+              continue;
+            if (
+              it === $item`sea lasso` &&
+              summonsAvailable() >= 3 &&
+              have($familiar`Sword of S Words`)
+            )
               continue;
             discretionaryPull(it);
           }
@@ -995,7 +1006,7 @@ export function initQuest(): Quest {
 }
 ```
 
-Notes: trim any import the final file does not use. `$coinmaster\`Mr. Store 2002\`` — if lint rejects the constant, the master name is exactly `Mr. Store 2002` in `coinmasters.txt`; report any correction. `Leprecondo.FURNITURE_PIECES` is index-by-id (libram Leprecondo.js); `setFurniture` validates discovery itself but its rearrange guard is a no-op (libram bug) — first-install-only usage here never rearranges. `Apriling band quad tom` / `piccolo` item names: lint-verify.
+Notes: trim any import the final file does not use. `$coinmaster\`Mr. Store 2002\``— if lint rejects the constant, the master name is exactly`Mr. Store 2002`in`coinmasters.txt`; report any correction. `Leprecondo.FURNITURE_PIECES`is index-by-id (libram Leprecondo.js);`setFurniture`validates discovery itself but its rearrange guard is a no-op (libram bug) — first-install-only usage here never rearranges.`Apriling band quad tom`/`piccolo` item names: lint-verify.
 
 - [ ] **Step 2: Wire the runplan** — replace `src/tasks/runplans.ts` with:
 
@@ -1004,6 +1015,7 @@ import { getTasks } from "grimoire-kolmafia";
 
 import { Task } from "../engine/task";
 import { Tier } from "../lib/tier";
+
 import { initQuest } from "./init";
 
 /**
@@ -1031,6 +1043,7 @@ git commit -m "feat: initialization dailies quest and runplan wiring"
 ```
 
 ---
+
 ### Task 6: Openers — sword imprint, guild unlock, garden pellet
 
 **Files:**
@@ -1084,9 +1097,7 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         // pay phone is absent (the ash's exact gate).
         name: "Sword Imprint",
         ready: () =>
-          have(sword) &&
-          summonsAvailable() >= 3 &&
-          (!opts.phonelessSwordOnly || !have(payphone)),
+          have(sword) && summonsAvailable() >= 3 && (!opts.phonelessSwordOnly || !have(payphone)),
         completed: () => get("swordOfSWordsMonster") !== "",
         do: () => summon($monster`sea cowboy`),
         choices: { 1589: "1&victim=776" },
@@ -1119,7 +1130,10 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         combat: new CombatStrategy().kill(),
         outfit: { modifier: "item" },
         prepare: () => recover(),
-        limit: { soft: 12, message: "The guild test grind is unlucky; rerun or finish it manually." },
+        limit: {
+          soft: 12,
+          message: "The guild test grind is unlucky; rerun or finish it manually.",
+        },
       },
       {
         name: "Guild Finish",
@@ -1147,8 +1161,8 @@ import { $item, $location, $monster, get, have } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
 import { Quest } from "../../engine/task";
-import { itemDropEffects } from "../../lib/moods";
 import { monkeesStep, recover } from "../../lib";
+import { itemDropEffects } from "../../lib/moods";
 
 const pellet = $item`wriggling flytrap pellet`;
 const flytrap = $monster`Neptune flytrap`;
@@ -1246,7 +1260,8 @@ export function bigBrotherQuest(): Quest {
         // lands the rescue in exactly one turn, wearing +item instead of
         // -combat. Estimate >= 4 is the ash's reserve threshold.
         name: "Wreck Rescue (forced)",
-        ready: () => monkeesStep() === 1 && (get("noncombatForcerActive") || ncForceEstimate() >= 4),
+        ready: () =>
+          monkeesStep() === 1 && (get("noncombatForcerActive") || ncForceEstimate() >= 4),
         completed: () => monkeesStep() >= 2,
         prepare: (): void => {
           recover();
@@ -1366,8 +1381,7 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
               // Into Next Week banks one more copy (redeemed by the
               // wanderer task, Task 10).
               name: "Golem Recall",
-              ready: () =>
-                have($skill`Just the Facts`) && get("_monsterHabitatsMonster") === null,
+              ready: () => have($skill`Just the Facts`) && get("_monsterHabitatsMonster") === null,
               completed: () =>
                 get("_monsterHabitatsMonster") !== null ||
                 availableAmount($item`crayon shavings`) >= 9,
@@ -1403,6 +1417,7 @@ git commit -m "feat: big brother rescue and grandpa quest tasks"
 ```
 
 ---
+
 ### Task 8: The Mer-Kin Outpost and the currents
 
 **Files:**
@@ -1431,9 +1446,7 @@ const outpost = $location`The Mer-Kin Outpost`;
 const beads = $item`Mer-kin prayerbeads`;
 
 function stashboxDone(): boolean {
-  return (
-    have($item`Mer-kin stashbox`) || have($item`Mer-kin trailmap`) || get("corralUnlocked")
-  );
+  return have($item`Mer-kin stashbox`) || have($item`Mer-kin trailmap`) || get("corralUnlocked");
 }
 
 /** Shared +item farm shape for the pre-stashbox outpost regimes (ash
@@ -1610,14 +1623,24 @@ import {
   useSkill,
   visitUrl,
 } from "kolmafia";
-import { $coinmaster, $familiar, $item, $location, $monster, $skill, get, have, Macro } from "libram";
+import {
+  $coinmaster,
+  $familiar,
+  $item,
+  $location,
+  $monster,
+  $skill,
+  get,
+  have,
+  Macro,
+} from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
-import { diverHuntActive } from "../../resources/saber";
 import { pullSequence } from "../../resources/pulls";
+import { diverHuntActive } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const outpost = $location`The Mer-Kin Outpost`;
@@ -1643,10 +1666,7 @@ function helmetDone(): boolean {
  * Bounded by the caller's limit. */
 function gainSandDollars(): void {
   while (itemAmount($item`Mer-kin thingpouch`) > 0) use($item`Mer-kin thingpouch`);
-  while (
-    itemAmount($item`sand dollar`) < 63 &&
-    itemAmount($item`sand penny`) >= 100
-  ) {
+  while (itemAmount($item`sand dollar`) < 63 && itemAmount($item`sand penny`) >= 100) {
     buy($coinmaster`Wet Crap For Sale`, 1, $item`sand dollar`);
   }
   if (itemAmount($item`sand dollar`) < 63 && pullSequence($item`damp old wallet`)) {
@@ -1779,6 +1799,7 @@ git commit -m "feat: old guy boot turn-in and diving helmet hunt"
 ```
 
 ---
+
 ### Task 10: Mom rescue and wanderer redemptions
 
 **Files:**
@@ -1853,9 +1874,7 @@ export function pearlResModifier(): string {
 /** Record a Spooky VHS of an abyss monster during the ash's window
  * (22 < momSeaMonkeeProgress < 36; UTS:900-912, CCS:891-896). */
 function vhsMacro(): Macro {
-  return !get("spookyVHSTapeMonster") &&
-    get("momSeaMonkeeProgress", 0) < 36 &&
-    itemAmount(vhs) > 0
+  return !get("spookyVHSTapeMonster") && get("momSeaMonkeeProgress", 0) < 36 && itemAmount(vhs) > 0
     ? Macro.tryItem(vhs)
     : new Macro();
 }
@@ -1923,10 +1942,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               },
               do: abyss,
               combat: new CombatStrategy()
-                .macro(
-                  Macro.trySkill($skill`Recall Facts: Monster Habitats`),
-                  habitatTargets,
-                )
+                .macro(Macro.trySkill($skill`Recall Facts: Monster Habitats`), habitatTargets)
                 .kill(),
               outfit: { modifier: "item", offhand: glass },
               effects: itemDropEffects,
@@ -1971,9 +1987,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ready: () => have(glass),
         completed: momDone,
         do: abyss,
-        combat: new CombatStrategy()
-          .macro(vhsMacro, vhsTargets)
-          .kill(),
+        combat: new CombatStrategy().macro(vhsMacro, vhsTargets).kill(),
         outfit: () => ({
           modifier: "item",
           offhand: glass,
@@ -1996,14 +2010,9 @@ export function momQuest(opts: { cyber: boolean }): Quest {
  * 11273-11287); the copies redeem at the class pearl zone wearing that
  * zone's resistance (ash UTS:888-924). */
 export function wandererTasks(): Task[] {
-  const redemption = (
-    name: string,
-    monsterPref: string,
-    turnPref: string,
-  ): Task => ({
+  const redemption = (name: string, monsterPref: string, turnPref: string): Task => ({
     name,
-    ready: () =>
-      !!get(monsterPref) && totalTurnsPlayed() >= get(turnPref, 0) + 8,
+    ready: () => !!get(monsterPref) && totalTurnsPlayed() >= get(turnPref, 0) + 8,
     completed: () => !get(monsterPref),
     do: () => grandpaZone(),
     underwater: true,
@@ -2182,9 +2191,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         combat: new CombatStrategy()
           .macro(
             () =>
-              swordOut()
-                ? Macro.trySkill($skill`%fn, kill a lot of these guys`)
-                : new Macro(),
+              swordOut() ? Macro.trySkill($skill`%fn, kill a lot of these guys`) : new Macro(),
             cowboy,
           )
           .kill(cowboy, cow)
@@ -2297,7 +2304,7 @@ git commit -m "feat: coral corral farms, seahorse taming, per-tier runplan compo
 
 Deferred to Phase 4 or a later optimization pass, each with its ash anchor:
 
-- Shadow Rift subsystem (Rufus, Shadow Waters, monkey-paw lasso wishes, rift lasso training, Sea *dent wave; UTS:1508-1559, 2974-3000) — training happens organically via the engine's round-1 lasso injection instead.
+- Shadow Rift subsystem (Rufus, Shadow Waters, monkey-paw lasso wishes, rift lasso training, Sea \*dent wave; UTS:1508-1559, 2974-3000) — training happens organically via the engine's round-1 lasso injection instead.
 - Skate-park war resolution + fountain Fishy (UTS:1320-1348; spec §9 takes it opportunistically during Phase 4's forced waits). The skate-blade pull reservation from Phase 2 stays dormant until then.
 - Baseball diamond pitch programming (iotm baseballD), backup-camera copy chains, Macrometeorite/CHEAT-CODE re-rolls, Map the Monsters, Time-Spinner, BCZ Refracted Gaze victims, codpiece gem socketing for the corral opener (UTS:2237; §8 socketing pattern), Source Terminal enhance/educate, Pocket Professor lectures, otoscope — all combat-optimizer layers on top of a working spine.
 - Mer-kin Elementary/Library/Gymnasium regimes, dreadscroll spading tasks, `dreadSeedCheck` post() hook — Phase 4 (deepcity opens once the seahorse is tamed).
@@ -2305,7 +2312,7 @@ Deferred to Phase 4 or a later optimization pass, each with its ash anchor:
 - Dropped on net-turn grounds (spec §9 evaluation principle), documented: stillsuit setup (aftercore-only value), autumn leaves/distilled resin, DoD bang-potion spading (UTS:1146-1159), numberology, trainset per-turn reconfiguration and autumn-aton re-sends (both live in ash post_adv; the autumn-aton/trainset init installs remain). If live runs show these matter, they slot into `post()` beside the existing duties.
 - The ash's `NCtoC` combat-NC interplay (Club 'Em Across the Battlefield gating) and `elementaryQueue` — Phase 4 concerns; no Phase 3 code writes those prefs.
 - Worktea-sushi timing for dreadscroll clue 7 (UTS:833-837, 3276-3281) and the `godRunGuard` — Phase 4's dreadscroll module; the Phase 3 Fishy ladder eats plain nigiri only.
-- Monodent Talk to Some Fish lasso-halving (throw the lasso before *and* after casting, spec §9) and BCZ Refracted Gaze pairing — combat-optimizer layer over the working corral farm.
+- Monodent Talk to Some Fish lasso-halving (throw the lasso before _and_ after casting, spec §9) and BCZ Refracted Gaze pairing — combat-optimizer layer over the working corral farm.
 
 ## Self-review notes (resolved during planning)
 
@@ -2313,4 +2320,3 @@ Deferred to Phase 4 or a later optimization pass, each with its ash anchor:
 - The **NC-force pull-trio budget ruling**: `forceNextNoncombat()` is invoked only from the Wreck rescue (route-critical, one NC) — the trio's deliberate `pullBudgetAllows` bypass stands; no additional budget policy needed this phase.
 - **`_subaqua_outpost_choices` is retired** (Tasks 3-4) in favor of `_subaqua_stashbox_checked`, still solely owned by the choice bundle.
 - **Old SCUBA tank decision point** (spec §9) is closed by mafia ground truth: not purchasable; no code models it.
-
