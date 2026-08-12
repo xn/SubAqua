@@ -4,7 +4,7 @@
 
 **Goal:** Build the iotm.ash port — seven `resources/` modules plus `ResourcePolicy` — and wire the engine's `customize()` so abstract combat actions (`banish`, `killFree`, `freeRun`, `yellowRay`, `forceItems`) resolve against real, tier-aware ladders instead of degrading.
 
-**Architecture:** Per `docs/superpowers/specs/2026-08-11-subaqua-design.md` §2–§4 (read §4 first). Each module encodes *this route's priorities* on top of libram's mechanics: budget/ladder data with `available()`/`remaining()`, selected by ordered search, tier-varied only through the `ResourcePolicy` object (spec §3 principle: tier logic lives in runplans + policy, nowhere else). Ash facts below were verified against `../UnderTheSea` source (iotm.ash / UnderTheSea.ash / UnderTheSeaCCS.ash) and libram 0.11.23 source on 2026-08-12; ash line references are cited so reviewers can spot-check.
+**Architecture:** Per `docs/superpowers/specs/2026-08-11-subaqua-design.md` §2–§4 (read §4 first). Each module encodes _this route's priorities_ on top of libram's mechanics: budget/ladder data with `available()`/`remaining()`, selected by ordered search, tier-varied only through the `ResourcePolicy` object (spec §3 principle: tier logic lives in runplans + policy, nowhere else). Ash facts below were verified against `../UnderTheSea` source (iotm.ash / UnderTheSea.ash / UnderTheSeaCCS.ash) and libram 0.11.23 source on 2026-08-12; ash line references are cited so reviewers can spot-check.
 
 **Tech Stack:** TypeScript on grimoire-kolmafia 0.3.33 / libram 0.11.23 / kolmafia typings, rollup (three CJS bundles, Rhino 1.8.0), yarn 4.
 
@@ -47,10 +47,12 @@ Cross-task naming contract (spec §Self-Review): `haveAnywhere(item)`, `currentP
 ### Task 1: Shared resource types, ResourcePolicy, haveAnywhere
 
 **Files:**
+
 - Create: `src/resources/resource.ts`, `src/resources/policy.ts`
 - Modify: `src/lib/index.ts`, `src/sim.ts`
 
 **Interfaces:**
+
 - Consumes: `Tier`/`currentTier` (Phase 1 `lib/tier.ts`).
 - Produces: `interface Resource {name, available(), remaining(), prepare?, equip?}`, `type CombatResource = Resource & BaseCombatResource`; `type ResourcePolicy {freeKillMode, allowClubEmBackInTime, allowDiscretionaryPulls}`, `policyForTier(tier)`, `currentPolicy()`; `haveAnywhere(item)` exported from `src/lib/index.ts`.
 
@@ -166,9 +168,11 @@ git commit -m "feat: resource interfaces, ResourcePolicy, shared haveAnywhere"
 ### Task 2: Pull bookkeeping
 
 **Files:**
+
 - Create: `src/resources/pulls.ts`
 
 **Interfaces:**
+
 - Consumes: `buyLimit`, `haveAnywhere` (lib); `currentPolicy` (Task 1).
 - Produces: `pulledToday(item)`, `pullSequence(item): boolean`, `reservedPulls(): number`, `pullBudgetAllows(item): boolean`, `discretionaryPull(item): boolean`.
 
@@ -189,6 +193,7 @@ import {
 import { $effect, $item, $items, get, have } from "libram";
 
 import { buyLimit } from "../lib";
+
 import { currentPolicy } from "./policy";
 
 /** _roninStoragePulls holds today's pulled item ids, comma-separated. Exact-id
@@ -333,9 +338,11 @@ git add src/resources/pulls.ts && git commit -m "feat: pull bookkeeping with res
 ### Task 3: Saber Force budget
 
 **Files:**
+
 - Create: `src/resources/saber.ts`
 
 **Interfaces:**
+
 - Consumes: `haveAnywhere` (lib).
 - Produces: `saberChargesLeft()`, `saberAllowedAt(loc)`, `diverHuntActive()`, `prayerbeadsShort()`, `seaCowNeeded()`, `forcesAfterDiver()`, `forcesAfterHealer()`, `saberForcesFree()`, `type ForcePurpose`, `forceGranted(purpose, loc?)`.
 
@@ -436,9 +443,11 @@ git add src/resources/saber.ts && git commit -m "feat: saber Force budget with c
 ### Task 4: Summon ladder
 
 **Files:**
+
 - Create: `src/resources/summon.ts`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks (libram + kolmafia only).
 - Produces: `summonsAvailable(): number`, `summon(target: Monster): void`.
 
@@ -472,19 +481,22 @@ import {
   CombatLoversLocket,
   get,
   have,
-  set,
+  PeridotOfPeril,
 } from "libram";
 
 const mimic = $familiar`Chest Mimic`;
 
 /** Ash count_summons() (UnderTheSea.ash:580-591): banked monster-summon
- * charges across fax, locket, and mimic eggs. Feeds Phase 3's opener
+ * charges across fax, locket, and mimic eggs (100 familiar exp per egg, 11/day
+ * cap per mafia ChoiceControl.java choice 1517). Feeds Phase 3's opener
  * decisions and retry-loop guards. */
 export function summonsAvailable(): number {
   let n = 0;
   if (!get("_photocopyUsed")) n += 1;
   if (CombatLoversLocket.have()) n += CombatLoversLocket.reminiscesLeft();
-  if (have(mimic)) n += Math.floor(mimic.experience / 200);
+  if (have(mimic)) {
+    n += Math.max(0, Math.min(Math.floor(mimic.experience / 100), 11 - get("_mimicEggsObtained")));
+  }
   return n;
 }
 
@@ -498,12 +510,9 @@ function farmPocketWish(): void {
   const lot = $location`The Overgrown Lot`;
   const snake = $monster`sewer snake with a sewer snake in it`;
   for (let tries = 0; tries < 5 && itemAmount($item`pocket wish`) === 0; tries++) {
-    if (
-      have($item`Peridot of Peril`) &&
-      !get("_perilLocations").split(",").includes(`${lot.id}`)
-    ) {
+    if (PeridotOfPeril.have() && !PeridotOfPeril.periledToday(lot)) {
       equip($item`Peridot of Peril`);
-      set("choiceAdventure1557", `1&bandersnatch=${snake.id}`);
+      PeridotOfPeril.setChoice(snake);
     }
     adv1(lot, -1, "");
   }
@@ -529,10 +538,12 @@ export function summon(target: Monster): void {
       return;
     }
   }
-  if (have(mimic) && mimic.experience > 200) {
+  if (have(mimic) && mimic.experience >= 100 && get("_mimicEggsObtained") < 11) {
     if (ChestMimic.differentiableQuantity(target) === 0) ChestMimic.receive(target);
     if (ChestMimic.differentiableQuantity(target) === 0) {
-      abort(`Failed to extract a mimic egg for ${target.name}. Rerun; if it repeats, summon it manually.`);
+      abort(
+        `Failed to extract a mimic egg for ${target.name}. Rerun; if it repeats, summon it manually.`,
+      );
     }
     ChestMimic.differentiate(target);
     // A Force cast mid-egg-fight can strand choice 1387; answer it (ash parity).
@@ -547,7 +558,9 @@ export function summon(target: Monster): void {
       return;
     }
   }
-  abort(`No summon source left for ${target.name} (locket, fax, mimic egg, and pocket wish all unavailable).`);
+  abort(
+    `No summon source left for ${target.name} (locket, fax, mimic egg, and pocket wish all unavailable).`,
+  );
 }
 ```
 
@@ -564,9 +577,11 @@ git add src/resources/summon.ts && git commit -m "feat: summon ladder over locke
 ### Task 5: Banish framework
 
 **Files:**
+
 - Create: `src/resources/banish.ts`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
 - Produces: `type BanishSource`, `banishSources`, `banishedBy(source)`, `banishActive(target)`, `pickBanishSource(location?)`.
 
@@ -671,9 +686,11 @@ git add src/resources/banish.ts && git commit -m "feat: banish framework with pr
 ### Task 6: Free-kill ladder
 
 **Files:**
+
 - Create: `src/resources/freekill.ts`
 
 **Interfaces:**
+
 - Consumes: `CombatResource` (Task 1), `currentPolicy` (Task 1).
 - Produces: `type FreeKillSource`, `freeKillSources`, `bczCost(counterPref)`, `selectFreeKill(opts)`, `selectYellowRay()`.
 
@@ -744,7 +761,8 @@ export const freeKillSources: FreeKillSource[] = [
       have($skill`Torso Awareness`) &&
       have($item`Jurassic Parka`) &&
       !have($effect`Everything Looks Yellow`),
-    remaining: () => (have($item`Jurassic Parka`) && !have($effect`Everything Looks Yellow`) ? 1 : 0),
+    remaining: () =>
+      have($item`Jurassic Parka`) && !have($effect`Everything Looks Yellow`) ? 1 : 0,
     equip: { equip: [$item`Jurassic Parka`], modes: { parka: "dilophosaur" } },
     do: Macro.trySkill($skill`Spit jurassic acid`),
     colosseumSafe: false,
@@ -781,7 +799,8 @@ export const freeKillSources: FreeKillSource[] = [
   {
     name: "Shattering Punch",
     available: () => have($skill`Shattering Punch`) && get("_shatteringPunchUsed") < 3,
-    remaining: () => (have($skill`Shattering Punch`) ? Math.max(0, 3 - get("_shatteringPunchUsed")) : 0),
+    remaining: () =>
+      have($skill`Shattering Punch`) ? Math.max(0, 3 - get("_shatteringPunchUsed")) : 0,
     do: Macro.trySkill($skill`Shattering Punch`),
     colosseumSafe: false,
     dropSafe: true,
@@ -845,7 +864,10 @@ export function selectFreeKill(
     if (policy.freeKillMode === "dartsOnly" && !dartsOnlyNames.includes(source.name)) return false;
     if (atColosseum && !source.colosseumSafe) return false;
     if (!atColosseum && source.colosseumOnly) return false;
-    if (source.name === "Assert your Authority" && (!location || !sheriffZones.includes(location))) {
+    if (
+      source.name === "Assert your Authority" &&
+      (!location || !sheriffZones.includes(location))
+    ) {
       return false;
     }
     if (dropsMatter && !source.dropSafe) return false;
@@ -873,9 +895,11 @@ git add src/resources/freekill.ts && git commit -m "feat: free-kill ladder with 
 ### Task 7: Free-run ladder
 
 **Files:**
+
 - Create: `src/resources/freerun.ts`
 
 **Interfaces:**
+
 - Consumes: `CombatResource` (1), `banishSources`/`banishedBy` (5), `FreeKillSource`/`selectFreeKill` (6).
 - Produces: `type FreeRunSource`, `freeRunSources`, `selectFreeRun(opts): FreeRunSource | FreeKillSource | undefined`.
 
@@ -929,7 +953,8 @@ export const freeRunSources: FreeRunSource[] = [
       have($item`Greatest American Pants`) &&
       get("_navelRunaways") < 3 &&
       have($effect`Driving Waterproofly`),
-    remaining: () => (have($item`Greatest American Pants`) ? Math.max(0, 3 - get("_navelRunaways")) : 0),
+    remaining: () =>
+      have($item`Greatest American Pants`) ? Math.max(0, 3 - get("_navelRunaways")) : 0,
     equip: $item`Greatest American Pants`,
     do: Macro.runaway(),
     banishes: false,
@@ -1070,9 +1095,11 @@ git add src/resources/freerun.ts && git commit -m "feat: free-run ladder with ba
 ### Task 8: NC-force
 
 **Files:**
+
 - Create: `src/resources/ncforce.ts`
 
 **Interfaces:**
+
 - Consumes: `haveAnywhere`, `debug` (lib); `pulledToday`, `pullSequence` (Task 2); `Resource`, `CombatResource` (Task 1).
 - Produces: `ncForceEstimate(): number`, `combatNCForceSources`, `ncForceSources`, `forceNextNoncombat(): boolean`.
 
@@ -1104,6 +1131,7 @@ import {
 } from "libram";
 
 import { debug, haveAnywhere } from "../lib";
+
 import { pulledToday, pullSequence } from "./pulls";
 import { CombatResource, Resource } from "./resource";
 
@@ -1122,7 +1150,8 @@ export const combatNCForceSources: CombatNCForceSource[] = [
       have($skill`Torso Awareness`) &&
       have($item`Jurassic Parka`) &&
       get("_spikolodonSpikeUses") < 5,
-    remaining: () => (have($item`Jurassic Parka`) ? Math.max(0, 5 - get("_spikolodonSpikeUses")) : 0),
+    remaining: () =>
+      have($item`Jurassic Parka`) ? Math.max(0, 5 - get("_spikolodonSpikeUses")) : 0,
     equip: { equip: [$item`Jurassic Parka`], modes: { parka: "spikolodon" } },
     do: Macro.trySkill($skill`Launch spikolodon spikes`),
   },
@@ -1159,7 +1188,8 @@ export const ncForceSources: NCForceSource[] = [
   {
     name: "Apriling tuba",
     available: () => have($item`Apriling band tuba`) && get("_aprilBandTubaUses") < 3,
-    remaining: () => (have($item`Apriling band tuba`) ? Math.max(0, 3 - get("_aprilBandTubaUses")) : 0),
+    remaining: () =>
+      have($item`Apriling band tuba`) ? Math.max(0, 3 - get("_aprilBandTubaUses")) : 0,
     force: () => AprilingBandHelmet.play($item`Apriling band tuba`),
   },
   {
@@ -1177,7 +1207,8 @@ export const ncForceSources: NCForceSource[] = [
   },
   {
     name: "Pillkeeper Sneakisol",
-    available: () => haveAnywhere($item`Eight Days a Week Pill Keeper`) && !get("_freePillKeeperUsed"),
+    available: () =>
+      haveAnywhere($item`Eight Days a Week Pill Keeper`) && !get("_freePillKeeperUsed"),
     remaining: () =>
       haveAnywhere($item`Eight Days a Week Pill Keeper`) && !get("_freePillKeeperUsed") ? 1 : 0,
     force: () => cliExecute("pillkeeper free noncombat"),
@@ -1188,7 +1219,10 @@ export const ncForceSources: NCForceSource[] = [
     remaining: () =>
       pullBackedFallbackActive() && !pulledToday($item`handheld Allied radio`) ? 1 : 0,
     force: () => {
-      if (itemAmount($item`handheld Allied radio`) > 0 || pullSequence($item`handheld Allied radio`)) {
+      if (
+        itemAmount($item`handheld Allied radio`) > 0 ||
+        pullSequence($item`handheld Allied radio`)
+      ) {
         cliExecute("alliedradio misc sniper");
       }
     },
@@ -1201,7 +1235,8 @@ export const ncForceSources: NCForceSource[] = [
       !pulledToday($item`Clara's bell`) &&
       (have($item`Clara's bell`) || storageAmount($item`Clara's bell`) > 0),
     remaining: () =>
-      !get("_claraBellUsed") && (have($item`Clara's bell`) || storageAmount($item`Clara's bell`) > 0)
+      !get("_claraBellUsed") &&
+      (have($item`Clara's bell`) || storageAmount($item`Clara's bell`) > 0)
         ? 1
         : 0,
     force: () => {
@@ -1263,9 +1298,11 @@ git add src/resources/ncforce.ts && git commit -m "feat: NC-force estimate and f
 ### Task 9: Engine resolution wiring
 
 **Files:**
+
 - Modify: `src/engine/engine.ts`, `src/engine/combat.ts`
 
 **Interfaces:**
+
 - Consumes: `pickBanishSource` (5), `selectFreeKill`/`selectYellowRay` (6), `selectFreeRun` (7), `forceGranted`/`saberAllowedAt` (3).
 - Produces: `customize()` that resolves `banish`/`killFree`/`freeRun`/`yellowRay`/`forceItems` before falling back to `MyActionDefaults`.
 
@@ -1288,50 +1325,54 @@ Replace that first line with:
 - [ ] **Step 2: Wire resolution into `src/engine/engine.ts`** — in `customize()`, insert between `super.customize(task, outfit, combat, resources);` and the breathing-enforcement block (`// Breathing enforcement (spec §2/§8: …`):
 
 ```ts
-    // Resolve abstract combat actions against the resource ladders (spec §2).
-    // Anything unresolved falls through to MyActionDefaults' explicit
-    // degradations — killFree still aborts by design when no source exists.
-    const location = task.do instanceof Location ? task.do : undefined;
-    if (combat.can("banish")) {
-      const banisher = pickBanishSource(location);
-      if (banisher) {
-        if (banisher.equip) outfit.equip(banisher.equip);
-        resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
-      }
-    }
-    if (combat.can("killFree")) {
-      const source = selectFreeKill({ location });
-      if (source) {
-        if (source.equip) outfit.equip(source.equip);
-        resources.provide("killFree", { prepare: source.prepare, do: source.do });
-      }
-    }
-    if (combat.can("freeRun")) {
-      const source = selectFreeRun({ location });
-      if (source) {
-        if (source.equip) outfit.equip(source.equip);
-        resources.provide("freeRun", { prepare: source.prepare, do: source.do });
-      }
-    }
-    if (combat.can("yellowRay") || combat.can("forceItems")) {
-      const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
-      const ray = selectYellowRay();
-      if (ray) {
-        if (ray.equip) outfit.equip(ray.equip);
-        resources.provide(action, { do: ray.do });
-      } else if (action === "forceItems" && (!location || saberAllowedAt(location)) && forceGranted("free", location)) {
-        // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
-        this.propertyManager.setChoice(1387, 3);
-        outfit.equip($item`Fourth of May Cosplay Saber`);
-        resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
-      }
-    }
+// Resolve abstract combat actions against the resource ladders (spec §2).
+// Anything unresolved falls through to MyActionDefaults' explicit
+// degradations — killFree still aborts by design when no source exists.
+const location = task.do instanceof Location ? task.do : undefined;
+if (combat.can("banish")) {
+  const banisher = pickBanishSource(location);
+  if (banisher) {
+    if (banisher.equip) outfit.equip(banisher.equip);
+    resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+  }
+}
+if (combat.can("killFree")) {
+  const source = selectFreeKill({ location });
+  if (source) {
+    if (source.equip) outfit.equip(source.equip);
+    resources.provide("killFree", { prepare: source.prepare, do: source.do });
+  }
+}
+if (combat.can("freeRun")) {
+  const source = selectFreeRun({ location });
+  if (source) {
+    if (source.equip) outfit.equip(source.equip);
+    resources.provide("freeRun", { prepare: source.prepare, do: source.do });
+  }
+}
+if (combat.can("yellowRay") || combat.can("forceItems")) {
+  const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
+  const ray = selectYellowRay();
+  if (ray) {
+    if (ray.equip) outfit.equip(ray.equip);
+    resources.provide(action, { do: ray.do });
+  } else if (
+    action === "forceItems" &&
+    (!location || saberAllowedAt(location)) &&
+    forceGranted("free", location)
+  ) {
+    // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
+    this.propertyManager.setChoice(1387, 3);
+    outfit.equip($item`Fourth of May Cosplay Saber`);
+    resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+  }
+}
 ```
 
 Add the imports this needs at the top of the file: `pickBanishSource` from `"../resources/banish"`, `selectFreeKill, selectYellowRay` from `"../resources/freekill"`, `selectFreeRun` from `"../resources/freerun"`, `forceGranted, saberAllowedAt` from `"../resources/saber"`, and add `$skill` to the existing `libram` import if not present. `Location`, `Macro`, `$item` are already imported. If tsc reports that `combat.can` does not exist, check the real method name in `node_modules/grimoire-kolmafia/dist/combat.d.ts` (it is declared as `can(action: A): boolean` at line 115) and report what you found.
 
 - [ ] **Step 3: Verify** — Run: `yarn check && yarn lint && yarn build`
-Expected: all pass; three bundles produced (`subaqua.js`, `subaqua_choice.js`, `relay_subaqua.js`).
+      Expected: all pass; three bundles produced (`subaqua.js`, `subaqua_choice.js`, `relay_subaqua.js`).
 
 - [ ] **Step 4: Commit**
 

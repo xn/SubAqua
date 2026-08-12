@@ -25,19 +25,22 @@ import {
   CombatLoversLocket,
   get,
   have,
-  set,
+  PeridotOfPeril,
 } from "libram";
 
 const mimic = $familiar`Chest Mimic`;
 
 /** Ash count_summons() (UnderTheSea.ash:580-591): banked monster-summon
- * charges across fax, locket, and mimic eggs. Feeds Phase 3's opener
+ * charges across fax, locket, and mimic eggs (100 familiar exp per egg, 11/day
+ * cap per mafia ChoiceControl.java choice 1517). Feeds Phase 3's opener
  * decisions and retry-loop guards. */
 export function summonsAvailable(): number {
   let n = 0;
   if (!get("_photocopyUsed")) n += 1;
   if (CombatLoversLocket.have()) n += CombatLoversLocket.reminiscesLeft();
-  if (have(mimic)) n += Math.floor(mimic.experience / 200);
+  if (have(mimic)) {
+    n += Math.max(0, Math.min(Math.floor(mimic.experience / 100), 11 - get("_mimicEggsObtained")));
+  }
   return n;
 }
 
@@ -51,9 +54,9 @@ function farmPocketWish(): void {
   const lot = $location`The Overgrown Lot`;
   const snake = $monster`sewer snake with a sewer snake in it`;
   for (let tries = 0; tries < 5 && itemAmount($item`pocket wish`) === 0; tries++) {
-    if (have($item`Peridot of Peril`) && !get("_perilLocations").split(",").includes(`${lot.id}`)) {
+    if (PeridotOfPeril.have() && !PeridotOfPeril.periledToday(lot)) {
       equip($item`Peridot of Peril`);
-      set("choiceAdventure1557", `1&bandersnatch=${snake.id}`);
+      PeridotOfPeril.setChoice(snake);
     }
     adv1(lot, -1, "");
   }
@@ -79,7 +82,7 @@ export function summon(target: Monster): void {
       return;
     }
   }
-  if (have(mimic) && mimic.experience > 200) {
+  if (have(mimic) && mimic.experience >= 100 && get("_mimicEggsObtained") < 11) {
     if (ChestMimic.differentiableQuantity(target) === 0) ChestMimic.receive(target);
     if (ChestMimic.differentiableQuantity(target) === 0) {
       abort(
