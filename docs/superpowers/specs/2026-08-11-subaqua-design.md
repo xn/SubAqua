@@ -199,13 +199,23 @@ stray-semicolon bug (unconditional Use the Force at Fitzsimmons, CCS:596-597) is
 **Layer 2 — dynamic regimes: filter callbacks** for fights needing live page text or mid-fight
 state:
 
-- **Bladeswitcher/Ringogeorge reflect** (library, gymnasium, colosseum): port
-  `reflectImminent()` — re-fetch `fight.php`, match "twirling his blade" / "an especially dope
-  move", stall regime (sea gel when HP < 50% / pungent unguent / attack; every stall branch must
-  advance the round; free delevelers banned in stalls; re-arm cap preserved). The secondary
-  \>400-damage-spike signature carries over.
-- **Colosseum**: gladiators instakill-immune — all instakills skipped except Club 'Em Back in
-  Time; saber never equipped there.
+- **Colosseum gladiators** (also bladeswitchers in library/gymnasium): mafia's source
+  (`FightDecorator.java`, `RelayRequest.java:1144`, `QuestManager.java:2358`) documents the full
+  mechanic. Opponent schedule is deterministic — `lastColosseumRoundWon % 3` → 0: balldodger
+  (counter-weapon: dragnet), 1: netdragger (switchblade), 2: bladeswitcher (dodgeball); named
+  bosses at rounds 13/14/15 — so the task outfit equips the correct counter-weapon per round.
+  Each gladiator telegraphs its big move one round ahead via a bolded keyword in the fight text;
+  the filter callback matches it and casts the counter skill granted by the equipped weapon
+  (bladeswitcher: bust/sweat/sack → Ball Bust/Sweat/Sack; balldodger: gain/loss/neutrality →
+  Net Gain/Loss/Neutrality; netdragger: sling/rolls/runner → Blade Sling/Roller/Runner).
+  The ash's `reflectImminent()` mid-round `fight.php` refetch + sea-gel/unguent stall regime
+  becomes the *fallback only* (counter gear not yet in hand), parsing the round text the
+  callback already receives — no refetch on the common path. Stall invariants preserved:
+  every stall branch advances the round; free delevelers banned in stalls.
+  `lastColosseumRoundWon` / `isMerkinGladiatorChampion` are mafia-maintained (wanderers
+  excluded) and serve as `ready()`/`completed()`.
+- **Colosseum rules**: gladiators instakill-immune — all instakills skipped except Club 'Em Back
+  in Time; saber never equipped there (weapon slot holds the counter-weapon).
 - **Coral Corral** three-regime dispatch: seahorse taming throws (`cowbell,cowbell` then
   `cowbell,lasso`, abort if untamed), one-turn opener paths, steady-state banish/re-roll.
   Monster re-rolls need no dispatch loop — the callback is simply called again.
@@ -278,8 +288,11 @@ README as skeleton). `prefs.txt` (old seafloor pref notes) is deleted.
 1. **README/code discrepancy in the ash**: README says high shiny requires an Asdon workshed;
    `highShiny()` (UnderTheSea.ash:171-176) only checks `garbo_valueOfFreeFight >
    valueOfAdventure`. We ship the code's rule and document it.
-2. **Mid-round `visitUrl("fight.php")` refetch** (reflect detection) is expected to behave
-   identically from a JS filter callback but must be verified on the first live colosseum run.
+2. **Colosseum telegraphs** (resolved 2026-08-11): mafia's `FightDecorator`/`RelayRequest`/
+   `QuestManager` sources document the deterministic opponent schedule, telegraph keywords, and
+   counter skills — the common path needs no mid-round refetch. Only the fallback stall regime
+   (counter gear not in hand) retains ash-style behavior; verify it on a live run only if that
+   fallback is ever exercised.
 3. **seedfinder algorithm** must be ported from source (VeeArrKoL/seedfinder), not from memory —
    an implementation-planning task.
 4. Game facts throughout implementation follow pearlo's CLAUDE.md rule: verify against
