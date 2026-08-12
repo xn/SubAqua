@@ -64,7 +64,10 @@ export const freeRunSources: FreeRunSource[] = [
     remaining: () => (have($item`V for Vivala mask`) && !get("_vmaskBanisherUsed") ? 1 : 0),
     equip: $item`V for Vivala mask`,
     do: Macro.trySkill($skill`Creepy Grin`),
-    banishes: true,
+    // Creepy Grin does banish, but the ash spends it as a generic run
+    // (it's absent from CCS free_run()'s non-banish skip list, CCS:84) —
+    // ash parity over conserving the once-daily banish.
+    banishes: false,
   },
   {
     name: "Throw Latte on Opponent",

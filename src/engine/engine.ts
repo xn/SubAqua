@@ -60,15 +60,19 @@ function isUnderwaterTask(task: Task): boolean {
 // Outfit.equip() only accepts grimoire's narrower Equippable (no bare
 // OutfitSpec[]). No ladder source currently populates equip with an array of
 // specs, so this narrows for the compiler without changing behavior.
+// Returns true only if every outfit.equip() call it makes returns true — a
+// slot conflict (e.g. lasso-training already pinned pants) means the gear
+// didn't land, so callers must not provide the resource on a false return.
 function equipResource(
   outfit: Outfit,
   equipment: Item | Familiar | OutfitSpec | OutfitSpec[],
-): void {
+): boolean {
   if (Array.isArray(equipment)) {
-    for (const spec of equipment) outfit.equip(spec);
-  } else {
-    outfit.equip(equipment);
+    let ok = true;
+    for (const spec of equipment) ok = outfit.equip(spec) && ok;
+    return ok;
   }
+  return outfit.equip(equipment);
 }
 
 export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
@@ -114,21 +118,29 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (combat.can("banish")) {
       const banisher = pickBanishSource(location);
       if (banisher) {
-        if (banisher.equip) outfit.equip(banisher.equip);
-        resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+        // Provide only if the gear actually landed in the outfit — a silently
+        // stripped equip would sell a gearless macro as a banish; failing
+        // through to MyActionDefaults degrades loudly instead.
+        const equipped = banisher.equip ? outfit.equip(banisher.equip) : true;
+        if (equipped) {
+          resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+        }
       }
     }
     if (combat.can("killFree")) {
       const source = selectFreeKill({ location });
-      if (source) {
-        if (source.equip) equipResource(outfit, source.equip);
+      // Provide only if the gear actually landed in the outfit — a silently
+      // stripped equip would sell a gearless macro as a free kill; failing
+      // through to MyActionDefaults degrades loudly instead (killFree aborts).
+      if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
         resources.provide("killFree", { prepare: source.prepare, do: source.do });
       }
     }
     if (combat.can("freeRun")) {
       const source = selectFreeRun({ location });
-      if (source) {
-        if (source.equip) equipResource(outfit, source.equip);
+      // Same gating as killFree: don't provide a run macro over gear that
+      // didn't equip.
+      if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
         resources.provide("freeRun", { prepare: source.prepare, do: source.do });
       }
     }
@@ -136,17 +148,20 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
       const ray = selectYellowRay();
       if (ray) {
-        if (ray.equip) equipResource(outfit, ray.equip);
-        resources.provide(action, { do: ray.do });
+        if (ray.equip === undefined || equipResource(outfit, ray.equip)) {
+          resources.provide(action, { do: ray.do });
+        }
       } else if (
         action === "forceItems" &&
         (!location || saberAllowedAt(location)) &&
         forceGranted("free", location)
       ) {
         // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
-        this.propertyManager.setChoice(1387, 3);
-        outfit.equip($item`Fourth of May Cosplay Saber`);
-        resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+        // Only set the choice and provide if the saber actually equipped.
+        if (outfit.equip($item`Fourth of May Cosplay Saber`)) {
+          this.propertyManager.setChoice(1387, 3);
+          resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+        }
       }
     }
 

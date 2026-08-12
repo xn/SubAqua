@@ -972,7 +972,10 @@ export const freeRunSources: FreeRunSource[] = [
     remaining: () => (have($item`V for Vivala mask`) && !get("_vmaskBanisherUsed") ? 1 : 0),
     equip: $item`V for Vivala mask`,
     do: Macro.trySkill($skill`Creepy Grin`),
-    banishes: true,
+    // Creepy Grin does banish, but the ash spends it as a generic run
+    // (it's absent from CCS free_run()'s non-banish skip list, CCS:84) —
+    // ash parity over conserving the once-daily banish.
+    banishes: false,
   },
   {
     name: "Throw Latte on Opponent",
@@ -1334,21 +1337,29 @@ const location = task.do instanceof Location ? task.do : undefined;
 if (combat.can("banish")) {
   const banisher = pickBanishSource(location);
   if (banisher) {
-    if (banisher.equip) outfit.equip(banisher.equip);
-    resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+    // Provide only if the gear actually landed in the outfit — a silently
+    // stripped equip would sell a gearless macro as a banish; failing
+    // through to MyActionDefaults degrades loudly instead.
+    const equipped = banisher.equip ? outfit.equip(banisher.equip) : true;
+    if (equipped) {
+      resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+    }
   }
 }
 if (combat.can("killFree")) {
   const source = selectFreeKill({ location });
-  if (source) {
-    if (source.equip) outfit.equip(source.equip);
+  // Provide only if the gear actually landed in the outfit — a silently
+  // stripped equip would sell a gearless macro as a free kill; failing
+  // through to MyActionDefaults degrades loudly instead (killFree aborts).
+  if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
     resources.provide("killFree", { prepare: source.prepare, do: source.do });
   }
 }
 if (combat.can("freeRun")) {
   const source = selectFreeRun({ location });
-  if (source) {
-    if (source.equip) outfit.equip(source.equip);
+  // Same gating as killFree: don't provide a run macro over gear that
+  // didn't equip.
+  if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
     resources.provide("freeRun", { prepare: source.prepare, do: source.do });
   }
 }
@@ -1356,20 +1367,25 @@ if (combat.can("yellowRay") || combat.can("forceItems")) {
   const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
   const ray = selectYellowRay();
   if (ray) {
-    if (ray.equip) outfit.equip(ray.equip);
-    resources.provide(action, { do: ray.do });
+    if (ray.equip === undefined || equipResource(outfit, ray.equip)) {
+      resources.provide(action, { do: ray.do });
+    }
   } else if (
     action === "forceItems" &&
     (!location || saberAllowedAt(location)) &&
     forceGranted("free", location)
   ) {
     // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
-    this.propertyManager.setChoice(1387, 3);
-    outfit.equip($item`Fourth of May Cosplay Saber`);
-    resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+    // Only set the choice and provide if the saber actually equipped.
+    if (outfit.equip($item`Fourth of May Cosplay Saber`)) {
+      this.propertyManager.setChoice(1387, 3);
+      resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+    }
   }
 }
 ```
+
+`equipResource` is a local helper (already defined earlier in the file for the array-of-`OutfitSpec` case) that now returns `boolean`: `true` only if every `outfit.equip()` call it makes returns `true`. Sources with no `equip` field always provide — the ladder-provide gate above only calls `equipResource` when `source.equip` is defined.
 
 Add the imports this needs at the top of the file: `pickBanishSource` from `"../resources/banish"`, `selectFreeKill, selectYellowRay` from `"../resources/freekill"`, `selectFreeRun` from `"../resources/freerun"`, `forceGranted, saberAllowedAt` from `"../resources/saber"`, and add `$skill` to the existing `libram` import if not present. `Location`, `Macro`, `$item` are already imported. If tsc reports that `combat.can` does not exist, check the real method name in `node_modules/grimoire-kolmafia/dist/combat.d.ts` (it is declared as `can(action: A): boolean` at line 115) and report what you found.
 

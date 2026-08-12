@@ -21,6 +21,10 @@ export function saberAllowedAt(location: Location): boolean {
   return location !== $location`The Mer-Kin Outpost`;
 }
 
+/** `haveAnywhere` deliberately broadens the ash's inventory+equipped check
+ * (iotm.ash:121-132) — a payoff hat sitting in Hagnk's releases the 2-Force
+ * reservation because pulling it beats a 2-Force hunt; the pull itself is
+ * budgeted when Phase 3 does the pulling. */
 export function diverHuntActive(): boolean {
   return itemAmount($item`rusty rivet`) < 8 && !diverPayoffGear.some((it) => haveAnywhere(it));
 }
