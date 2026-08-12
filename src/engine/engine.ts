@@ -11,6 +11,7 @@ import {
   autosell,
   booleanModifier,
   canEquip,
+  cliExecute,
   equip,
   equippedAmount,
   Familiar,
@@ -35,9 +36,9 @@ import {
   have,
   Macro,
   PropertiesManager,
+  set,
   undelay,
   uneffect,
-  withProperty,
 } from "libram";
 
 import { pickBanishSource } from "../resources/banish";
@@ -87,13 +88,24 @@ function equipResource(
 // libram exports withProperty/withChoice scoped setters but no withMacro —
 // this mirrors grimoire's own combat-resolution mechanism (engine.js
 // setCombat(): write a "[default]" macro entry to a CCS file, point
-// customCombatScript at it) for the one-off dolphin-whistle fight in post(),
-// scoped with withProperty so the engine's own CCS pointer (grimoire_macro)
-// is restored before the next task's setCombat() runs.
+// customCombatScript at it, and cliExecute("ccs ...") to FORCE mafia to
+// reparse — the reparse is load-bearing (grimoire.js:250-260 comment), a bare
+// property write leaves the previous task's macro active) for the one-off
+// dolphin-whistle fight in post(). Restoring the property alone on the way
+// out is equally inert, so the restore also reparses back to grimoire's own
+// CCS pointer before the next task's setCombat() runs.
 const whistleCcsName = "subaqua_whistle";
 function withMacro(macro: Macro, action: () => void): void {
+  const priorCcs = get("customCombatScript");
   writeCcs(`[default]\n"${macro.toString()}"`, whistleCcsName);
-  withProperty("customCombatScript", whistleCcsName, action);
+  set("customCombatScript", whistleCcsName);
+  cliExecute(`ccs ${whistleCcsName}`);
+  try {
+    action();
+  } finally {
+    set("customCombatScript", priorCcs);
+    cliExecute(`ccs ${priorCcs}`);
+  }
 }
 
 export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
