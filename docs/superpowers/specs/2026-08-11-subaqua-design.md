@@ -395,7 +395,13 @@ all route/tier policy. `merkinQuestPath` is deliberately unmaintained in-path �
 ## 9. Route constraints from the wiki strategy guide
 
 Source: [11,037 Leagues Under the Sea/Strategy] (fetched 2026-08-11 via the MediaWiki API with a
-browser UA — CloudFront blocks non-browser agents). Constraints that shape task design:
+browser UA — CloudFront blocks non-browser agents).
+
+**Evaluation principle**: the script's objective is minimum total turns for the run. A wiki tip
+is a mechanic *fact*; it becomes a route *decision* only when it's net-turn-positive here, and
+many are conditional on tier policy (pull budgets, wish budgets, owned IOTMs) rather than
+unconditional. Bullets below record both the fact and the condition under which the route
+acts on it:
 
 - **Pearls are codpiece-smuggled, full stop.** The path requires five unblemished pearls; the
   September 1st nerfs made most quest items unpullable, and the ash's route assumes the pearls
@@ -415,25 +421,39 @@ browser UA — CloudFront blocks non-browser agents). Constraints that shape tas
   forced waits like Deep-Tainted Mind), and never schedules war turns *to get* Fishy. The
   Monodent's Summon a Wave (~10 turns of Fishy off free fights in CyberRealm/a Shadow Rift)
   is similarly only counted at its marginal cost.
-- **Damp old boot ordering trap**: the old SCUBA tank can only be bought from Big Brother
-  *before* the boot is turned in — and back-slot breathing is what frees hat+pants for the
-  sea cowboy hat + sea chaps during lasso training. The Old Guy task must sequence:
-  buy tank (if the outfit plan wants it) → turn in boot. (Elf Guard SCUBA tank is the
-  penalty-free softcore alternative.)
-- **Mining**: teflon ore never drops in rows 1–2 and only rarely row 3 — square selection from
-  `mineState3` prefers rows 4–6. Never `grandpa mine` (it adds a marine aquamarine sparkle
-  square that dilutes the teflon odds). Lodestone saves ~5 turns; minin' dynamite saves one.
-- **Ators Gonna Ate** (gymnasium NC): anomalous — it responds to combat-rate *increasers*, and
-  an active NC forcer is believed to *suppress* it. The gymnasium task must assert no NC force
-  is pending and may run +combat, inverting the usual NC-hunting outfit.
+- **Old SCUBA tank decision point (not an unconditional buy)**: the tank vanishes from Big
+  Brother's store once the damp old boot is turned in, so the *decision* must precede the
+  turn-in. Whether to buy is tier/plan policy: it costs sand dollars and carries a −item
+  penalty, and it only earns its keep if the lasso-training outfit actually needs back-slot
+  breathing to free hat+pants (sea cowboy hat + sea chaps are +2 lasso progress/toss) *and*
+  no cheaper breather covers it — Asdon Driving Waterproofly (high shiny), a pulled Elf Guard
+  SCUBA tank (softcore, penalty-free), or Mer-kin mask outfits. The Old Guy task evaluates
+  the policy, then turns in the boot.
+- **Mining**: spend no real turns if avoidable — the five daily Unaccompanied Miner picks are
+  free, the lodestone pull replaces ~5 of them, minin' dynamite saves one more; whether the
+  pull beats the free picks is tier pull-budget policy. Square selection from `mineState3`
+  prefers rows 4–6 (teflon ore never drops in rows 1–2, rarely 3). Never `grandpa mine` — the
+  marine aquamarine sparkle square dilutes teflon odds permanently.
+- **Ators Gonna Ate** (gymnasium NC): a mechanics anomaly to respect *if* the runplan hunts it —
+  it appears to respond to combat-rate *increasers*, and a pending NC forcer is believed to
+  suppress it (a known 176-wasted-turn trap). Encoded as task invariants (assert no NC force
+  pending; don't run −combat for it), while whether the NC is worth hunting at all is a
+  routing question settled in planning against its actual payout.
 - **Yog-Urt prep**: with three prayerbeads equipped, surviving ~2 rounds clears More Like a
-  Suckrament — sea gel + healscroll + waterlogged scroll suffice. Getting beaten up by Deep
-  Dark Visions is a sanctioned way to *lower* max HP toward the ≤311 guard.
-- **Shub-Jigguwatt weakens with each loss** — a retry ladder is viable, not just a failure
-  state. Delevel stock in-run: crayon shavings (4+ suffices), table tennis ball (Leprecondo),
-  Mer-kin mouthsoap, spare lasso/cowbell; a Comic Violence wish removes miss chance.
-- **Sneakmask/hidepaint are exempt from the −combat cap** — they stack past the usual limit for
-  outpost/grandpa NC hunting (why the route prizes them).
+  Suckrament — sea gel + healscroll + waterlogged scroll suffice. For the max-HP ≤311 guard,
+  a deliberate Deep Dark Visions beat-down is *available* — near-free only when DDV is being
+  cast anyway (it's the dreadScroll3 source) and the Beaten Up debuff won't taint upcoming
+  fights; otherwise the ash's burn-turns-elsewhere wait (which spends the turns on real route
+  work) remains the default. Choose per net cost at planning time.
+- **Shub-Jigguwatt weakens with each loss** — so a lost fight is a recovery path, not an abort.
+  The plan still optimizes to win on the first attempt (each loss costs a turn plus re-prep);
+  the retry ladder replaces the ash's abort-with-essay as the failure mode, it does not
+  replace prep. Delevel stock in-run: crayon shavings (4+ suffices), table tennis ball
+  (Leprecondo), Mer-kin mouthsoap, spare lasso/cowbell; a Comic Violence wish removes miss
+  chance at a wish's opportunity cost (tier policy).
+- **Sneakmask/hidepaint are exempt from the −combat cap** — mechanic fact making them
+  unusually strong for outpost/grandpa NC hunting. Acquiring them (pull, wish, or farm) is
+  priced per tier policy like any other resource, not assumed.
 - **Nautical Seaceress is a plain high-stats fight** (no gimmicks); Wet Crap For Sale stat
   buffs are the in-path lever.
 - **Softcore pull exceptions** (still pullable post-nerf, complements mafia's blocklist):
