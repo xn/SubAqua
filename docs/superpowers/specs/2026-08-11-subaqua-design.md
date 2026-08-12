@@ -17,7 +17,7 @@ pref names, and before hand-writing any game interaction, check whether libram a
 
 A **one-shot speedrun script for the 11,037 Leagues Under the Sea challenge path** (path id 55),
 written in TypeScript on grimoire-kolmafia/libram, for **public release**. It runs the path from
-initialization through the Nautical Sorceress with minimal resource waste. It is *not* a loop
+initialization through the Nautical Sorceress with minimal resource waste. It is _not_ a loop
 manager: no aftercore mode, no postloop pearl farming, no eagle-screech cleanup, no codpiece prep.
 
 ### Scope decisions (user, 2026-08-11)
@@ -25,7 +25,7 @@ manager: no aftercore mode, no postloop pearl farming, no eagle-screech cleanup,
 - **Full parity** with UnderTheSea.ash's in-path route, **except**:
   - `sim` stays a bare checklist (owned IOTMs/skills/familiars + Hagnk's pulls, tier verdict).
   - Postloop reduces to a single optional `postloopCommand=` arg (`cliExecute` after the finale).
-    The postloop *mode* and its features (eagle screech run-out, pearl farming, codpiece prep) are dropped.
+    The postloop _mode_ and its features (eagle screech run-out, pearl farming, codpiece prep) are dropped.
 - **Path only** — every `my_path().id == 0` (aftercore) branch is cut, including the boss prompt
   and the aftercore organ guards.
 - **Public release**, with **per-tier runplans**: each shiny tier gets its own composed task list
@@ -133,7 +133,7 @@ There is **no consult-script bundle** — see §5; dynamic combat runs in-proces
   `canAdventure()` already implements all sea-floor and deepcity gating
   (`KoLAdventure.seaFloorZoneAvailable`/`deepCityZoneAvailable`: class maps, `corralUnlocked`,
   black glass for the Abyss, `seahorseName` for deepcity, the temple-door state machine) and
-  auto-equips required Mer-kin outfits for temple zones. Mafia *refuses* underwater adventures
+  auto-equips required Mer-kin outfits for temple zones. Mafia _refuses_ underwater adventures
   without breathing gear rather than fixing them, which is exactly why our outfit layer
   enforces breathing first.
 - **Bounded loops**: every adventuring task has a `limit` (type-enforced). Intentional ash
@@ -169,7 +169,7 @@ routes diff as two arrays; a future plan (e.g. aftercore) is a new composition, 
 ## 4. Resources layer (iotm.ash port)
 
 All consulted through `customize()` or task `prepare`, never free-lanced from task bodies.
-These modules encode *this route's* priorities; libram owns the mechanics.
+These modules encode _this route's_ priorities; libram owns the mechanics.
 
 - **`saber.ts`** — explicit Force budget object: tasks request a purpose; module grants/refuses
   based on remaining charges and outstanding higher-priority purposes
@@ -226,7 +226,7 @@ state:
   the filter callback matches it and casts the counter skill granted by the equipped weapon
   (bladeswitcher: bust/sweat/sack → Ball Bust/Sweat/Sack; balldodger: gain/loss/neutrality →
   Net Gain/Loss/Neutrality; netdragger: sling/rolls/runner → Blade Sling/Roller/Runner).
-  **Caveat (wiki strategy)**: the nine counter skills must first be *learned* by landing enough
+  **Caveat (wiki strategy)**: the nine counter skills must first be _learned_ by landing enough
   critical hits with each weapon — so the primary kill plan stays the ash's spell route
   (Saucegeyser with the lantern spell-damage coefficient maximize), with telegraph counters
   used opportunistically when known, and the ash's sea-gel/unguent stall regime as the response
@@ -263,7 +263,7 @@ state:
 - The elementary queue is maintained in exactly one place (choice script), fixing the ash's
   two-site duplication.
 
-**`lib/dreadscroll.ts`** owns *decisions only* — mafia already owns the clue data
+**`lib/dreadscroll.ts`** owns _decisions only_ — mafia already owns the clue data
 (source-verified, `DreadScrollManager.java`): all eight clues are parsed automatically into
 `dreadScroll1..8` (choice 704 → 1/6/8; fights → 2/5; Deep Dark Visions → 3; knucklebone → 4;
 worktea sushi → 7), failed guesses land in `dreadScrollGuesses` as `<8-digit-guess>:<n-correct>`
@@ -276,7 +276,7 @@ handling the vocabulary-dependent option reordering. No custom clue store; the a
 - Engine `post()` narrowing hook: exactly one candidate remaining → write the remaining
   `dreadScroll<n>` prefs (ash `dreadSeedCheck()`).
 - `isKnucklebonesAndSushiEnough()` gates the long cheatsheet/vocabulary route vs the short branch.
-- Choice 703 answer *selection and submission* (mafia records but never solves): the salvaged
+- Choice 703 answer _selection and submission_ (mafia records but never solves): the salvaged
   expected-wrong-positions constraint solver over candidates + `dreadScrollGuesses`.
 - Route decisions from clue coverage (which spading tasks are still needed).
 - `godRunGuard` (arg-gated as in ash): at ≤ 17 turns played with clue 7 unknown, eat worktea
@@ -326,7 +326,7 @@ section is the authority when it conflicts with ash-derived assumptions elsewher
 - **Lasso training**: `lassoTrainingCount` (0–20) is fully mafia-maintained, including the
   +1 sea cowboy hat and +1 sea chaps bonuses. `lassoTraining` holds the quality tier.
 - **Lockkey → stashbox**: `merkinLockkeyMonster` is set on the lockkey drop and mafia
-  auto-writes `choiceAdventure312` to match. Choices 313–315 have *no* mafia tracking — the
+  auto-writes `choiceAdventure312` to match. Choices 313–315 have _no_ mafia tracking — the
   stashbox search rotation stays ours (choice script).
 - **Colosseum**: `lastColosseumRoundWon` (self-correcting — re-derived from the round header on
   entry), `isMerkinGladiatorChampion`, the `% 3` weapon rotation (§5). Gladiator monster stats
@@ -337,7 +337,7 @@ section is the authority when it conflicts with ash-derived assumptions elsewher
 - **Dreadscroll clues** (§6): `dreadScroll1..8`, `dreadScrollGuesses`, `merkinCatalogChoices`.
 - **Copy/wanderer chains**: `_monsterHabitatsMonster`/`_monsterHabitatsFightsLeft` (reliable),
   `_saberForceMonster(Count)`, `rwbMonsterCount`. Macrometeorite / Powerful Glove re-rolls are
-  *not* tracked — re-read `last_monster()` after a re-roll.
+  _not_ tracked — re-read `last_monster()` after a re-roll.
 - **Dolphin steals**: `dolphinItem` holds what was stolen; durable dolphin whistle uses/day
   equals `seaPoints`.
 - **Boss facts** (monsters.txt): Yog-Urt is **Phys: 100** (spells only), Shub-Jigguwatt
@@ -356,15 +356,15 @@ section is the authority when it conflicts with ash-derived assumptions elsewher
 - **Skate park**: `cliExecute("skate lutz")` etc.; `skateParkStatus` + `_skateBuff1..5` tracked.
 - **Mom buffs**: `mom` CLI / `MomRequest`; `_momFoodReceived`.
 - **Codpiece**: modeled as slots `codpiece1..5`, and libram ships an `EternityCodpiece` module
-  (`currentGems()`, `equippable()`, per-gem `modifiers()`) — use it for *reading* state.
+  (`currentGems()`, `equippable()`, per-gem `modifiers()`) — use it for _reading_ state.
   **But mounting via `equip()` is unreliable**: mafia's codpiece slot state goes stale and
   `equip()` no-ops on slots it wrongly believes are filled (user-verified in practice). The
   proven pattern (see `/Users/xn/sites/KOL/loop/src/tasks/thesea.ts` "Socket Pearls") drives
   the codpiece page directly — `visitUrl("inventory.php?action=docodpiece")`, trust only the
   page's `mounted in slot #N` text, pop blockers with `choice.php?whichchoice=1588&option=2&
-  which=N`, mount with `option=1&which=N&iid=`, then `cliExecute("refresh inv")` and re-verify
+which=N`, mount with `option=1&which=N&iid=`, then `cliExecute("refresh inv")` and re-verify
   from a fresh page fetch. Removal via `unequip(slot)` works (the loop repo's `pryPearls()`).
-  The maximizer does *not* fill these slots; gem selection is ours (`init.ts`/outfit layer).
+  The maximizer does _not_ fill these slots; gem selection is ours (`init.ts`/outfit layer).
 - **Autumn-aton**: `cliExecute("autumnaton send <zone>")` — the option-list hand-parse is dead.
 - **2002 Mr. Store Catalog is a coinmaster** (`availableMrStore2002Credits`); mimic-egg DNA lab
   counters (`mimicEggMonsters`, `_mimicEggsObtained/Donated`) are mafia-maintained (libram
@@ -390,7 +390,7 @@ section is the authority when it conflicts with ash-derived assumptions elsewher
 
 ### Still ours (confirmed gaps)
 
-Outpost stashbox rotation (313–315), dreadscroll answer *solving* (703), seedfinder seed math,
+Outpost stashbox rotation (313–315), dreadscroll answer _solving_ (703), seedfinder seed math,
 mining square choice, trainset/tot/baseball submissions listed above, codpiece gem choice, and
 all route/tier policy. `merkinQuestPath` is deliberately unmaintained in-path — gate on
 `isMerkinGladiatorChampion`/`isMerkinHighPriest`/`shubJigguwattDefeated`/`yogUrtDefeated`.
@@ -401,7 +401,7 @@ Source: [11,037 Leagues Under the Sea/Strategy] (fetched 2026-08-11 via the Medi
 browser UA — CloudFront blocks non-browser agents).
 
 **Evaluation principle**: the script's objective is minimum total turns for the run. A wiki tip
-is a mechanic *fact*; it becomes a route *decision* only when it's net-turn-positive here, and
+is a mechanic _fact_; it becomes a route _decision_ only when it's net-turn-positive here, and
 many are conditional on tier policy (pull budgets, wish budgets, owned IOTMs) rather than
 unconditional. Bullets below record both the fact and the condition under which the route
 acts on it:
@@ -411,24 +411,24 @@ acts on it:
   arrive pre-loaded (`UnderTheSea.ash:1024` — in-run resistance "only matters for farming
   unblemished pearls and those are smuggled in via the codpiece"). SubAqua adds an explicit
   **init guard**: count pearls across codpiece slots (libram `EternityCodpiece.currentGems()`)
-  + inventory, abort at turn 0 with instructions if short (better than the ash's silent wall at
-  the center door). In-run pearl farming is a possible future runplan, not current scope.
-  In-run, pearls are popped out of the codpiece via `unequip(slot)` to free slots for gems
-  (BCZ, peridot, heartstone); re-mounting anything follows the §8 socketing pattern.
+  - inventory, abort at turn 0 with instructions if short (better than the ash's silent wall at
+    the center door). In-run pearl farming is a possible future runplan, not current scope.
+    In-run, pearls are popped out of the codpiece via `unequip(slot)` to free slots for gems
+    (BCZ, peridot, heartstone); re-mounting anything follows the §8 socketing pattern.
 - **Fishy economics are net-turn, not turns-of-Fishy**: `maintainFishy()` ranks sources by
-  *marginal turns spent*, since the whole point of Fishy is halving underwater turn cost.
+  _marginal turns spent_, since the whole point of Fishy is halving underwater turn cost.
   Fishy pipe costs 0 turns; the Brinier Deepers Lucky! costs 1 turn + a Lucky! source; the
   Skate Park war resolution (choice 403, **skate blade equipped**) grants 30 turns but its
   war turns are only free because the route resolves the skate park anyway — so the ladder
   takes it opportunistically when the war completes (choosing blade over key, ideally during
-  forced waits like Deep-Tainted Mind), and never schedules war turns *to get* Fishy. The
+  forced waits like Deep-Tainted Mind), and never schedules war turns _to get_ Fishy. The
   Monodent's Summon a Wave (~10 turns of Fishy off free fights in CyberRealm/a Shadow Rift)
   is similarly only counted at its marginal cost.
 - **Old SCUBA tank decision point (not an unconditional buy)**: the tank vanishes from Big
-  Brother's store once the damp old boot is turned in, so the *decision* must precede the
+  Brother's store once the damp old boot is turned in, so the _decision_ must precede the
   turn-in. Whether to buy is tier/plan policy: it costs sand dollars and carries a −item
   penalty, and it only earns its keep if the lasso-training outfit actually needs back-slot
-  breathing to free hat+pants (sea cowboy hat + sea chaps are +2 lasso progress/toss) *and*
+  breathing to free hat+pants (sea cowboy hat + sea chaps are +2 lasso progress/toss) _and_
   no cheaper breather covers it — Asdon Driving Waterproofly (high shiny), a pulled Elf Guard
   SCUBA tank (softcore, penalty-free), or Mer-kin mask outfits. The Old Guy task evaluates
   the policy, then turns in the boot.
@@ -437,14 +437,14 @@ acts on it:
   pull beats the free picks is tier pull-budget policy. Square selection from `mineState3`
   prefers rows 4–6 (teflon ore never drops in rows 1–2, rarely 3). Never `grandpa mine` — the
   marine aquamarine sparkle square dilutes teflon odds permanently.
-- **Ators Gonna Ate** (gymnasium NC): a mechanics anomaly to respect *if* the runplan hunts it —
-  it appears to respond to combat-rate *increasers*, and a pending NC forcer is believed to
+- **Ators Gonna Ate** (gymnasium NC): a mechanics anomaly to respect _if_ the runplan hunts it —
+  it appears to respond to combat-rate _increasers_, and a pending NC forcer is believed to
   suppress it (a known 176-wasted-turn trap). Encoded as task invariants (assert no NC force
   pending; don't run −combat for it), while whether the NC is worth hunting at all is a
   routing question settled in planning against its actual payout.
 - **Yog-Urt prep**: with three prayerbeads equipped, surviving ~2 rounds clears More Like a
   Suckrament — sea gel + healscroll + waterlogged scroll suffice. For the max-HP ≤311 guard,
-  a deliberate Deep Dark Visions beat-down is *available* — near-free only when DDV is being
+  a deliberate Deep Dark Visions beat-down is _available_ — near-free only when DDV is being
   cast anyway (it's the dreadScroll3 source) and the Beaten Up debuff won't taint upcoming
   fights; otherwise the ash's burn-turns-elsewhere wait (which spends the turns on real route
   work) remains the default. Choose per net cost at planning time.
@@ -463,14 +463,14 @@ acts on it:
   shark jumper, scale-mail underwear, sea lasso, sea cowbell, Mer-kin knucklebone / wordquiz /
   cheatsheet / prayerbeads.
 - **Monodent synergies** worth encoding: Talk to Some Fish halves lasso training (throw the
-  lasso both before *and* after casting); BCZ Refracted Gaze pairs with Talk to Some Fish so
+  lasso both before _and_ after casting); BCZ Refracted Gaze pairs with Talk to Some Fish so
   the current monster's drops aren't lost.
 
 ## Flagged items
 
 1. **README/code discrepancy in the ash**: README says high shiny requires an Asdon workshed;
    `highShiny()` (UnderTheSea.ash:171-176) only checks `garbo_valueOfFreeFight >
-   valueOfAdventure`. We ship the code's rule and document it.
+valueOfAdventure`. We ship the code's rule and document it.
 2. **Colosseum telegraphs** (resolved 2026-08-11): mafia's `FightDecorator`/`RelayRequest`/
    `QuestManager` sources document the deterministic opponent schedule, telegraph keywords, and
    counter skills — the common path needs no mid-round refetch. Only the fallback stall regime
@@ -486,5 +486,5 @@ acts on it:
 - No unit-testable mafia runtime; correctness comes from: `yarn check` (tsc), `yarn lint`
   (eslint-plugin-libram validates all `$item`/`$effect`/… names), and **incremental live runs**
   on the user's account as phases land, using `actions=N`, `list`, and re-entrancy.
-- Pure logic that *can* be tested without mafia (dreadscroll seed math, Shub delevel factors,
+- Pure logic that _can_ be tested without mafia (dreadscroll seed math, Shub delevel factors,
   pull bookkeeping) should be written mafia-free so it can get real unit tests later if wanted.

@@ -4,7 +4,7 @@
 
 **Goal:** Replace the stale SubAqua source with the spec's foundation: clean args, tier detection, a correct grimoire Engine subclass with underwater-breathing enforcement, the sim checklist, the choice-script and relay bundles, and a main entry that runs an (empty, for now) per-tier runplan.
 
-**Architecture:** Per `docs/superpowers/specs/2026-08-11-subaqua-design.md` (read it first — especially §1–§2, §7, §8). This phase builds everything *except* the resources layer (Phase 2), the quest tasks (Phase 3), and the sorceress endgame (Phase 4). The old source is one giant "wip" commit; salvaged code is retrieved from git history (`git show a8c4168:<path>`), fixed per the spec, and everything else is deleted.
+**Architecture:** Per `docs/superpowers/specs/2026-08-11-subaqua-design.md` (read it first — especially §1–§2, §7, §8). This phase builds everything _except_ the resources layer (Phase 2), the quest tasks (Phase 3), and the sorceress endgame (Phase 4). The old source is one giant "wip" commit; salvaged code is retrieved from git history (`git show a8c4168:<path>`), fixed per the spec, and everything else is deleted.
 
 **Tech Stack:** TypeScript on grimoire-kolmafia 0.3.33 / libram 0.11.23 / kolmafia typings, bundled by rollup (three CJS bundles targeting Rhino 1.8.0), yarn 4.
 
@@ -46,11 +46,13 @@ src/
 ### Task 1: Clean slate + minimal building stub
 
 **Files:**
+
 - Delete: everything under `src/`, plus `prefs.txt`, `webpack.config.js`
 - Create: `src/main.ts` (stub)
 - Modify: `rollup.config.ts:46-53` (single bundle for now)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: a repo where `yarn check && yarn lint && yarn build` all pass; later tasks re-add files.
 
@@ -95,9 +97,11 @@ git add -A && git commit -m "chore: clean slate for foundation rebuild"
 ### Task 2: Args
 
 **Files:**
+
 - Create: `src/args.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `export const args` with fields `command: string` ("run"|"sim"), `tier: string` ("auto"|"low"|"mid"|"high"), `buyLimit: number | undefined`, `postloopCommand: string`, `godRunGuard: boolean`, `list: boolean`, `actions: number | undefined`, `version: boolean`, `help: boolean` (auto). Positional arg: `command`.
 
@@ -167,9 +171,11 @@ git add src/args.ts && git commit -m "feat: rebuilt args (only consumed options)
 ### Task 3: Tier detection + lib
 
 **Files:**
+
 - Create: `src/lib/tier.ts`, `src/lib/index.ts`
 
 **Interfaces:**
+
 - Consumes: `args` from Task 2.
 - Produces: `type Tier = "low" | "mid" | "high"`, `detectTier(): Tier`, `currentTier(): Tier` (honors `args.tier` override, memoizes, writes `_subaqua_tier`), `buyLimit(): number`. `lib/index.ts` re-exports tier plus a `debug(msg)` print helper.
 
@@ -204,9 +210,7 @@ let cachedTier: Tier | undefined;
 export function currentTier(): Tier {
   if (cachedTier === undefined) {
     cachedTier =
-      args.tier === "low" || args.tier === "mid" || args.tier === "high"
-        ? args.tier
-        : detectTier();
+      args.tier === "low" || args.tier === "mid" || args.tier === "high" ? args.tier : detectTier();
     set("_subaqua_tier", cachedTier);
   }
   return cachedTier;
@@ -247,11 +251,13 @@ git add src/lib && git commit -m "feat: tier detection and shared lib helpers"
 ### Task 4: Task types + combat action taxonomy
 
 **Files:**
+
 - Create: `src/engine/task.ts`, `src/engine/combat.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
-- Produces: `type Task` (grimoire task + required `limit`, optional `peridot`, `underwater`, `freeaction`, `combat`), `type Quest`, `type CombatActions`, `class CombatStrategy`, `class MyActionDefaults`, `killMacro(hard?: boolean): Macro`, `runMacro(): Macro`. Phase 2's resource layer will *resolve* actions like `banish`/`killFree`; until then defaults degrade explicitly (banish→kill, killFree→abort) exactly as documented in the class.
+- Produces: `type Task` (grimoire task + required `limit`, optional `peridot`, `underwater`, `freeaction`, `combat`), `type Quest`, `type CombatActions`, `class CombatStrategy`, `class MyActionDefaults`, `killMacro(hard?: boolean): Macro`, `runMacro(): Macro`. Phase 2's resource layer will _resolve_ actions like `banish`/`killFree`; until then defaults degrade explicitly (banish→kill, killFree→abort) exactly as documented in the class.
 
 - [ ] **Step 1: Write `src/engine/task.ts`** (salvage, unchanged shape)
 
@@ -391,11 +397,13 @@ git add src/engine && git commit -m "feat: task types and combat action taxonomy
 ### Task 5: Outfit module — single source of breathing truth
 
 **Files:**
+
 - Create: `src/engine/outfit.ts`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
-- Produces: `waterBreathingEquipment: Item[]`, `familiarWaterBreathingEquipment: Item[]`, `canBreatheUnderwater(): boolean`, `hasBreathingEffect(): boolean`, `isTrainingLasso(): boolean`, `preferredBreathingGear(): Item[]`, `bestFamUnderwaterGear(fam: Familiar): Item`, `chooseFamiliar(): Familiar`. This is the *only* module allowed to define these lists (spec fix for the old repo's three copies).
+- Produces: `waterBreathingEquipment: Item[]`, `familiarWaterBreathingEquipment: Item[]`, `canBreatheUnderwater(): boolean`, `hasBreathingEffect(): boolean`, `isTrainingLasso(): boolean`, `preferredBreathingGear(): Item[]`, `bestFamUnderwaterGear(fam: Familiar): Item`, `chooseFamiliar(): Familiar`. This is the _only_ module allowed to define these lists (spec fix for the old repo's three copies).
 
 - [ ] **Step 1: Write `src/engine/outfit.ts`**
 
@@ -446,9 +454,7 @@ export function canBreatheUnderwater(): boolean {
  * so back-slot SCUBA tanks jump the breathing-preference queue. */
 export function isTrainingLasso(): boolean {
   return (
-    get("lassoTraining") !== "expertly" &&
-    get("lassoTrainingCount") < 20 &&
-    have($item`sea lasso`)
+    get("lassoTraining") !== "expertly" && get("lassoTrainingCount") < 20 && have($item`sea lasso`)
   );
 }
 
@@ -521,9 +527,11 @@ git add src/engine/outfit.ts && git commit -m "feat: outfit module with single b
 ### Task 6: SubAquaEngine
 
 **Files:**
+
 - Create: `src/engine/engine.ts`
 
 **Interfaces:**
+
 - Consumes: `Task` (Task 4), `CombatActions`/`MyActionDefaults` (Task 4), breathing helpers (Task 5).
 - Produces: `class SubAquaEngine extends Engine<CombatActions, Task>` with grimoire's **stock scheduling** (no `getNextTask` override — the old one silently broke every `after` dependency), overriding: `customize` (peridot equip + lasso-training macro/gear + breathing enforcement), `createOutfit` (defensive stripping of un-owned gear), `dress` (last-chance breathing equip + verify), `do` (Peridot choice-1557 targeting), `post` (lost-combat abort / Beaten Up cleanup), `setChoices` (outpost 315 rotation + June cleaver safety), `initPropertiesManager` (restorer bans, choice script registration).
 
@@ -796,10 +804,12 @@ git add src/engine/engine.ts && git commit -m "feat: SubAquaEngine with stock sc
 ### Task 7: Choice script bundle
 
 **Files:**
+
 - Create: `src/standalone/choice.ts`
 - Modify: `rollup.config.ts` (add the bundle entry back)
 
 **Interfaces:**
+
 - Consumes: nothing at runtime from the main bundle (separate interpreter — state via prefs only).
 - Produces: `subaqua_choice.js` registered by the engine (Task 6). Handles: generic safety choices, dart perks (1525), Möbius (1562), dreadscroll solve/submit (703), catalog card (704), outpost 312/315, Economist of Scales (310), 1565, doctor bag (1340), tavern (496/513/514/515), NEP (1322), Random Lack (182), Hidden City + Black Forest leftovers.
 
@@ -823,24 +833,24 @@ and remove `abort` from the `kolmafia` import list.
 **(b)** Choice 312 must defer to mafia's lockkey auto-answer (spec §8) — replace `runChoice(3);` in the `choice === 312` branch with:
 
 ```ts
-    // Mafia writes choiceAdventure312 (1/2/3) when the lockkey drops; 3 = healer default.
-    const lockkeyChoice = parseInt(getProperty("choiceAdventure312") || "3");
-    runChoice(lockkeyChoice >= 1 && lockkeyChoice <= 3 ? lockkeyChoice : 3);
+// Mafia writes choiceAdventure312 (1/2/3) when the lockkey drops; 3 = healer default.
+const lockkeyChoice = parseInt(getProperty("choiceAdventure312") || "3");
+runChoice(lockkeyChoice >= 1 && lockkeyChoice <= 3 ? lockkeyChoice : 3);
 ```
 
 **(c)** Bound the 315 stashbox rotation (the unbounded counter eventually submits invalid options) — replace the `choice === 315` branch body with:
 
 ```ts
-    const encounters = get("_subaqua_outpost_choices", 0);
-    set("_subaqua_outpost_choices", encounters + 1);
-    runChoice((encounters % 3) + 1);
+const encounters = get("_subaqua_outpost_choices", 0);
+set("_subaqua_outpost_choices", encounters + 1);
+runChoice((encounters % 3) + 1);
 ```
 
 **(d)** In the 704 branch, delete the debug `print(page);` line and add a fallback after the loop so the handler always answers (spec §6 invariant):
 
 ```ts
-    // All entries known: take the first card (stats) rather than stalling the choice.
-    runChoice(1);
+// All entries known: take the first card (stats) rather than stalling the choice.
+runChoice(1);
 ```
 
 - [ ] **Step 3: Re-add the bundle entry** — in `rollup.config.ts`, the `bundles` array becomes:
@@ -856,7 +866,7 @@ const bundles: Array<{ input: Record<string, string>; dir: string }> = [
 ```
 
 - [ ] **Step 4: Verify** — Run: `yarn check && yarn lint && yarn build`
-Expected: pass; `dist/KoLmafia/scripts/subaqua/subaqua_choice.js` exists. If lint flags unused imports after edit (a), remove them.
+      Expected: pass; `dist/KoLmafia/scripts/subaqua/subaqua_choice.js` exists. If lint flags unused imports after edit (a), remove them.
 
 - [ ] **Step 5: Commit**
 
@@ -870,10 +880,12 @@ git commit -m "feat: choice script salvaged with 312/315/704 fixes"
 ### Task 8: Relay bundle
 
 **Files:**
+
 - Create: `src/relay.ts`
 - Modify: `rollup.config.ts` (add the relay entry back)
 
 **Interfaces:**
+
 - Consumes: `args` (Task 2) via `Args.getMetadata` traversal.
 - Produces: `relay_subaqua.js` — settings UI reflecting whatever `args.ts` declares.
 
@@ -902,7 +914,7 @@ Then remove the workshed hack (new args has no workshed option): delete the impo
 ```
 
 - [ ] **Step 3: Verify** — Run: `yarn check && yarn lint && yarn build`
-Expected: pass; `dist/KoLmafia/relay/relay_subaqua.js` exists.
+      Expected: pass; `dist/KoLmafia/relay/relay_subaqua.js` exists.
 
 - [ ] **Step 4: Commit**
 
@@ -915,9 +927,11 @@ git add src/relay.ts rollup.config.ts && git commit -m "feat: relay settings UI 
 ### Task 9: Sim checklist
 
 **Files:**
+
 - Create: `src/sim.ts`
 
 **Interfaces:**
+
 - Consumes: `detectTier` (Task 3).
 - Produces: `printSimChecklist(): void` — no purchases, no turns, no server writes. Called by `main.ts` (Task 10).
 
@@ -1028,10 +1042,12 @@ git add src/sim.ts && git commit -m "feat: sim readiness checklist"
 ### Task 10: Runplan skeleton + full main wiring
 
 **Files:**
+
 - Create: `src/tasks/runplans.ts`
 - Modify: `src/main.ts` (replace the stub)
 
 **Interfaces:**
+
 - Consumes: `args` (2), `currentTier`/`Tier`/`debug` (3), `Task` (4), `SubAquaEngine` (6), `printSimChecklist` (9).
 - Produces: `buildRunplan(tier: Tier): Task[]` (empty this phase; Phases 3–4 fill it), and the real `main()`. Deliverable: `subaqua sim` works anywhere; `subaqua` in-path reports an empty route and exits cleanly; `subaqua list` prints the (empty) plan.
 
@@ -1138,7 +1154,7 @@ export function main(command = ""): void {
 ```
 
 - [ ] **Step 3: Verify** — Run: `yarn check && yarn lint && yarn build`
-Expected: all pass; three bundles in `dist/`.
+      Expected: all pass; three bundles in `dist/`.
 
 - [ ] **Step 4: Smoke test (user, in mafia)**
 
