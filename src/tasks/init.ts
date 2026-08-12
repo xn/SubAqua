@@ -40,11 +40,10 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
  * discretionaryPull (low shiny farms instead, spec §3/§4). The CMOI is
  * never bought — ash aborts "Get yer own CMOI" (UTS:1137-1138); we simply
  * skip it unless it is already in Hagnk's. */
-const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Flash Liquidizer Ultra Dousing Accessory`;
-// "Sword of S Words" (familiar #330) is a real, correctly-spelled familiar added in kolmafia's
-// src/data/familiars.txt (2026-06-01); the bundled eslint-plugin-libram data snapshot predates
-// it, so its name-verification rule false-positives here (see src/sim.ts for the same note).
-// eslint-disable-next-line libram/verify-constants
+// Elf Guard SCUBA tank is pullable in-path (not on InventoryManager.pullableInSeaPath's
+// blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
+// spec §3/§4's softcore exceptions list confirms it.
+const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Flash Liquidizer Ultra Dousing Accessory, Elf Guard SCUBA tank`;
 const swordOfSWords = $familiar`Sword of S Words`;
 
 export function initQuest(): Quest {

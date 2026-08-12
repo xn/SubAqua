@@ -1,4 +1,4 @@
-import { cliExecute, use } from "kolmafia";
+import { cliExecute, use, visitUrl } from "kolmafia";
 import { $item, get, have } from "libram";
 
 import { Quest } from "../../engine/task";
@@ -20,6 +20,10 @@ export function currentsQuest(): Quest {
           if (have($item`Mer-kin stashbox`)) use($item`Mer-kin stashbox`);
           if (have($item`Mer-kin trailmap`)) use($item`Mer-kin trailmap`);
           cliExecute("grandpa currents");
+          // Mafia only sets intenseCurrents/map prefs from a seafloor.php page
+          // load (QuestManager.handleSeaChange); a single visitUrl("seafloor.php")
+          // re-syncs the map/zone prefs cheaply (spec §8).
+          visitUrl("seafloor.php");
         },
         underwater: true,
         freeaction: true,

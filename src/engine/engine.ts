@@ -216,7 +216,19 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       if (!hasBreathingGearInOutfit) {
         const breather = preferredBreathingGear().find((item) => have(item));
         if (!breather) throw `Unable to provide player water breathing for ${task.name}`;
-        outfit.equip(breather);
+        if (!outfit.equip(breather)) {
+          // Lasso training pins the hat slot with the sea cowboy hat (see
+          // above); if the only breather on hand is itself a hat-slot item
+          // (e.g. a freshly crafted aerated diving helmet), the equip above
+          // fails silently. Release the pinned hat and retry — chaps alone
+          // still trains the lasso at +2/toss.
+          if (outfit.equips.get($slot`hat`) === $item`sea cowboy hat`) {
+            outfit.equips.delete($slot`hat`);
+          }
+          if (!outfit.equip(breather)) {
+            throw `Unable to provide player water breathing for ${task.name}`;
+          }
+        }
       }
 
       if (outfit.familiar && !outfit.familiar.underwater) {

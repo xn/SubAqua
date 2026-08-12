@@ -25,10 +25,6 @@ const cow = $monster`sea cow`;
 const seahorse = $monster`wild seahorse`;
 const cowbell = $item`sea cowbell`;
 const lasso = $item`sea lasso`;
-// "Sword of S Words" (familiar #330) is a real, correctly-spelled familiar in kolmafia's
-// src/data/familiars.txt; the bundled eslint-plugin-libram data snapshot predates it, so its
-// name-verification rule false-positives here (same note as src/tasks/init.ts / guild.ts).
-// eslint-disable-next-line libram/verify-constants
 const sword = $familiar`Sword of S Words`;
 
 /** Ash doneWithSeaCow (UTS:1446-1453). */

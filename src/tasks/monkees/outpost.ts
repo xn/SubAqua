@@ -26,6 +26,24 @@ export function outpostQuest(): Quest {
     name: "Outpost",
     tasks: [
       {
+        // Runs BEFORE "Outpost Grandma" in list order: grimoire picks the
+        // first available task, and Outpost Grandma stays available (ready
+        // step>=6, not completed until step>=9) through steps 6-8. This task's
+        // own ready() only fires once the Note + both yarns are in hand, so it
+        // is a no-op until it's needed and then preempts the grind exactly
+        // when `grandpa note` must run to produce Grandma's Map for step 9.
+        name: "Grandma Note",
+        ready: () =>
+          have($item`Grandma's Note`) &&
+          have($item`Grandma's Fuchsia Yarn`) &&
+          have($item`Grandma's Chartreuse Yarn`),
+        completed: () => have($item`Grandma's Map`) || monkeesStep() >= 8,
+        do: () => void cliExecute("grandpa note"),
+        underwater: true,
+        freeaction: true,
+        limit: { tries: 2 },
+      },
+      {
         // Grandma rescue rides the same turns: Note (step7) and yarns drop
         // in-zone, the map (step8) comes from `grandpa note`, and step9 is
         // the "Phew, that was a close one" adventure result
@@ -39,18 +57,6 @@ export function outpostQuest(): Quest {
         effects: itemDropEffects,
         prepare: () => recover(),
         limit: { soft: 30, message: "Grandma's rescue is stalling; check the outpost drops." },
-      },
-      {
-        name: "Grandma Note",
-        ready: () =>
-          have($item`Grandma's Note`) &&
-          have($item`Grandma's Fuchsia Yarn`) &&
-          have($item`Grandma's Chartreuse Yarn`),
-        completed: () => have($item`Grandma's Map`) || monkeesStep() >= 8,
-        do: () => void cliExecute("grandpa note"),
-        underwater: true,
-        freeaction: true,
-        limit: { tries: 2 },
       },
       {
         // Farm on until the lockkey drops (any of burglar/raider/healer can
@@ -100,7 +106,11 @@ export function outpostQuest(): Quest {
         // purpose is exempt from the outpost saber ban, Task 1). Yog-Urt
         // prep wants 3 equipped beads (spec §9).
         name: "Prayerbeads",
-        ready: () => monkeesStep() >= 9,
+        // Post-currents the outpost hut NC is the beads shop and -combat is
+        // productive; farming beads before `intenseCurrents` is told wastes
+        // the hut NC roll (earlier bead income still flows from the grind
+        // kills and the 315 shop branch).
+        ready: () => monkeesStep() >= 9 && get("intenseCurrents"),
         completed: () => availableAmount(beads) >= 3,
         do: outpost,
         saberPurpose: "healer",

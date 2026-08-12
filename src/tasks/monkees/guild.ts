@@ -6,10 +6,6 @@ import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
 import { summon, summonsAvailable } from "../../resources/summon";
 
-// "Sword of S Words" (familiar #330) is a real, correctly-spelled familiar in kolmafia's
-// src/data/familiars.txt; the bundled eslint-plugin-libram data snapshot predates it, so its
-// name-verification rule false-positives here (same note as src/tasks/init.ts / src/sim.ts).
-// eslint-disable-next-line libram/verify-constants
 const sword = $familiar`Sword of S Words`;
 const payphone = $item`closed-circuit pay phone`;
 

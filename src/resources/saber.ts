@@ -1,5 +1,5 @@
 import { availableAmount, itemAmount, Location } from "kolmafia";
-import { $item, $items, $location, get } from "libram";
+import { $item, $items, $location, get, have } from "libram";
 
 import { haveAnywhere } from "../lib";
 
@@ -21,12 +21,22 @@ export function saberAllowedAt(location: Location): boolean {
   return location !== $location`The Mer-Kin Outpost`;
 }
 
-/** `haveAnywhere` deliberately broadens the ash's inventory+equipped check
- * (iotm.ash:121-132) — a payoff hat sitting in Hagnk's releases the 2-Force
- * reservation because pulling it beats a 2-Force hunt; the pull itself is
- * budgeted when Phase 3 does the pulling. */
+/** Four of the five payoff items (aerated diving helmet, Mer-kin
+ * gladiator/scholar masks, crappy Mer-kin mask) sit on mafia's in-path pull
+ * blocklist (InventoryManager.pullableInSeaPath) — a storage copy is
+ * unreachable, so only inventory/equipped (`have`) releases the reservation
+ * for those. The fifth, Elf Guard SCUBA tank, is pullable in-path, so
+ * `haveAnywhere` (inventory/equipped/storage) is correct for it: a storage
+ * copy really does mean pulling it beats a 2-Force hunt, and Phase 3's
+ * seaGearPulls (tasks/init.ts) budgets that pull. */
 export function diverHuntActive(): boolean {
-  return itemAmount($item`rusty rivet`) < 8 && !diverPayoffGear.some((it) => haveAnywhere(it));
+  const scubaTank = $item`Elf Guard SCUBA tank`;
+  const blocklisted = diverPayoffGear.filter((it) => it !== scubaTank);
+  return (
+    itemAmount($item`rusty rivet`) < 8 &&
+    !blocklisted.some((it) => have(it)) &&
+    !haveAnywhere(scubaTank)
+  );
 }
 
 export function prayerbeadsShort(): boolean {
