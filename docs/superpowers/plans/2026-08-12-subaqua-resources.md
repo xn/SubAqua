@@ -1235,7 +1235,9 @@ export const ncForceSources: NCForceSource[] = [
       !pulledToday($item`Clara's bell`) &&
       (have($item`Clara's bell`) || storageAmount($item`Clara's bell`) > 0),
     remaining: () =>
+      pullBackedFallbackActive() &&
       !get("_claraBellUsed") &&
+      !pulledToday($item`Clara's bell`) &&
       (have($item`Clara's bell`) || storageAmount($item`Clara's bell`) > 0)
         ? 1
         : 0,
