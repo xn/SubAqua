@@ -58,6 +58,21 @@ function tamingMacro(): Macro {
     : Macro.item(cowbell).item(cowbell).item(cowbell).item(lasso).abort();
 }
 
+/** The wild seahorse is a BOSS (upstream UnderTheSea cf01d4d, 2026-08-12):
+ * free-run skills, banishes and copies all fail against it and every hit
+ * lands for 1, so an unready encounter can only end on the round limit —
+ * a lost combat and a hard post() abort. The ash CCS runs its tamer ahead
+ * of all zone logic and answers unready seahorses with the plain Run Away
+ * button, the one exit a boss allows. Mirror both: tame on the spot when
+ * training and supplies are ready, otherwise spam runaway. */
+function seahorseMacro(): Macro {
+  const ready =
+    get("lassoTrainingCount", 0) >= 20 &&
+    availableAmount(cowbell) >= 3 &&
+    availableAmount(lasso) >= 1;
+  return ready ? tamingMacro() : Macro.runaway().repeat();
+}
+
 export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Quest {
   const swordOut = () => opts.swordLane && have(sword) && get("swordOfSWordsMonster") !== null;
   return {
@@ -81,7 +96,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                 .macro(Macro.trySkill($skill`Do an epic McTwist!`), cow)
                 .kill($monsters`sea cow, sea cowboy`)
                 .banish(rustler)
-                .freeRun(seahorse)
+                .macro(seahorseMacro, seahorse)
                 .kill(),
               outfit: { modifier: "item", equip: $items`pro skateboard` },
               effects: itemDropEffects,
@@ -105,7 +120,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           .forceItems(cow)
           .kill(cowboy)
           .banish(rustler)
-          .freeRun(seahorse),
+          .macro(seahorseMacro, seahorse),
         outfit: () => ({
           modifier: "item",
           equip: $items`pro skateboard`,
@@ -154,7 +169,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           )
           .kill($monsters`sea cowboy, sea cow`)
           .banish(rustler)
-          .freeRun(seahorse),
+          .macro(seahorseMacro, seahorse),
         outfit: () => ({ modifier: "item", familiar: swordOut() ? sword : undefined }),
         effects: itemDropEffects,
         prepare: () => recover(),
