@@ -1,0 +1,174 @@
+import { appearanceRates, itemAmount, Location, Monster } from "kolmafia";
+import { $effect, $item, $locations, $phylum, $skill, get, have, Macro } from "libram";
+
+import { banishedBy, banishSources } from "./banish";
+import { FreeKillSource, selectFreeKill } from "./freekill";
+import { CombatResource } from "./resource";
+
+export type FreeRunSource = CombatResource & {
+  do: Macro;
+  /** True = this source banishes; reserved for call sites that opt in
+   * (ash free_run()'s `banish` flag, UnderTheSeaCCS.ash:74-107). */
+  banishes: boolean;
+};
+
+/** The ash zone-excludes snokebomb at three surface farm zones
+ * (UnderTheSeaCCS.ash:86-89). */
+const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Sleazy Back Alley, The Haunted Pantry`;
+
+/** Ordered per ash freeRun() (UnderTheSea.ash:255-265) with the CCS spenders
+ * folded in. Spring shoes appear twice on purpose: banish mode upgrades
+ * Spring Away to Spring Kick (CCS:98); both share the Everything Looks Green
+ * cooldown. */
+export const freeRunSources: FreeRunSource[] = [
+  {
+    name: "Spring Kick",
+    available: () => have($item`spring shoes`) && !have($effect`Everything Looks Green`),
+    remaining: () => (have($item`spring shoes`) && !have($effect`Everything Looks Green`) ? 1 : 0),
+    equip: $item`spring shoes`,
+    do: Macro.trySkill($skill`Spring Kick`),
+    banishes: true,
+  },
+  {
+    name: "Spring Away",
+    available: () => have($item`spring shoes`) && !have($effect`Everything Looks Green`),
+    remaining: () => (have($item`spring shoes`) && !have($effect`Everything Looks Green`) ? 1 : 0),
+    equip: $item`spring shoes`,
+    do: Macro.trySkill($skill`Spring Away`),
+    banishes: false,
+  },
+  {
+    // Underwater the GAP runaway only works while Driving Waterproofly
+    // (ash freeRun():257).
+    name: "GAP runaway",
+    available: () =>
+      have($item`Greatest American Pants`) &&
+      get("_navelRunaways") < 3 &&
+      have($effect`Driving Waterproofly`),
+    remaining: () =>
+      have($item`Greatest American Pants`) ? Math.max(0, 3 - get("_navelRunaways")) : 0,
+    equip: $item`Greatest American Pants`,
+    do: Macro.runaway(),
+    banishes: false,
+  },
+  {
+    name: "Bowl a Curveball",
+    available: () => itemAmount($item`cosmic bowling ball`) > 0,
+    remaining: () => (itemAmount($item`cosmic bowling ball`) > 0 ? 1 : 0),
+    do: Macro.trySkill($skill`Bowl a Curveball`),
+    banishes: true,
+  },
+  {
+    name: "Creepy Grin",
+    available: () => have($item`V for Vivala mask`) && !get("_vmaskBanisherUsed"),
+    remaining: () => (have($item`V for Vivala mask`) && !get("_vmaskBanisherUsed") ? 1 : 0),
+    equip: $item`V for Vivala mask`,
+    do: Macro.trySkill($skill`Creepy Grin`),
+    banishes: true,
+  },
+  {
+    name: "Throw Latte on Opponent",
+    available: () => have($item`latte lovers member's mug`) && !get("_latteBanishUsed"),
+    remaining: () => (have($item`latte lovers member's mug`) && !get("_latteBanishUsed") ? 1 : 0),
+    equip: $item`latte lovers member's mug`,
+    do: Macro.trySkill($skill`Throw Latte on Opponent`),
+    banishes: true,
+  },
+  {
+    name: "Feel Hatred",
+    available: () => have($skill`Feel Hatred`) && get("_feelHatredUsed") < 3,
+    remaining: () => (have($skill`Feel Hatred`) ? Math.max(0, 3 - get("_feelHatredUsed")) : 0),
+    do: Macro.trySkill($skill`Feel Hatred`),
+    banishes: true,
+  },
+  {
+    name: "Snokebomb",
+    available: () => have($skill`Snokebomb`) && get("_snokebombUsed") < 3,
+    remaining: () => (have($skill`Snokebomb`) ? Math.max(0, 3 - get("_snokebombUsed")) : 0),
+    do: Macro.trySkill($skill`Snokebomb`),
+    banishes: true,
+  },
+  {
+    name: "glob of Blank-Out",
+    available: () => itemAmount($item`glob of Blank-Out`) > 0,
+    remaining: () => itemAmount($item`glob of Blank-Out`),
+    do: Macro.tryItem($item`glob of Blank-Out`),
+    banishes: false,
+  },
+  {
+    name: "peppermint parasol",
+    available: () => itemAmount($item`peppermint parasol`) > 0 && get("parasolUsed") < 3,
+    remaining: () =>
+      itemAmount($item`peppermint parasol`) > 0 ? Math.max(0, 3 - get("parasolUsed")) : 0,
+    do: Macro.tryItem($item`peppermint parasol`),
+    banishes: false,
+  },
+  {
+    name: "anchor bomb",
+    available: () => itemAmount($item`anchor bomb`) > 0,
+    remaining: () => itemAmount($item`anchor bomb`),
+    do: Macro.tryItem($item`anchor bomb`),
+    banishes: true,
+  },
+  {
+    name: "stuffed yam stinkbomb",
+    available: () => itemAmount($item`stuffed yam stinkbomb`) > 0,
+    remaining: () => itemAmount($item`stuffed yam stinkbomb`),
+    do: Macro.tryItem($item`stuffed yam stinkbomb`),
+    banishes: true,
+  },
+  {
+    name: "handful of split pea soup",
+    available: () => itemAmount($item`handful of split pea soup`) > 0,
+    remaining: () => itemAmount($item`handful of split pea soup`),
+    do: Macro.tryItem($item`handful of split pea soup`),
+    banishes: true,
+  },
+  {
+    // Mer-kin phylum only; the selector enforces it when a target is known.
+    name: "Mer-kin pinkslip",
+    available: () => itemAmount($item`Mer-kin pinkslip`) > 0,
+    remaining: () => itemAmount($item`Mer-kin pinkslip`),
+    do: Macro.tryItem($item`Mer-kin pinkslip`),
+    banishes: false,
+  },
+  {
+    name: "ink bladder",
+    available: () => itemAmount($item`ink bladder`) > 0,
+    remaining: () => itemAmount($item`ink bladder`),
+    do: Macro.tryItem($item`ink bladder`),
+    banishes: false,
+  },
+];
+
+/**
+ * First run source the mode, zone, and fight context allow. `banish: true`
+ * additionally admits the banishing sources (and prefers Spring Kick over
+ * Spring Away by list order). Falls through to the free-kill ladder like the
+ * ash's freeRun() (UnderTheSea.ash:264): a free kill substitutes when no run
+ * source is left. Curveball guard as in free-kill.
+ */
+export function selectFreeRun(
+  options: { banish?: boolean; location?: Location; target?: Monster } = {},
+): FreeRunSource | FreeKillSource | undefined {
+  const { banish = false, location, target } = options;
+  if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
+    return undefined;
+  }
+  const snokebomb = banishSources.find((source) => source.name === "snokebomb");
+  const run = freeRunSources.find((source) => {
+    if (source.banishes && !banish) return false;
+    if (source.name === "Snokebomb") {
+      if (location && snokebombExcludedZones.includes(location)) return false;
+      // Skip when snokebomb's existing banish already covers this zone
+      // (ash banishUsedAtYourLocation(), iotm.ash:1102-1109).
+      const current = snokebomb ? banishedBy(snokebomb) : undefined;
+      if (location && current && (appearanceRates(location)[current.name] ?? 0) > 0) return false;
+    }
+    if (source.name === "Mer-kin pinkslip" && target && target.phylum !== $phylum`mer-kin`) {
+      return false;
+    }
+    return source.available();
+  });
+  return run ?? selectFreeKill({ location, target });
+}
