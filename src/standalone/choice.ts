@@ -1,5 +1,26 @@
-import { availableChoiceOptions, getProperty, print, runChoice } from "kolmafia";
+import { availableAmount, availableChoiceOptions, getProperty, print, runChoice } from "kolmafia";
 import { $item, get, have, set, ValueOf } from "libram";
+
+/**
+ * Ash stashboxCheck (CH:9-20): walk the per-lockkey-monster search order,
+ * answering the first hut location not yet checked today. Choices 313-315
+ * have no mafia tracking (ChoiceAdventures.java:2174-2177) — the record is
+ * ours alone, in _subaqua_stashbox_checked (comma-joined option list; the
+ * comma-wrap test keeps exact matching). Solely owned by this bundle.
+ */
+function stashboxCheck(order: number[]): void {
+  const checked = get("_subaqua_stashbox_checked", "");
+  for (const option of order) {
+    if (`,${checked},`.includes(`,${option},`)) continue;
+    runChoice(option);
+    set("_subaqua_stashbox_checked", checked === "" ? `${option}` : `${checked},${option}`);
+    return;
+  }
+  // All three checked and the choice fired again: answer *something*
+  // (invariant: every handler branch answers) — the outpost task aborts on
+  // this state before spending another turn.
+  runChoice(order[0]);
+}
 
 export function main(choice: number, _page: string) {
   const options: { [key: number]: string } = availableChoiceOptions();
@@ -90,13 +111,33 @@ export function main(choice: number, _page: string) {
   else if (choice === 1565) {
     runChoice(1);
   } else if (choice === 312) {
-    // Mafia writes choiceAdventure312 (1/2/3) when the lockkey drops; 3 = healer default.
-    const lockkeyChoice = parseInt(getProperty("choiceAdventure312") || "3");
-    runChoice(lockkeyChoice >= 1 && lockkeyChoice <= 3 ? lockkeyChoice : 3);
+    // Post-currents the outpost hut becomes a shop; option 3 opens the healer
+    // stock (ash CH:55-59). Otherwise mafia auto-writes choiceAdventure312
+    // from the lockkey drop (ResultProcessor.java:2271-2283); 3 = healer default.
+    if (get("intenseCurrents")) {
+      runChoice(3);
+    } else {
+      const lockkeyChoice = parseInt(getProperty("choiceAdventure312") || "3");
+      runChoice(lockkeyChoice >= 1 && lockkeyChoice <= 3 ? lockkeyChoice : 3);
+    }
+  } else if (choice === 313) {
+    stashboxCheck([1, 3, 2]); // burglar lockkey search order (ash CH:61)
+  } else if (choice === 314) {
+    stashboxCheck([1, 2, 3]); // raider (CH:62)
   } else if (choice === 315) {
-    const encounters = get("_subaqua_outpost_choices", 0);
-    set("_subaqua_outpost_choices", encounters + 1);
-    runChoice((encounters % 3) + 1);
+    if (get("intenseCurrents")) {
+      // Post-currents shopping (CH:63-75): beads, then dreadscroll spading
+      // scrolls (mafia parses clues 2/5 from thrown heal/killscrolls), then
+      // beads again — never leave the choice unanswered.
+      if (availableAmount($item`Mer-kin prayerbeads`) < 3) runChoice(3);
+      else if (availableAmount($item`Mer-kin killscroll`) === 0 && get("dreadScroll5", 0) === 0)
+        runChoice(1);
+      else if (availableAmount($item`Mer-kin healscroll`) === 0 && get("dreadScroll2", 0) === 0)
+        runChoice(2);
+      else runChoice(3);
+    } else {
+      stashboxCheck([3, 1, 2]); // healer (CH:63-79)
+    }
   } else if (choice === 1562) {
     const getPriority = (option: string): number => MOBIUS_PRIORITIES[option as MobiusOption];
     const bestChoice = Object.entries(options).reduce((a, b) =>
