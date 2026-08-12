@@ -4,9 +4,11 @@
 **Status:** approved pending user review
 **Reference material:** `../UnderTheSea` (ash source of truth), `../pearlo` (domain docs:
 `CLAUDE.md`, `docs/sea-reference.md`, `docs/consumption-reference.md`,
-`docs/maximizer-reference.md`), `../kolmafia` (mafia source ground truth — see §8), and the
+`docs/maximizer-reference.md`), `../kolmafia` (mafia source ground truth — see §8), the
 wiki page `11,037_Leagues_Under_the_Sea/Strategy` (see §9; fetch via MediaWiki API with a
-browser user agent)
+browser user agent), and `../loop` (the user's aftercore loop wrapping this content —
+battle-tested idioms, notably codpiece socketing in `src/tasks/thesea.ts` and pearl helpers in
+`src/tasks/pearl.ts`)
 
 ## What SubAqua is
 
@@ -350,9 +352,16 @@ section is the authority when it conflicts with ash-derived assumptions elsewher
   `shop.php?whichrow=…`/`monkeycastle.php` URL work. Sand-penny shop is path-gated and known.
 - **Skate park**: `cliExecute("skate lutz")` etc.; `skateParkStatus` + `_skateBuff1..5` tracked.
 - **Mom buffs**: `mom` CLI / `MomRequest`; `_momFoodReceived`.
-- **Codpiece is equipment**: slots `codpiece1..5` — `equip($slot`codpiece3`, gem)`; loaded gems
-  via `equippedItem()`, modifiers apply automatically. The maximizer does *not* fill these
-  slots; gem selection is ours (in `init.ts`/outfit layer). No choice-URL scraping.
+- **Codpiece**: modeled as slots `codpiece1..5`, and libram ships an `EternityCodpiece` module
+  (`currentGems()`, `equippable()`, per-gem `modifiers()`) — use it for *reading* state.
+  **But mounting via `equip()` is unreliable**: mafia's codpiece slot state goes stale and
+  `equip()` no-ops on slots it wrongly believes are filled (user-verified in practice). The
+  proven pattern (see `/Users/xn/sites/KOL/loop/src/tasks/thesea.ts` "Socket Pearls") drives
+  the codpiece page directly — `visitUrl("inventory.php?action=docodpiece")`, trust only the
+  page's `mounted in slot #N` text, pop blockers with `choice.php?whichchoice=1588&option=2&
+  which=N`, mount with `option=1&which=N&iid=`, then `cliExecute("refresh inv")` and re-verify
+  from a fresh page fetch. Removal via `unequip(slot)` works (the loop repo's `pryPearls()`).
+  The maximizer does *not* fill these slots; gem selection is ours (`init.ts`/outfit layer).
 - **Autumn-aton**: `cliExecute("autumnaton send <zone>")` — the option-list hand-parse is dead.
 - **2002 Mr. Store Catalog is a coinmaster** (`availableMrStore2002Credits`); mimic-egg DNA lab
   counters (`mimicEggMonsters`, `_mimicEggsObtained/Donated`) are mafia-maintained (libram
@@ -392,10 +401,11 @@ browser UA — CloudFront blocks non-browser agents). Constraints that shape tas
   September 1st nerfs made most quest items unpullable, and the ash's route assumes the pearls
   arrive pre-loaded (`UnderTheSea.ash:1024` — in-run resistance "only matters for farming
   unblemished pearls and those are smuggled in via the codpiece"). SubAqua adds an explicit
-  **init guard**: count pearls across codpiece slots + inventory, abort at turn 0 with
-  instructions if short (better than the ash's silent wall at the center door). In-run pearl
-  farming is a possible future runplan, not current scope. In-run, pearls are popped out of the
-  codpiece to free slots for gems (BCZ, peridot, heartstone).
+  **init guard**: count pearls across codpiece slots (libram `EternityCodpiece.currentGems()`)
+  + inventory, abort at turn 0 with instructions if short (better than the ash's silent wall at
+  the center door). In-run pearl farming is a possible future runplan, not current scope.
+  In-run, pearls are popped out of the codpiece via `unequip(slot)` to free slots for gems
+  (BCZ, peridot, heartstone); re-mounting anything follows the §8 socketing pattern.
 - **Fishy ladder ordering**: the Skate Park war resolution with the **skate blade equipped**
   grants 30 turns of Fishy once per day (the side quest is mandatory anyway) — it outranks the
   fishy pipe (10) and the Brinier Deepers Lucky! (20) in `maintainFishy()`. The Monodent's
