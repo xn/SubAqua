@@ -8,6 +8,7 @@ import {
   outfitSlots,
 } from "grimoire-kolmafia";
 import {
+  autosell,
   booleanModifier,
   canEquip,
   equip,
@@ -15,8 +16,13 @@ import {
   Familiar,
   haveEquipped,
   Item,
+  itemAmount,
   Location,
+  myMeat,
   print,
+  runCombat,
+  use,
+  writeCcs,
 } from "kolmafia";
 import {
   $effect,
@@ -31,14 +37,17 @@ import {
   PropertiesManager,
   undelay,
   uneffect,
+  withProperty,
 } from "libram";
 
 import { pickBanishSource } from "../resources/banish";
+import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import { selectFreeKill, selectYellowRay } from "../resources/freekill";
 import { selectFreeRun } from "../resources/freerun";
-import { forceGranted, saberAllowedAt } from "../resources/saber";
+import { currentPolicy } from "../resources/policy";
+import { forceGranted } from "../resources/saber";
 
-import { CombatActions, MyActionDefaults } from "./combat";
+import { CombatActions, killMacro, MyActionDefaults } from "./combat";
 import {
   familiarWaterBreathingEquipment,
   hasBreathingEffect,
@@ -73,6 +82,18 @@ function equipResource(
     return ok;
   }
   return outfit.equip(equipment);
+}
+
+// libram exports withProperty/withChoice scoped setters but no withMacro —
+// this mirrors grimoire's own combat-resolution mechanism (engine.js
+// setCombat(): write a "[default]" macro entry to a CCS file, point
+// customCombatScript at it) for the one-off dolphin-whistle fight in post(),
+// scoped with withProperty so the engine's own CCS pointer (grimoire_macro)
+// is restored before the next task's setCombat() runs.
+const whistleCcsName = "subaqua_whistle";
+function withMacro(macro: Macro, action: () => void): void {
+  writeCcs(`[default]\n"${macro.toString()}"`, whistleCcsName);
+  withProperty("customCombatScript", whistleCcsName, action);
 }
 
 export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
@@ -146,22 +167,31 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     }
     if (combat.can("yellowRay") || combat.can("forceItems")) {
       const action = combat.can("yellowRay") ? "yellowRay" : "forceItems";
-      const ray = selectYellowRay();
-      if (ray) {
-        if (ray.equip === undefined || equipResource(outfit, ray.equip)) {
-          resources.provide(action, { do: ray.do });
-        }
-      } else if (
-        action === "forceItems" &&
-        (!location || saberAllowedAt(location)) &&
-        forceGranted("free", location)
-      ) {
-        // Saber force-drop: choice 1387 option 3 drops the yellow-ray items.
-        // Only set the choice and provide if the saber actually equipped.
-        if (outfit.equip($item`Fourth of May Cosplay Saber`)) {
-          this.propertyManager.setChoice(1387, 3);
-          resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
-        }
+      const purpose = task.saberPurpose ?? "free";
+      // Diver/healer Forces guarantee specific quest drops (4 rivets + porthole
+      // + helmet, iotm:185-199; prayerbeads + thingpouch, iotm:247-261), so for
+      // those purposes the saber outranks the parka ray; otherwise ray first.
+      const saberFirst = purpose === "diver" || purpose === "healer";
+      const provideSaber = (): boolean => {
+        if (action !== "forceItems") return false;
+        if (!forceGranted(purpose, location)) return false;
+        // Only provide if the saber actually equipped (equip-gated provides).
+        if (!outfit.equip($item`Fourth of May Cosplay Saber`)) return false;
+        this.propertyManager.setChoice(1387, 3);
+        resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+        return true;
+      };
+      const provideRay = (): boolean => {
+        const ray = selectYellowRay();
+        if (!ray) return false;
+        if (ray.equip !== undefined && !equipResource(outfit, ray.equip)) return false;
+        resources.provide(action, { do: ray.do });
+        return true;
+      };
+      if (saberFirst) {
+        if (!provideSaber()) provideRay();
+      } else {
+        if (!provideRay()) provideSaber();
       }
     }
 
@@ -186,6 +216,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         }
       }
     }
+  }
+
+  override prepare(task: Task): void {
+    // Fishy/Waterproofly upkeep before every underwater adventuring turn
+    // (spec §2; ash restores at zero in post_adv UTS:811-843). Never from
+    // post() — the ladder may eat, chew, or pull.
+    if (isUnderwaterTask(task) && !undelay(task.freeaction)) {
+      maintainWaterproofly();
+      maintainFishy();
+    }
+    super.prepare(task);
   }
 
   override createOutfit(task: Task): Outfit {
@@ -273,15 +314,42 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       if (get("_lastCombatLost") && !shubLoss) throw `Lost a combat during ${task.name}; stopping.`;
       uneffect($effect`Beaten Up`);
     }
+
+    // Poison cure — the ash handles exactly one tier (UTS:763-764).
+    if (have($effect`Really Quite Poisoned`)) uneffect($effect`Really Quite Poisoned`);
+
+    // Junk autosell: emergency meat only (UTS:773-777) — rough scales feed the
+    // Madness Reef pristine conversion, so never sell above the meat floor.
+    if (myMeat() < 300) {
+      autosell(itemAmount($item`dull fish scale`), $item`dull fish scale`);
+      autosell(itemAmount($item`rough fish scale`), $item`rough fish scale`);
+    }
+
+    // Dolphin whistle: reclaim stolen quest drops (UTS:761-762 + the targeted
+    // sites UTS:2265/2282/2290/3010/3017, folded into one list). Corral drops
+    // always; outpost drops per policy. Daily uses = seaPoints
+    // (dailylimits.txt:361). Spec §2 assigns the whistle fight to post().
+    const stolen = get("dolphinItem", $item.none);
+    const alwaysWhistle = $items`sea lasso, sea leather, sea cowbell`;
+    const outpostWhistle = $items`Mer-kin prayerbeads, rusty rivet`;
+    if (
+      have($item`durable dolphin whistle`) &&
+      get("_durableDolphinWhistleUsed", 0) < get("seaPoints", 0) &&
+      (alwaysWhistle.includes(stolen) ||
+        (currentPolicy().whistleOutpostDrops && outpostWhistle.includes(stolen)))
+    ) {
+      withMacro(killMacro(false), () => {
+        use($item`durable dolphin whistle`);
+        runCombat();
+      });
+    }
+
+    // Zero-adventure pilsner diet (UTS:781-796); aborts with instructions when dry.
+    emergencyDiet();
   }
 
   override setChoices(task: Task, manager: PropertiesManager): void {
     super.setChoices(task, manager);
-    // Outpost stashbox rotation: bounded, one pref, owned by the script (spec §8:
-    // mafia tracks nothing for 313-315). Choice 312 is NOT set here — mafia
-    // auto-writes choiceAdventure312 from the lockkey drop; the choice script
-    // falls back if it's unset.
-    manager.setChoices({ 315: (get("_subaqua_outpost_choices", 0) % 3) + 1 });
     if (equippedAmount($item`June cleaver`) > 0) {
       manager.setChoices({
         1467: 3,
@@ -299,6 +367,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
   override initPropertiesManager(manager: PropertiesManager): void {
     super.initPropertiesManager(manager);
+    // Choice 1387 (Use the Force) is globally option 3 — "drop your things" —
+    // for the whole run, exactly like the ash (UTS:3695). This single value
+    // resolves the Phase-2 flagged collision: customize()'s forceItems branch
+    // and summon()'s stranded-choice handler re-assert the same value, so no
+    // site can fight another. Every saber Force in this route is a drop-force.
+    manager.setChoices({ 1387: 3 });
     const bannedRestorers = [
       "sleep on your clan sofa",
       "rest in your campaway tent",
