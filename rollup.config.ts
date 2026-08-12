@@ -45,6 +45,10 @@ const plugins = [
 
 const bundles: Array<{ input: Record<string, string>; dir: string }> = [
   { input: { subaqua: "src/main.ts" }, dir: "dist/KoLmafia/scripts/subaqua" },
+  {
+    input: { subaqua_choice: "src/standalone/choice.ts" },
+    dir: "dist/KoLmafia/scripts/subaqua",
+  },
 ];
 
 export default bundles.map(
