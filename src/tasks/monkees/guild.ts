@@ -6,6 +6,9 @@ import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
 import { summon, summonsAvailable } from "../../resources/summon";
 
+// eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
+// (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
+// eslint-disable-next-line libram/verify-constants
 const sword = $familiar`Sword of S Words`;
 const payphone = $item`closed-circuit pay phone`;
 
@@ -42,6 +45,7 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         do: () => summon($monster`sea cowboy`),
         choices: { 1589: "1&victim=776" },
         combat: new CombatStrategy()
+          // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
           .macro(Macro.trySkill($skill`%fn, kill a lot of these guys`), $monster`sea cowboy`)
           .kill(),
         outfit: { modifier: "item", familiar: sword },

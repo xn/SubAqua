@@ -25,6 +25,9 @@ const cow = $monster`sea cow`;
 const seahorse = $monster`wild seahorse`;
 const cowbell = $item`sea cowbell`;
 const lasso = $item`sea lasso`;
+// eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
+// (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
+// eslint-disable-next-line libram/verify-constants
 const sword = $familiar`Sword of S Words`;
 
 /** Ash doneWithSeaCow (UTS:1446-1453). */
@@ -143,7 +146,10 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         combat: new CombatStrategy()
           .macro(
             () =>
-              swordOut() ? Macro.trySkill($skill`%fn, kill a lot of these guys`) : new Macro(),
+              swordOut()
+                ? // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+                  Macro.trySkill($skill`%fn, kill a lot of these guys`)
+                : new Macro(),
             cowboy,
           )
           .kill($monsters`sea cowboy, sea cow`)

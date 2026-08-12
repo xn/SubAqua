@@ -44,6 +44,9 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
 // blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
 // spec §3/§4's softcore exceptions list confirms it.
 const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Flash Liquidizer Ultra Dousing Accessory, Elf Guard SCUBA tank`;
+// eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
+// (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
+// eslint-disable-next-line libram/verify-constants
 const swordOfSWords = $familiar`Sword of S Words`;
 
 export function initQuest(): Quest {
