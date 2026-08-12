@@ -406,10 +406,15 @@ browser UA — CloudFront blocks non-browser agents). Constraints that shape tas
   the center door). In-run pearl farming is a possible future runplan, not current scope.
   In-run, pearls are popped out of the codpiece via `unequip(slot)` to free slots for gems
   (BCZ, peridot, heartstone); re-mounting anything follows the §8 socketing pattern.
-- **Fishy ladder ordering**: the Skate Park war resolution with the **skate blade equipped**
-  grants 30 turns of Fishy once per day (the side quest is mandatory anyway) — it outranks the
-  fishy pipe (10) and the Brinier Deepers Lucky! (20) in `maintainFishy()`. The Monodent's
-  Summon a Wave can flood CyberRealm/a Shadow Rift for ~10 turns of Fishy off free fights.
+- **Fishy economics are net-turn, not turns-of-Fishy**: `maintainFishy()` ranks sources by
+  *marginal turns spent*, since the whole point of Fishy is halving underwater turn cost.
+  Fishy pipe costs 0 turns; the Brinier Deepers Lucky! costs 1 turn + a Lucky! source; the
+  Skate Park war resolution (choice 403, **skate blade equipped**) grants 30 turns but its
+  war turns are only free because the route resolves the skate park anyway — so the ladder
+  takes it opportunistically when the war completes (choosing blade over key, ideally during
+  forced waits like Deep-Tainted Mind), and never schedules war turns *to get* Fishy. The
+  Monodent's Summon a Wave (~10 turns of Fishy off free fights in CyberRealm/a Shadow Rift)
+  is similarly only counted at its marginal cost.
 - **Damp old boot ordering trap**: the old SCUBA tank can only be bought from Big Brother
   *before* the boot is turned in — and back-slot breathing is what frees hat+pants for the
   sea cowboy hat + sea chaps during lasso training. The Old Guy task must sequence:
