@@ -121,6 +121,13 @@ There is **no consult-script bundle** — see §5; dynamic combat runs in-proces
   `restoreHp`/`restoreMp` with absolute floors in task `prepare` (570 HP baseline, 800 gymnasium,
   full colosseum, 250 MP). Shub turns MP recovery off and dumps MP; Yog-Urt keeps the
   max-HP ≤ 311 guard.
+- **Zone gating**: `ready()` conditions lean on mafia's own availability logic —
+  `canAdventure()` already implements all sea-floor and deepcity gating
+  (`KoLAdventure.seaFloorZoneAvailable`/`deepCityZoneAvailable`: class maps, `corralUnlocked`,
+  black glass for the Abyss, `seahorseName` for deepcity, the temple-door state machine) and
+  auto-equips required Mer-kin outfits for temple zones. Mafia *refuses* underwater adventures
+  without breathing gear rather than fixing them, which is exactly why our outfit layer
+  enforces breathing first.
 - **Bounded loops**: every adventuring task has a `limit` (type-enforced). Intentional ash
   counters carry over (`diverTries < 4` → `tries: 4`, golem ≤ 6, gummiheart stall ≤ 8, cleanUp
   round-stall abort). The ash's unbounded loops (stashbox, rivet grind, High Priest wait) get
@@ -175,7 +182,10 @@ These modules encode *this route's* priorities; libram owns the mechanics.
   `available()`/`use()`, filtered by `ResourcePolicy`; one-free-source-per-fight guard preserved.
 - **`pulls.ts`** — one reserved slot per unique item; exact-id matching against
   `_roninStoragePulls` (keeping the `",3604,"` delimiter trick); `pullsRemaining() > reserved()`
-  gating (preserving the intentional `>=` at the skate-park site).
+  gating (preserving the intentional `>=` at the skate-park site). Mafia enforces a 24-item
+  in-path pull blocklist (`InventoryManager.pullableInSeaPath`: fish scales, diving helmets,
+  sea leather, Mer-kin gear, colosseum weapons, unblemished pearl, …) — the module mirrors it
+  so route planning never counts on an impossible pull.
 
 **No `user_confirm` anywhere** (public automation must not block on dialogs): the
 `autoBuyPriceLimit` prompt becomes a `buyLimit=` arg (default: the user's `autoBuyPriceLimit`
@@ -242,17 +252,22 @@ state:
 - The elementary queue is maintained in exactly one place (choice script), fixing the ash's
   two-site duplication.
 
-**`lib/dreadscroll.ts`** owns the spading pipeline:
+**`lib/dreadscroll.ts`** owns *decisions only* — mafia already owns the clue data
+(source-verified, `DreadScrollManager.java`): all eight clues are parsed automatically into
+`dreadScroll1..8` (choice 704 → 1/6/8; fights → 2/5; Deep Dark Visions → 3; knucklebone → 4;
+worktea sushi → 7), failed guesses land in `dreadScrollGuesses` as `<8-digit-guess>:<n-correct>`
+entries, and `merkinCatalogChoices` tracks catalog cards by identifier with stats/clue outcomes —
+handling the vocabulary-dependent option reordering. No custom clue store; the ash's
+`cardChoice1..10` / `DS1/6/8` bookkeeping has no TS equivalent. What remains ours:
 
 - Native reimplementation of seedfinder's seed-space algorithm (source to be read exactly during
-  implementation planning): `candidateSeeds()` filtered against all known clues.
-- Engine `post()` narrowing hook: exactly one candidate remaining → write all eight
+  implementation planning): `candidateSeeds()` filtered against mafia's clue prefs.
+- Engine `post()` narrowing hook: exactly one candidate remaining → write the remaining
   `dreadScroll<n>` prefs (ash `dreadSeedCheck()`).
 - `isKnucklebonesAndSushiEnough()` gates the long cheatsheet/vocabulary route vs the short branch.
-- Choice 703 uses the salvaged expected-wrong-positions constraint solver (strictly better than
-  the ash's first-unguessed-candidate).
-- Card-catalog 704 spading and combat scroll-hint verification (clues 2/5) write into the same
-  clue store (namespaced prefs replacing `cardChoice1..10` / `DS1/6/8`).
+- Choice 703 answer *selection and submission* (mafia records but never solves): the salvaged
+  expected-wrong-positions constraint solver over candidates + `dreadScrollGuesses`.
+- Route decisions from clue coverage (which spading tasks are still needed).
 - `godRunGuard` (arg-gated as in ash): at ≤ 17 turns played with clue 7 unknown, eat worktea
   sushi or abort.
 
@@ -282,6 +297,81 @@ verdict. No purchases, turns, or server writes.
 `yarn mafia`. Delete `dependencies.txt` (no external script deps), `webpack.config.js`, and the
 starter-kit README; write a public README (requirements, options, tier explanation — UnderTheSea's
 README as skeleton). `prefs.txt` (old seafloor pref notes) is deleted.
+
+## 8. Mafia-source integration (verified against the ../kolmafia checkout, 2026-08-11)
+
+A source sweep of KoLmafia established what the script reads versus what it must own. This
+section is the authority when it conflicts with ash-derived assumptions elsewhere.
+
+### Read, never reimplement
+
+- **Quest spine**: the whole `questS02Monkees` step ladder, `corralUnlocked`, `seahorseName`,
+  `bigBrotherRescued`, map-purchase prefs — all parsed from page text by `QuestManager`.
+  A single `visitUrl("seafloor.php")` re-syncs the map/zone prefs cheaply.
+- **Lasso training**: `lassoTrainingCount` (0–20) is fully mafia-maintained, including the
+  +1 sea cowboy hat and +1 sea chaps bonuses. `lassoTraining` holds the quality tier.
+- **Lockkey → stashbox**: `merkinLockkeyMonster` is set on the lockkey drop and mafia
+  auto-writes `choiceAdventure312` to match. Choices 313–315 have *no* mafia tracking — the
+  stashbox search rotation stays ours (choice script).
+- **Colosseum**: `lastColosseumRoundWon` (self-correcting — re-derived from the round header on
+  entry), `isMerkinGladiatorChampion`, the `% 3` weapon rotation (§5). Gladiator monster stats
+  scale off the pref and proxy-record stats are recalculated at fight start — read
+  `monster_attack()`/`monster_defense()`, never recompute. Same for Shadow Rift scaling
+  (`_shadowRiftCombats`). ⚠ Mafia bug: `gladiatorBladeMovesKnown` is never written
+  (`FightRequest.java:4926` writes the Ball pref instead) — don't read the `*MovesKnown` prefs.
+- **Dreadscroll clues** (§6): `dreadScroll1..8`, `dreadScrollGuesses`, `merkinCatalogChoices`.
+- **Copy/wanderer chains**: `_monsterHabitatsMonster`/`_monsterHabitatsFightsLeft` (reliable),
+  `_saberForceMonster(Count)`, `rwbMonsterCount`. Macrometeorite / Powerful Glove re-rolls are
+  *not* tracked — re-read `last_monster()` after a re-roll.
+- **Dolphin steals**: `dolphinItem` holds what was stolen; durable dolphin whistle uses/day
+  equals `seaPoints`.
+- **Boss facts** (monsters.txt): Yog-Urt is **Phys: 100** (spells only), Shub-Jigguwatt
+  **Elem: 95** (physical only), wild seahorse Phys+Elem 100 with 1M HP (lasso is the only win),
+  temple bosses all `Init: 10000`. No sea monster is NOBANISH. Colosseum/temple rows carry the
+  `overdrunk` flag (fightable while falling-down drunk); all other sea zones are
+  snarfblat-based and wineglass-compatible.
+- **Underwater cost**: mafia's `getAdventuresUsed()` knows underwater = 2 turns without Fishy.
+
+### Supported APIs replacing ash page-scrapes
+
+- **Grandma's shop is a coinmaster** (barter tree including gladiator/scholar masks+tailpieces
+  and their reverse conversions) and **Big Brother's store** likewise (sand dollars, maps,
+  damp old boot, black glass) — plain `buy()`/`retrieveItem()` replaces the ash's
+  `shop.php?whichrow=…`/`monkeycastle.php` URL work. Sand-penny shop is path-gated and known.
+- **Skate park**: `cliExecute("skate lutz")` etc.; `skateParkStatus` + `_skateBuff1..5` tracked.
+- **Mom buffs**: `mom` CLI / `MomRequest`; `_momFoodReceived`.
+- **Codpiece is equipment**: slots `codpiece1..5` — `equip($slot`codpiece3`, gem)`; loaded gems
+  via `equippedItem()`, modifiers apply automatically. The maximizer does *not* fill these
+  slots; gem selection is ours (in `init.ts`/outfit layer). No choice-URL scraping.
+- **Autumn-aton**: `cliExecute("autumnaton send <zone>")` — the option-list hand-parse is dead.
+- **2002 Mr. Store Catalog is a coinmaster** (`availableMrStore2002Credits`); mimic-egg DNA lab
+  counters (`mimicEggMonsters`, `_mimicEggsObtained/Donated`) are mafia-maintained (libram
+  `ChestMimic` drives it).
+- **Saber daily upgrade**: `cliExecute("saber familiar")` (choice 1386) — no raw may4 URL.
+- **Baseball diamond**: entry still `visitUrl("inventory.php?action=pball")`, but choice 1598
+  has dynamic spoilers (read `availableChoiceOptions(true)` — pitch options are randomized per
+  inning, map by text not position) and full pref tracking (`_baseballInnings`,
+  `_curveballMonster`/`FightsLeft`, `_beanballMonster`, `_screwballMonster`, `_skullballMonster`);
+  ice ball registers in mafia's BanishManager. Replaces `pitchNum1..9`. Must exit via option 6
+  (not walk-away-able).
+- **Choice auto-guards**: mafia rewrites choices 298/304/305/309 (seed packet / Vent Horizon MP
+  / pressureglobe / Barback) to "skip" when unaffordable — tasks need no own affordability
+  checks there.
+- **Mining (teflon ore)**: automation is explicitly refused by mafia, but every fetched
+  `mining.php` response is parsed into `mineState3` — a 36-char row-major 6×6 grid
+  (`*` = promising chunk). The task picks a square from the pref and hits
+  `mining.php?mine=3&which=<row*8+col>` (1-based row/col); no grid parsing.
+- **Train set**: no CLI; `runChoice(1, "slot[]=…")` (the `choice` CLI's field validation rejects
+  the form), then verify via `trainsetConfiguration`/`trainsetPosition`.
+- **Trick-or-treat**: `_trickOrTreatBlock` is auto-scanned (uppercase = fresh house); only the
+  `whichhouse=` submission is ours.
+
+### Still ours (confirmed gaps)
+
+Outpost stashbox rotation (313–315), dreadscroll answer *solving* (703), seedfinder seed math,
+mining square choice, trainset/tot/baseball submissions listed above, codpiece gem choice, and
+all route/tier policy. `merkinQuestPath` is deliberately unmaintained in-path — gate on
+`isMerkinGladiatorChampion`/`isMerkinHighPriest`/`shubJigguwattDefeated`/`yogUrtDefeated`.
 
 ## Flagged items
 
