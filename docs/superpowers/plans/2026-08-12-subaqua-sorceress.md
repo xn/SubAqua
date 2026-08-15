@@ -10,6 +10,12 @@
 
 **Source key** (all citations re-extracted 2026-08-12 from the NEW UnderTheSea HEAD `ab1105e`, branch chartreusenator — the Aug 8 line numbers in older plans are dead): UTS = `../UnderTheSea/scripts/UnderTheSea.ash` (3063 lines), G = `globals.ash` (1998), CCS = `UnderTheSeaCCS.ash` (1342), CH = `UnderTheSea_Choice.ash` (305), mafia = `../kolmafia/src/net/sourceforge/kolmafia/`, SF = `/Users/xn/sites/KOL/seedfinder/scripts/seedfinder/`.
 
+**Upstream sync 2026-08-15 — UnderTheSea HEAD moved `ab1105e` → `c84c28b`.** All UTS/CCS/G line citations in this plan remain **ab1105e-pinned**: commit `c4a2f9b` ("Condense the commentary") rewrote 57 comment blocks with zero code changes, and `7ac379b` normalized CRLFs, so every line number shifted (UTS is now 2986 lines, CCS 1193, G 1961). Resolve any cite with `git -C ../UnderTheSea show ab1105e:scripts/<file>` rather than reading the working tree at the cited line. Functional deltas since ab1105e, all dispositioned — none change this plan's tasks:
+
+- `611a915` (corral: never banish the lasso/leather source while its drop is needed; `doneWithCowboy` threshold 21 → 23 to reserve the tame's own lasso) — **ported to Phase 3 code** (`src/tasks/monkees/corral.ts`, 2026-08-15): `lassosDone()` now uses 23; the banish guard was already satisfied structurally by task ordering. `doneWithCowboy`/`doneWithSeaCow` now live at G:638-650/G:652-660 (HEAD).
+- `c84c28b` (replace hand-rolled `universe()` solver with mafia's `reverse_numberology()`; drops `uniInt`/`uniAdv` globals and the sign map from G) — **no port**: numberology was dropped from SubAqua on net-turn grounds (Phase 3 plan, "Deliberate deferrals"); the drop decision stands, and the simpler built-in is noted here should live runs ever re-open it.
+- `78cfbbe` (pearl farming: re-drive Waterproofly via Asdon instead of re-dressing; print-before-abort) and `76e2f03` (`uts_loop` pref: drain astral pilsners before the postloop farm) — **out of scope**: both live in `pearlResCheck`/`pearlPostloop`, and SubAqua ships no aftercore/postloop by design (spec scope).
+
 ## Global Constraints
 
 - Runs inside KoLmafia's Rhino JS runtime — no Node APIs; `kolmafia` stays `external` in rollup.
@@ -26,7 +32,7 @@
 These override spec-era shorthand; each was verified in mafia source or the new ash HEAD this phase's research pass:
 
 1. **No telegraph counter-skill system exists in the ash** — no bust/sweat/sack keyword matching, no Ball/Net/Blade counter casts, anywhere at HEAD or eeb1ba5. The real colosseum regime is: **nuke-first opening** (1 special-free wind-up round, CCS:165-174, 416-426), delevel openers behind it (CCS:232-265), and a **bladeswitcher reflect-stall** read off each submitted action's response (CCS:209-217: `"twirling his blade around himself"` → 10, `"an especially dope move"` → 11), with a wording-independent backstop (bladeswitcher + >400 HP lost in one round → stall 10, CCS:474-477). Mafia's telegraph decorator (`FightDecorator.java:167-232`) documents the counter skills, but they require per-weapon critical-hit unlocks out of reach in-run (CCS:176-181) — the port ships the ash's stall regime and nothing else.
-2. **No `% 3` weapon-rotation outfit exists in the ash** — every colosseum round wears the same spell-damage/mys outfit with a computed coefficient (UTS:2203-2219); kills are spell nukes. The `% 3` schedule (mafia `RelayRequest.java:1116-1200`: lastRound%3 → 0 balldodger/dragnet, 1 netdragger/switchblade, 2 bladeswitcher/dodgeball; bosses Georgepaul/Johnringo/Ringogeorge at rounds 13/14/15) is used only to know *which* monster is next (the filter keys off `last monster` anyway).
+2. **No `% 3` weapon-rotation outfit exists in the ash** — every colosseum round wears the same spell-damage/mys outfit with a computed coefficient (UTS:2203-2219); kills are spell nukes. The `% 3` schedule (mafia `RelayRequest.java:1116-1200`: lastRound%3 → 0 balldodger/dragnet, 1 netdragger/switchblade, 2 bladeswitcher/dodgeball; bosses Georgepaul/Johnringo/Ringogeorge at rounds 13/14/15) is used only to know _which_ monster is next (the filter keys off `last monster` anyway).
 3. **`gladiatorBladeMovesKnown` mafia bug confirmed** at `FightRequest.java:4926` (blade branch writes the Ball pref) — never read the `*MovesKnown` prefs.
 4. **Mining pref is `mineState3`** (36-char row-major 6×6, `(row-1)*6+(col-1)`, codes `o`/`*`/`X`/`?`, `MineDecorator.java:76-103`); mine URL square is `which = row*8 + col` on the same 1-based coordinates (`MineDecorator.java:57-65`). The ash reads raw page text + `mineLayout3` instead — the port uses `mineState3`. The ash's square policy (G:585-632) is a fixed column-3 shaft (3,6)→(3,5)→(3,4)→(3,3)→(3,2)→(2,2)→(4,2)→(5,2), then promising sparkles at row<4 not adjacent to velcro/vinyl ore, then any sparkle at row<4. The spec §9 "prefer rows 4-6" note conflicts with the run-proven ash filter (`y_coor >= 4 → continue`); **the ash implementation wins** (the wiki likely counts rows from the other edge). "Never `grandpa mine`" = never ask Grandpa about mining (no code needed; nothing visits that dialog).
 5. **"Ators Gonna Ate"** is Gymnasium choice **701** ("get an item" / skip — `ChoiceAdventures.java:3612-3619`). The ash's guard is: +combat mood/outfit and a hard abort when an NC-forcer is pending (UTS:638-639). No other special-casing exists.
@@ -44,22 +50,22 @@ These override spec-era shorthand; each was verified in mafia source or the new 
 
 ## Deferral pricing (spec §9 net-turn rule — decisions, not options)
 
-| Phase 3 deferral | Decision | Pricing rationale |
-|---|---|---|
-| Skate-park war + fountain Fishy | **IN** (Task 7) | War resolution = 1 forced NC with skate blade equipped ("Holey Rollers"; bladeless serves "Picking Sides", G:213-221); pays a free 30-turn Fishy every day (`skate lutz`, `_skateBuff1`, statuseffects.txt:552) replacing a fish-sauce/nigiri forever. Doubles as the Deep-Tainted/gummiheart burn zone. |
-| Mom daily buff | **IN** (Task 9) | Free (0 turns, 1/day) once the quest finishes. `mom stats` (Cereal Killer +200 exp → mys → spell damage). |
-| Worktea-sushi clue 7 + godRunGuard | **IN** (Task 12) | 2 fullness + a pull vs up to 3 wrong 703 guesses × ~9-adv Deep-Tainted burns. |
-| dreadSeedCheck post() hook | **IN** (Tasks 1, 4) | Zero-turn clue inference; skips knucklebone/sushi/vocabulary work outright when the seed pins. |
-| Elementary/Library/Gymnasium regimes | **IN** (Tasks 6, 11, 12) | Core route. |
-| Shub null-day pull reservation | **IN** (Task 2) | Insertion point already commented in pulls.ts:55-63. |
-| Source Terminal enhance/duplicate | **IN** (Task 9) | Free: 3×(25+) turns of +30% item/day (`ChoiceControl.java:9070-9072`); duplicate 1/day doubles a monitor's cheatsheet table. |
-| Corral-Leather McTwist guard | **DROP** | Its only live window — corral farming with a maximizer-picked pro skateboard — closed with Phase 3's live-frozen spine; `forceGranted()`'s own comment already scopes it to combat builders. Revisit only if the smoke test surfaces a skateboard equip. |
-| Shadow-rift subsystem | **DROP** (again) | Value (free lasso reps, Shadow Waters, Wave Fishy) is real for payphone accounts, but (a) its window is pre-taming — inside the live-frozen Phase 3 spine, (b) the ash's own choice script handles only 1500 of the rift's choice surface (1499 labyrinth and 1566 Wave-zone rely on ambient mafia/user settings — unacceptable for a no-dialog public release), (c) Phase 3 corral training already converges. Re-entry criterion: smoke test shows lasso training > ~8 real turns on a payphone account. |
-| NCtoC + Club 'Em Across the Battlefield | **DROP** | The ash's gate ("don't cast after an NC already became this combat", CCS:1048-1053) is a *runtime* fight decision; our macros compile before the adventure, so the gate cannot be honored and misfires would convert catalog-card NCs we want. 5/day marginal combats don't buy back that risk. `elementaryQueue` dead in the ash — also dropped. |
-| Codpiece gem socketing | **DROP in-run socketing; IN pearl pry** (Task 13) | We never socket gems in-run (peridot/BCZ ride as normal accessories), so `if_equip`'s unsocket dance is moot. Pearls must come OUT before the finale (loop repo `thesea.ts:38-46`: "Gems are the only way to carry pearls past the Astral Gash… they have to come back out"). |
-| Baseball diamond, backup camera, Macrometeorite/CHEAT-CODE, Map the Monsters, Time-Spinner, Pocket Professor, otoscope | **DROP** | Combat-optimizer layers. Peridot (choice 1557, engine-native) + Source Terminal duplicate already force/double monitors; the marginal copies mostly matter on the long vocabulary route, which the seed narrowing makes rare. Macrometeorite/Professor/otoscope aren't used in the ash's sorceress phase at all (G:1346-1365, 1204-1212, 1414-1432). |
-| Wet Crap stat scrolls | **DROP** | 1000 pennies each; ash-proven unnecessary (finale is 2 advs in the spell outfit). |
-| Bang-potion throws (CCS:625-639) | **DROP** | Bang potions come from DoD spading, dropped in Phase 3 on net-turn grounds — no in-path supply. The seed criteria still read `lastBangPotion819..827` (free: empty prefs are wildcards). |
+| Phase 3 deferral                                                                                                       | Decision                                          | Pricing rationale                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skate-park war + fountain Fishy                                                                                        | **IN** (Task 7)                                   | War resolution = 1 forced NC with skate blade equipped ("Holey Rollers"; bladeless serves "Picking Sides", G:213-221); pays a free 30-turn Fishy every day (`skate lutz`, `_skateBuff1`, statuseffects.txt:552) replacing a fish-sauce/nigiri forever. Doubles as the Deep-Tainted/gummiheart burn zone.                                                                                                                                                                                                   |
+| Mom daily buff                                                                                                         | **IN** (Task 9)                                   | Free (0 turns, 1/day) once the quest finishes. `mom stats` (Cereal Killer +200 exp → mys → spell damage).                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Worktea-sushi clue 7 + godRunGuard                                                                                     | **IN** (Task 12)                                  | 2 fullness + a pull vs up to 3 wrong 703 guesses × ~9-adv Deep-Tainted burns.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| dreadSeedCheck post() hook                                                                                             | **IN** (Tasks 1, 4)                               | Zero-turn clue inference; skips knucklebone/sushi/vocabulary work outright when the seed pins.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Elementary/Library/Gymnasium regimes                                                                                   | **IN** (Tasks 6, 11, 12)                          | Core route.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Shub null-day pull reservation                                                                                         | **IN** (Task 2)                                   | Insertion point already commented in pulls.ts:55-63.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Source Terminal enhance/duplicate                                                                                      | **IN** (Task 9)                                   | Free: 3×(25+) turns of +30% item/day (`ChoiceControl.java:9070-9072`); duplicate 1/day doubles a monitor's cheatsheet table.                                                                                                                                                                                                                                                                                                                                                                               |
+| Corral-Leather McTwist guard                                                                                           | **DROP**                                          | Its only live window — corral farming with a maximizer-picked pro skateboard — closed with Phase 3's live-frozen spine; `forceGranted()`'s own comment already scopes it to combat builders. Revisit only if the smoke test surfaces a skateboard equip.                                                                                                                                                                                                                                                   |
+| Shadow-rift subsystem                                                                                                  | **DROP** (again)                                  | Value (free lasso reps, Shadow Waters, Wave Fishy) is real for payphone accounts, but (a) its window is pre-taming — inside the live-frozen Phase 3 spine, (b) the ash's own choice script handles only 1500 of the rift's choice surface (1499 labyrinth and 1566 Wave-zone rely on ambient mafia/user settings — unacceptable for a no-dialog public release), (c) Phase 3 corral training already converges. Re-entry criterion: smoke test shows lasso training > ~8 real turns on a payphone account. |
+| NCtoC + Club 'Em Across the Battlefield                                                                                | **DROP**                                          | The ash's gate ("don't cast after an NC already became this combat", CCS:1048-1053) is a _runtime_ fight decision; our macros compile before the adventure, so the gate cannot be honored and misfires would convert catalog-card NCs we want. 5/day marginal combats don't buy back that risk. `elementaryQueue` dead in the ash — also dropped.                                                                                                                                                          |
+| Codpiece gem socketing                                                                                                 | **DROP in-run socketing; IN pearl pry** (Task 13) | We never socket gems in-run (peridot/BCZ ride as normal accessories), so `if_equip`'s unsocket dance is moot. Pearls must come OUT before the finale (loop repo `thesea.ts:38-46`: "Gems are the only way to carry pearls past the Astral Gash… they have to come back out").                                                                                                                                                                                                                              |
+| Baseball diamond, backup camera, Macrometeorite/CHEAT-CODE, Map the Monsters, Time-Spinner, Pocket Professor, otoscope | **DROP**                                          | Combat-optimizer layers. Peridot (choice 1557, engine-native) + Source Terminal duplicate already force/double monitors; the marginal copies mostly matter on the long vocabulary route, which the seed narrowing makes rare. Macrometeorite/Professor/otoscope aren't used in the ash's sorceress phase at all (G:1346-1365, 1204-1212, 1414-1432).                                                                                                                                                       |
+| Wet Crap stat scrolls                                                                                                  | **DROP**                                          | 1000 pennies each; ash-proven unnecessary (finale is 2 advs in the spell outfit).                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| Bang-potion throws (CCS:625-639)                                                                                       | **DROP**                                          | Bang potions come from DoD spading, dropped in Phase 3 on net-turn grounds — no in-path supply. The seed criteria still read `lastBangPotion819..827` (free: empty prefs are wildcards).                                                                                                                                                                                                                                                                                                                   |
 
 ## File structure (this phase)
 
@@ -128,7 +134,16 @@ README.md              REPLACE: public release README
 - [ ] **Step 3: Write `src/lib/dreadscroll.ts`**
 
 ```ts
-import { abort, myAscensions, phpMtRand, phpRand, phpSeed, print, Rng, turnsPlayed } from "kolmafia";
+import {
+  abort,
+  myAscensions,
+  phpMtRand,
+  phpRand,
+  phpSeed,
+  print,
+  Rng,
+  turnsPlayed,
+} from "kolmafia";
 import { get, set } from "libram";
 
 import { args } from "../args";
@@ -187,10 +202,111 @@ export function calculateDreadscroll(seed: number): number[] {
 
 // Seahorse name tables, verbatim from SF/seedfinder_calc.ash:67-70
 // (data collected by Fart Scauce #2813285; inline in the ash, no data files).
-const SWIM_NAMES = ["Flicker", "Flitter", "Glitter", "Glimmer", "Shimmer", "Luster", "Dazzle", "Splendor", "Fritter", "Frizzle", "Tripper"];
-const JACK_NAMES = ["Banana", "Blackberry", "Blueberry", "Cantaloupe", "Cherry", "Clementine", "Dragonfruit", "Durian", "Fig", "Grape", "Grapefruit", "Honeydew", "Huckleberry", "Jackfruit", "Kiwi", "Kumquat", "Lemon", "Lime", "Mango", "Orange", "Pear", "Pineapple", "Raspberry", "Starfruit", "Strawberry", "Tangerine", "Tomato", "Watermelon", "Grapple", "Pluot", "Apricot", "Plum"];
-const TWOPART_NAMES_1 = ["Morning", "Afternoon", "Evening", "Waterspout", "Dolphin", "Cloud", "Reddie", "Purplie", "Bluie", "Orangie", "Greenie", "Pasty", "Lightning", "Thunder", "Pokey", "Scarlet", "Manta", "Sailboat", "Swimmy", "Backstroke", "Butterfly", "Sushi", "Hermit", "Diving", "Swordfish", "Starfish", "Sturgeon", "Urchin", "Beluga"];
-const TWOPART_NAMES_2 = ["Splash", "Pie", "Sparkle", "Waves", "Sand", "Gloaming", "Dreams", "Munchies", "Seagrass", "Shipwreck", "Sailor", "Fizzy", "Bucket", "Bait", "Sofa", "Apple", "Urchin", "Star", "Beam", "Valley", "Blossom", "Scallop", "Coral", "Anemone", "Seaweed"];
+const SWIM_NAMES = [
+  "Flicker",
+  "Flitter",
+  "Glitter",
+  "Glimmer",
+  "Shimmer",
+  "Luster",
+  "Dazzle",
+  "Splendor",
+  "Fritter",
+  "Frizzle",
+  "Tripper",
+];
+const JACK_NAMES = [
+  "Banana",
+  "Blackberry",
+  "Blueberry",
+  "Cantaloupe",
+  "Cherry",
+  "Clementine",
+  "Dragonfruit",
+  "Durian",
+  "Fig",
+  "Grape",
+  "Grapefruit",
+  "Honeydew",
+  "Huckleberry",
+  "Jackfruit",
+  "Kiwi",
+  "Kumquat",
+  "Lemon",
+  "Lime",
+  "Mango",
+  "Orange",
+  "Pear",
+  "Pineapple",
+  "Raspberry",
+  "Starfruit",
+  "Strawberry",
+  "Tangerine",
+  "Tomato",
+  "Watermelon",
+  "Grapple",
+  "Pluot",
+  "Apricot",
+  "Plum",
+];
+const TWOPART_NAMES_1 = [
+  "Morning",
+  "Afternoon",
+  "Evening",
+  "Waterspout",
+  "Dolphin",
+  "Cloud",
+  "Reddie",
+  "Purplie",
+  "Bluie",
+  "Orangie",
+  "Greenie",
+  "Pasty",
+  "Lightning",
+  "Thunder",
+  "Pokey",
+  "Scarlet",
+  "Manta",
+  "Sailboat",
+  "Swimmy",
+  "Backstroke",
+  "Butterfly",
+  "Sushi",
+  "Hermit",
+  "Diving",
+  "Swordfish",
+  "Starfish",
+  "Sturgeon",
+  "Urchin",
+  "Beluga",
+];
+const TWOPART_NAMES_2 = [
+  "Splash",
+  "Pie",
+  "Sparkle",
+  "Waves",
+  "Sand",
+  "Gloaming",
+  "Dreams",
+  "Munchies",
+  "Seagrass",
+  "Shipwreck",
+  "Sailor",
+  "Fizzy",
+  "Bucket",
+  "Bait",
+  "Sofa",
+  "Apple",
+  "Urchin",
+  "Star",
+  "Beam",
+  "Valley",
+  "Blossom",
+  "Scallop",
+  "Coral",
+  "Anemone",
+  "Seaweed",
+];
 
 /** SF/seedfinder_calc.ash:72-85 — a 4 on the type roll is redrawn (and
  * CONSUMES an MT output); all draws come from the MT stream. */
@@ -302,10 +418,16 @@ export function candidateSeeds(): number[] | undefined {
   }
   if (seeds.length > CACHE_MAX) {
     set("subaqua_seedScanFloor", constraintCount(c));
-    print(`Dreadscroll seed scan overflowed ${CACHE_MAX} candidates; retrying after more clues.`, "olive");
+    print(
+      `Dreadscroll seed scan overflowed ${CACHE_MAX} candidates; retrying after more clues.`,
+      "olive",
+    );
     return undefined;
   }
-  print(`Dreadscroll seed scan: ${seeds.length} candidates in ${Math.round((Date.now() - start) / 1000)}s.`, "blue");
+  print(
+    `Dreadscroll seed scan: ${seeds.length} candidates in ${Math.round((Date.now() - start) / 1000)}s.`,
+    "blue",
+  );
   set("subaqua_seedCandidates", seeds.join(","));
   set("subaqua_seedCandidatesAsc", myAscensions());
   return seeds;
@@ -321,7 +443,10 @@ export function dreadSeedCheck(): void {
   const seeds = candidateSeeds();
   if (seeds === undefined) return;
   if (seeds.length === 0) {
-    print("Dreadscroll seed scan: zero candidates — a criteria pref is corrupt (check leprecondoNeedOrder / dreadScroll*).", "red");
+    print(
+      "Dreadscroll seed scan: zero candidates — a criteria pref is corrupt (check leprecondoNeedOrder / dreadScroll*).",
+      "red",
+    );
     return;
   }
   const scrolls = seeds.map((seed) => calculateDreadscroll(seed));
@@ -369,6 +494,7 @@ export function godRunGuardCheck(): void {
       "Acquire a Mer-kin worktea and eat a sea sushi (the tea rides along and reveals the clue), then rerun.",
   );
 }
+```
 
 - [ ] **Step 4: Verify** — Run: `yarn check && yarn lint` — Expected: pass. If tsc cannot find `Rng`/`phpSeed` in the `kolmafia` module, they are at `node_modules/kolmafia/index.d.ts:510-514` — report what the actual exported names are and adapt (do not reimplement the RNG).
 
@@ -453,17 +579,17 @@ Add `import { shubPrepShort } from "../lib/shub";` and `get` to the libram impor
 - [ ] **Step 3: Extend `ResourcePolicy` in `src/resources/policy.ts`** — add three fields to the type (with doc comments) and to all three tier records:
 
 ```ts
-  /** High shiny banks free-fight riders (bat wings / retro cape) for
-   * aftercore instead of spending them on colosseum/finale outfits
-   * (ash !highShiny() gates at UTS:2179-2196, 2963-2969). */
-  conserveFreeFights: boolean;
-  /** Platinum Yendorian Express Card use in-run (ash gates on !highShiny(),
-   * UTS:2325-2330). */
-  usePyec: boolean;
-  /** Pull gremlin juice + hand chalk before Shub when the account is likely
-   * to miss (ash lowShiny() branch, UTS:2932-2944); all tiers still pull
-   * them when buffed muscle < 1250 — that half is game-state, not tier. */
-  shubInsurancePulls: boolean;
+/** High shiny banks free-fight riders (bat wings / retro cape) for
+ * aftercore instead of spending them on colosseum/finale outfits
+ * (ash !highShiny() gates at UTS:2179-2196, 2963-2969). */
+conserveFreeFights: boolean;
+/** Platinum Yendorian Express Card use in-run (ash gates on !highShiny(),
+ * UTS:2325-2330). */
+usePyec: boolean;
+/** Pull gremlin juice + hand chalk before Shub when the account is likely
+ * to miss (ash lowShiny() branch, UTS:2932-2944); all tiers still pull
+ * them when buffed muscle < 1250 — that half is game-state, not tier. */
+shubInsurancePulls: boolean;
 ```
 
 Values — low: `conserveFreeFights: false, usePyec: true, shubInsurancePulls: true`; mid: `false, true, false`; high: `true, false, false`.
@@ -532,27 +658,27 @@ git commit -m "feat: shub delevel math, null-day pull reservation, phase-4 polic
 (a) Guard the enumeration cost: at the top of the function, count unknowns first; with more than 4 unknown clues the 4^n candidate space explodes (65,536 codes × O(n²) scoring hangs Rhino). The route never uses the scroll that blind (clues 1/6/8 gate acquisition), but a manual `use` shouldn't hang:
 
 ```ts
-  const unknowns = [];
-  for (let i = 1; i <= 8; i++) {
-    if (get(`dreadScroll${i}`, 0) === 0) unknowns.push(i);
-  }
-  if (unknowns.length > 4) {
-    // Too blind to enumerate; answer the known clues and 1s elsewhere —
-    // mafia records the guess and its wrong-count either way, which is
-    // evidence the next attempt uses.
-    return Array.from({ length: 8 }, (_, i) => `${get(`dreadScroll${i + 1}`, 0) || 1}`).join("");
-  }
+const unknowns = [];
+for (let i = 1; i <= 8; i++) {
+  if (get(`dreadScroll${i}`, 0) === 0) unknowns.push(i);
+}
+if (unknowns.length > 4) {
+  // Too blind to enumerate; answer the known clues and 1s elsewhere —
+  // mafia records the guess and its wrong-count either way, which is
+  // evidence the next attempt uses.
+  return Array.from({ length: 8 }, (_, i) => `${get(`dreadScroll${i + 1}`, 0) || 1}`).join("");
+}
 ```
 
 (b) Fix the empty-pool edge: after the `dreadScrollGuesses` filtering loop, `possibleCodes` can be empty (contradictory history — e.g. a pref was hand-edited); `bestCode` would be `undefined` and the handler would submit garbage. Add immediately after the filtering loop:
 
 ```ts
-  if (possibleCodes.length === 0) {
-    // Contradictory guess history; fall back to known clues + 1s rather
-    // than submitting "undefined". (The ash's 4->3->2->1 clue-7 brute force
-    // is subsumed by the Hamming filter when the history is consistent.)
-    return Array.from({ length: 8 }, (_, i) => `${get(`dreadScroll${i + 1}`, 0) || 1}`).join("");
-  }
+if (possibleCodes.length === 0) {
+  // Contradictory guess history; fall back to known clues + 1s rather
+  // than submitting "undefined". (The ash's 4->3->2->1 clue-7 brute force
+  // is subsumed by the Hamming filter when the history is consistent.)
+  return Array.from({ length: 8 }, (_, i) => `${get(`dreadScroll${i + 1}`, 0) || 1}`).join("");
+}
 ```
 
 Match the function's actual local variable names when editing (the array of candidate strings is `possibleCodes` on main; adapt if it differs).
@@ -582,13 +708,13 @@ git commit -m "feat: deepcity choice handlers (396-401, 701, 705) and dreadscrol
 - [ ] **Step 1: Add the hook to `post()`** — at the end of the existing `post(task)` method body (after `emergencyDiet();`):
 
 ```ts
-    // Dreadscroll seed narrowing (ash post_adv UTS:253-254): active exactly
-    // between the seahorse tame and High Priesthood. Pure pref reads/writes —
-    // candidateSeeds() gates its own one-time scan cost (>= 2 clues + name)
-    // and cache-filters afterwards; no adventuring, per the hooks rule.
-    if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
-      dreadSeedCheck();
-    }
+// Dreadscroll seed narrowing (ash post_adv UTS:253-254): active exactly
+// between the seahorse tame and High Priesthood. Pure pref reads/writes —
+// candidateSeeds() gates its own one-time scan cost (>= 2 clues + name)
+// and cache-filters afterwards; no adventuring, per the hooks rule.
+if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
+  dreadSeedCheck();
+}
 ```
 
 Add `import { dreadSeedCheck } from "../lib/dreadscroll";` (grouped with the other `../lib` imports).
@@ -635,11 +761,23 @@ import {
   myMaxhp,
   myMp,
 } from "kolmafia";
-import { $class, $effect, $item, $items, $location, $monster, $skill, $stat, get, have, Macro } from "libram";
+import {
+  $class,
+  $effect,
+  $item,
+  $items,
+  $location,
+  $monster,
+  $skill,
+  $stat,
+  get,
+  have,
+  Macro,
+} from "libram";
 
 import { killMacro } from "../../engine/combat";
-import { currentPolicy } from "../../resources/policy";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
+import { currentPolicy } from "../../resources/policy";
 
 export type CombatFilter = (round: number, monster: Monster, text: string) => string;
 
@@ -717,7 +855,10 @@ export function gladiatorFilter(opts: { gym?: boolean } = {}): CombatFilter {
   return (round, monster, text) => {
     if (round === lastRound) {
       stuck += 1;
-      if (stuck > 3) abort("Gladiator fight is not advancing rounds; aborting rather than looping (CCS:490-492).");
+      if (stuck > 3)
+        abort(
+          "Gladiator fight is not advancing rounds; aborting rather than looping (CCS:490-492).",
+        );
     } else {
       stuck = 0;
       if (stallLeft > 0) {
@@ -749,11 +890,19 @@ export function gladiatorFilter(opts: { gym?: boolean } = {}): CombatFilter {
         forcerBanked = true;
         return Macro.trySkill($skill`McHugeLarge avalanche`).toString();
       }
-      if (!healTossed && get("dreadScroll2", 0) === 0 && itemAmount($item`Mer-kin healscroll`) > 0) {
+      if (
+        !healTossed &&
+        get("dreadScroll2", 0) === 0 &&
+        itemAmount($item`Mer-kin healscroll`) > 0
+      ) {
         healTossed = true;
         return Macro.tryItem($item`Mer-kin healscroll`).toString();
       }
-      if (!killTossed && get("dreadScroll5", 0) === 0 && itemAmount($item`Mer-kin killscroll`) > 0) {
+      if (
+        !killTossed &&
+        get("dreadScroll5", 0) === 0 &&
+        itemAmount($item`Mer-kin killscroll`) > 0
+      ) {
         killTossed = true; // gladiators are mer-kin phylum (monsters.txt:427-436)
         return Macro.tryItem($item`Mer-kin killscroll`).toString();
       }
@@ -781,7 +930,12 @@ export function gladiatorFilter(opts: { gym?: boolean } = {}): CombatFilter {
         spinnerUsed = true;
         return Macro.tryItem($item`Time-Spinner`).toString();
       }
-      if (underleveled && !weaksauceUsed && have($skill`Curse of Weaksauce`) && myMp() >= mpCost($skill`Curse of Weaksauce`)) {
+      if (
+        underleveled &&
+        !weaksauceUsed &&
+        have($skill`Curse of Weaksauce`) &&
+        myMp() >= mpCost($skill`Curse of Weaksauce`)
+      ) {
         weaksauceUsed = true;
         return Macro.trySkill($skill`Curse of Weaksauce`).toString();
       }
@@ -868,7 +1022,9 @@ export function yogUrtFilter(): CombatFilter {
         myBuffedstat($stat`Moxie`) + 10 > monsterAttack() ? undefined : next(yogDelevelOrder);
       const heal = next(yogHealOrder);
       if (!heal) {
-        abort("Out of Yog-Urt healing items mid-fight (CCS:510-517) — acquire sea gel / Mer-kin healscroll / waterlogged scroll of healing and rerun.");
+        abort(
+          "Out of Yog-Urt healing items mid-fight (CCS:510-517) — acquire sea gel / Mer-kin healscroll / waterlogged scroll of healing and rerun.",
+        );
       } else if (deleveler && have($skill`Ambidextrous Funkslinging`)) {
         thrown.add(deleveler);
         thrown.add(heal);
@@ -905,7 +1061,10 @@ export function yogUrtFilter(): CombatFilter {
         itemAmount($item`Doc Galaktik's Pungent Unguent`) > 0 &&
         have($skill`Ambidextrous Funkslinging`)
       ) {
-        return Macro.tryItem([$item`Doc Galaktik's Homeopathic Elixir`, $item`Doc Galaktik's Pungent Unguent`]).toString();
+        return Macro.tryItem([
+          $item`Doc Galaktik's Homeopathic Elixir`,
+          $item`Doc Galaktik's Pungent Unguent`,
+        ]).toString();
       }
     }
     if (have($skill`Saucegeyser`) && myMp() >= mpCost($skill`Saucegeyser`)) {
@@ -943,7 +1102,11 @@ export function shubFilter(): CombatFilter {
       const d = shubDelevelers.find((it) => itemAmount(it) > 0);
       if (d) {
         const f = shubDelevelFactor(d);
-        if (itemAmount(d) >= 2 && remaining * f * f >= 0.2 && have($skill`Ambidextrous Funkslinging`)) {
+        if (
+          itemAmount(d) >= 2 &&
+          remaining * f * f >= 0.2 &&
+          have($skill`Ambidextrous Funkslinging`)
+        ) {
           remaining *= f * f;
           return Macro.tryItem([d, d]).toString();
         }
@@ -966,13 +1129,18 @@ export function centerDoorFilter(): CombatFilter {
   return (round, monster, text) => {
     if (round === lastRound) {
       stuck += 1;
-      if (stuck > 3) abort("Seaceress fight is not advancing rounds; aborting rather than looping.");
+      if (stuck > 3)
+        abort("Seaceress fight is not advancing rounds; aborting rather than looping.");
     } else stuck = 0;
     lastRound = round;
     void monster;
     void text;
 
-    if (dancers < 2 && have($skill`Raise Backup Dancer`) && myMp() >= mpCost($skill`Raise Backup Dancer`)) {
+    if (
+      dancers < 2 &&
+      have($skill`Raise Backup Dancer`) &&
+      myMp() >= mpCost($skill`Raise Backup Dancer`)
+    ) {
       dancers += 1;
       return Macro.trySkill($skill`Raise Backup Dancer`).toString();
     }
@@ -980,7 +1148,10 @@ export function centerDoorFilter(): CombatFilter {
       return Macro.trySkill($skill`Saucegeyser`).toString();
     }
     if (have($skill`Saucestorm`) && myMp() >= mpCost($skill`Saucestorm`)) {
-      if (have($skill`Stuffed Mortar Shell`) && myMp() >= mpCost($skill`Stuffed Mortar Shell`) + mpCost($skill`Saucestorm`)) {
+      if (
+        have($skill`Stuffed Mortar Shell`) &&
+        myMp() >= mpCost($skill`Stuffed Mortar Shell`) + mpCost($skill`Saucestorm`)
+      ) {
         return Macro.trySkill($skill`Stuffed Mortar Shell`).toString();
       }
       return Macro.trySkill($skill`Saucestorm`).toString();
@@ -1034,6 +1205,7 @@ import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
+
 import { gladiatorFilter } from "./fights";
 import { skateWarOpen } from "./skatepark";
 
@@ -1050,7 +1222,9 @@ const gladTail = $item`Mer-kin gladiator tailpiece`;
  */
 export function gymnasiumTurn(): void {
   if (get("noncombatForcerActive")) {
-    abort("An NC forcer is pending while headed to the Mer-kin Gymnasium — it would be wasted on the zone NC (ash UTS:638-639). Spend it (e.g. at the Skate Park) and rerun.");
+    abort(
+      "An NC forcer is pending while headed to the Mer-kin Gymnasium — it would be wasted on the zone NC (ash UTS:638-639). Spend it (e.g. at the Skate Park) and rerun.",
+    );
   }
   const pieces: string[] = [];
   if (skateWarOpen()) {
@@ -1108,7 +1282,10 @@ export function gearQuest(): Quest {
         completed: () => availableAmount(gladMask) > 0 && availableAmount(gladTail) > 0,
         do: gladiatorGearStep,
         underwater: true,
-        limit: { soft: 18, message: "Gladiator guards are not dropping; check the gymnasium grind." },
+        limit: {
+          soft: 18,
+          message: "Gladiator guards are not dropping; check the gymnasium grind.",
+        },
       },
     ],
   };
@@ -1131,11 +1308,23 @@ import {
   useFamiliar,
   useSkill,
 } from "kolmafia";
-import { $coinmaster, $effect, $familiar, $item, $location, $skill, $stat, get, have, set } from "libram";
+import {
+  $coinmaster,
+  $effect,
+  $familiar,
+  $item,
+  $location,
+  $skill,
+  $stat,
+  get,
+  have,
+  set,
+} from "libram";
 
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
+
 import { gladiatorFilter } from "./fights";
 
 const gel = $item`sea gel`;
@@ -1187,7 +1376,11 @@ export function colosseumRoundTurn(): void {
   const pieces = ["+equip Mer-kin gladiator mask", "+equip Mer-kin gladiator tailpiece"];
   if (have(cmoi)) pieces.push("+equip Congressional Medal of Insanity");
   const policy = currentPolicy();
-  if (policy.allowClubEmBackInTime && get("_clubEmTimeUsed", 0) < 5 && have($item`legendary seal-clubbing club`)) {
+  if (
+    policy.allowClubEmBackInTime &&
+    get("_clubEmTimeUsed", 0) < 5 &&
+    have($item`legendary seal-clubbing club`)
+  ) {
     pieces.push("+equip legendary seal-clubbing club");
   }
   if (!policy.conserveFreeFights) {
@@ -1199,7 +1392,8 @@ export function colosseumRoundTurn(): void {
   }
   // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
   // against mys by the current multiplier.
-  const coeff = (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
+  const coeff =
+    (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
   maximize([`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces].join(", "), false);
   recover(myMaxhp()); // colosseum floor is FULL HP (setRecoveryTargets UTS:219-220)
   adv1($location`Mer-kin Colosseum`, -1, gladiatorFilter());
@@ -1217,12 +1411,16 @@ export function colosseumQuest(): Quest {
       {
         name: "Fifteen Rounds",
         ready: () =>
-          itemAmount($item`Mer-kin gladiator mask`) + itemAmount($item`Mer-kin gladiator tailpiece`) >= 2 ||
-          get("isMerkinGladiatorChampion"),
+          itemAmount($item`Mer-kin gladiator mask`) +
+            itemAmount($item`Mer-kin gladiator tailpiece`) >=
+            2 || get("isMerkinGladiatorChampion"),
         completed: () => get("lastColosseumRoundWon", 0) >= 15 || get("isMerkinGladiatorChampion"),
         do: colosseumRoundTurn,
         underwater: true,
-        limit: { soft: 25, message: "Colosseum rounds are not being won; inspect the gladiator filter." },
+        limit: {
+          soft: 25,
+          message: "Colosseum rounds are not being won; inspect the gladiator filter.",
+        },
       },
     ],
   };
@@ -1315,7 +1513,10 @@ export function skateParkQuest(): Quest {
         completed: () => !skateWarOpen(),
         do: skateParkTurn,
         underwater: true,
-        limit: { soft: 8, message: "The skate-park war is not resolving; check NC forcers and the skate blade." },
+        limit: {
+          soft: 8,
+          message: "The skate-park war is not resolving; check NC forcers and the skate blade.",
+        },
       },
     ],
   };
@@ -1368,12 +1569,12 @@ export function burnTurnElsewhere(): boolean {
 - [ ] **Step 3: Fishy lutz rung + eatSushi export in `src/resources/fishy.ts`** — (a) change `function eatSushi(` to `export function eatSushi(`; (b) insert a new rung in `maintainFishy()` between the fishy-pipe rung and the pull-meal rung:
 
 ```ts
-  // Rung 1.5: Lutz the Ice Skate — free 30-turn Fishy once the skate war
-  // resolved for ice (statuseffects.txt:552; SkateParkRequest state2buff1).
-  if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
-    cliExecute("skate lutz");
-    if (have(fishy)) return;
-  }
+// Rung 1.5: Lutz the Ice Skate — free 30-turn Fishy once the skate war
+// resolved for ice (statuseffects.txt:552; SkateParkRequest state2buff1).
+if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
+  cliExecute("skate lutz");
+  if (have(fishy)) return;
+}
 ```
 
 - [ ] **Step 4: Verify** — Run: `yarn check && yarn lint && yarn build` — Expected: pass; three bundles (Task 6's `./skatepark` import now resolves).
@@ -1460,7 +1661,14 @@ function getLucky(): void {
 // 'o' = open cavern (MineDecorator.java:76-103); dig URL which = row*8+col
 // (MineDecorator.java:57-65)) ──
 const SHAFT: [number, number][] = [
-  [3, 6], [3, 5], [3, 4], [3, 3], [3, 2], [2, 2], [4, 2], [5, 2],
+  [3, 6],
+  [3, 5],
+  [3, 4],
+  [3, 3],
+  [3, 2],
+  [2, 2],
+  [4, 2],
+  [5, 2],
 ];
 
 function stateAt(state: string, col: number, row: number): string {
@@ -1511,7 +1719,9 @@ function mineSquare(): void {
   visitUrl("mining.php?mine=3"); // refresh mineState3
   const state = get("mineState3", "");
   if (state.length !== 36) {
-    abort("mineState3 did not parse (expected 36 chars); visit mining.php?mine=3 manually and rerun.");
+    abort(
+      "mineState3 did not parse (expected 36 chars); visit mining.php?mine=3 manually and rerun.",
+    );
   }
   const [col, row] = pickSquare(state);
   visitUrl(`mining.php?mine=3&which=${row * 8 + col}`);
@@ -1535,7 +1745,10 @@ export function mineQuest(): Quest {
         combat: new CombatStrategy().kill(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,
-        limit: { soft: 8, message: "No Mer-kin digpick after 8 turns; pull one manually and rerun." },
+        limit: {
+          soft: 8,
+          message: "No Mer-kin digpick after 8 turns; pull one manually and rerun.",
+        },
       },
       {
         // Free picks (5/day Unaccompanied Miner) -> lodestone Loded picks ->
@@ -1545,7 +1758,8 @@ export function mineQuest(): Quest {
         completed: () => itemAmount(ore) > 0 || tailpieceOwned(),
         prepare: (): void => {
           recover();
-          const freePicks = have($skill`Unaccompanied Miner`) && get("_unaccompaniedMinerUsed", 0) < 5;
+          const freePicks =
+            have($skill`Unaccompanied Miner`) && get("_unaccompaniedMinerUsed", 0) < 5;
           if (!freePicks && !have($effect`Loded`) && !pulledToday($item`lodestone`)) {
             if (pullSequence($item`lodestone`)) use($item`lodestone`);
           }
@@ -1583,7 +1797,10 @@ export function mineQuest(): Quest {
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
         underwater: true,
-        limit: { soft: 8, message: "Pristine fish scales are not accumulating for the crappy mask." },
+        limit: {
+          soft: 8,
+          message: "Pristine fish scales are not accumulating for the crappy mask.",
+        },
       },
       {
         name: "Crappy Tailpiece",
@@ -1607,7 +1824,10 @@ export function mineQuest(): Quest {
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
         underwater: true,
-        limit: { soft: 8, message: "Pristine fish scales are not accumulating for the crappy tailpiece." },
+        limit: {
+          soft: 8,
+          message: "Pristine fish scales are not accumulating for the crappy tailpiece.",
+        },
       },
     ],
   };
@@ -1957,14 +2177,15 @@ import {
 import { $effect, $item, $location, $monster, get, have, Macro } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
+import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { godRunGuardCheck } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
-import { sneakFamiliar } from "../../engine/outfit";
 import { eatSushi } from "../../resources/fishy";
 import { pulledToday, pullSequence } from "../../resources/pulls";
 import { saberForcesFree } from "../../resources/saber";
+
 import { burnTurnElsewhere } from "./burn";
 import { sourceEnhanceItems } from "./daily";
 
@@ -2029,7 +2250,10 @@ export function libraryQuest(): Quest {
           return { modifier: "-combat", equip: scholarPieces, familiar: sneakFamiliar() };
         },
         effects: () => (availableAmount(dreadscroll) === 0 ? itemDropEffects() : sneakEffects()),
-        limit: { soft: 30, message: "Library is yielding neither the dreadscroll nor catalog clues." },
+        limit: {
+          soft: 30,
+          message: "Library is yielding neither the dreadscroll nor catalog clues.",
+        },
       },
       {
         // Clue 4 (ash UTS:2629-2634): knucklebone bounce.
@@ -2039,7 +2263,9 @@ export function libraryQuest(): Quest {
         do: (): void => {
           if (itemAmount(knucklebone) === 0 && !pulledToday(knucklebone)) pullSequence(knucklebone);
           if (itemAmount(knucklebone) === 0) {
-            abort("No Mer-kin knucklebone (drop it in the library or load one in Hagnk's); acquire one and rerun.");
+            abort(
+              "No Mer-kin knucklebone (drop it in the library or load one in Hagnk's); acquire one and rerun.",
+            );
           }
           use(knucklebone);
         },
@@ -2056,19 +2282,24 @@ export function libraryQuest(): Quest {
           availableAmount(dreadscroll) > 0 &&
           get("dreadScroll7", 0) === 0 &&
           get("merkinVocabularyMastery", 0) < 90,
-        completed: () =>
-          get("dreadScroll7", 0) !== 0 || get("merkinVocabularyMastery", 0) >= 90,
+        completed: () => get("dreadScroll7", 0) !== 0 || get("merkinVocabularyMastery", 0) >= 90,
         do: (): void => {
           if (itemAmount(worktea) === 0 && !pulledToday(worktea)) pullSequence(worktea);
           if (itemAmount(worktea) === 0) {
-            abort("No Mer-kin worktea for clue 7 (farm the library alphabetizer or load one in Hagnk's), or raise vocabulary to 90; then rerun.");
+            abort(
+              "No Mer-kin worktea for clue 7 (farm the library alphabetizer or load one in Hagnk's), or raise vocabulary to 90; then rerun.",
+            );
           }
           if (fullnessLimit() - myFullness() < 2) {
-            abort("No room for a 2-fullness nigiri to drink the worktea; free up fullness and rerun.");
+            abort(
+              "No room for a 2-fullness nigiri to drink the worktea; free up fullness and rerun.",
+            );
           }
           retrieveItem($item`white rice`);
           if (!eatSushi()) {
-            abort("Could not roll a nigiri (need fish meat + white rice + the sushi mat); fix supplies and rerun.");
+            abort(
+              "Could not roll a nigiri (need fish meat + white rice + the sushi mat); fix supplies and rerun.",
+            );
           }
         },
         freeaction: true,
@@ -2083,7 +2314,9 @@ export function libraryQuest(): Quest {
         do: (): void => {
           if (have($effect`Deep-Tainted Mind`)) {
             if (!burnTurnElsewhere()) {
-              abort("Hit a 1-in-40 situation — spend 1 non-free turn anywhere and rerun (ash UTS:2719-2721).");
+              abort(
+                "Hit a 1-in-40 situation — spend 1 non-free turn anywhere and rerun (ash UTS:2719-2721).",
+              );
             }
             return;
           }
@@ -2091,7 +2324,10 @@ export function libraryQuest(): Quest {
           use(dreadscroll); // fires choice 703; the bundle submits the answers
         },
         underwater: true,
-        limit: { soft: 40, message: "Not becoming High Priest; check dreadScroll* prefs and the 703 solver." },
+        limit: {
+          soft: 40,
+          message: "Not becoming High Priest; check dreadScroll* prefs and the 703 solver.",
+        },
       },
     ],
   };
@@ -2141,6 +2377,7 @@ import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
 import { pulledToday, pullSequence } from "../../resources/pulls";
+
 import { burnTurnElsewhere } from "./burn";
 import { yogUrtFilter } from "./fights";
 
@@ -2236,21 +2473,28 @@ export function yogUrtQuest(): Quest {
         // The fight (UTS:2783-2816 + CCS:1230-1249): -hp outfit, three bead
         // slots, hard max-HP ceiling, Cannelloni Cocoon to full.
         name: "Yog-Urt",
-        ready: () => yogPrepComplete() && !have($effect`Gummiheart`) && get("isMerkinHighPriest", false),
+        ready: () =>
+          yogPrepComplete() && !have($effect`Gummiheart`) && get("isMerkinHighPriest", false),
         completed: () => get("yogUrtDefeated", false),
         prepare: (): void => {
-          for (const slot of [$slot`acc1`, $slot`acc2`, $slot`acc3`].slice(0, availableAmount(beads))) {
+          for (const slot of [$slot`acc1`, $slot`acc2`, $slot`acc3`].slice(
+            0,
+            availableAmount(beads),
+          )) {
             equip(slot, beads);
           }
           if (have($skill`Cannelloni Cocoon`)) useSkill($skill`Cannelloni Cocoon`);
           recover(311, 100);
           if (myMaxhp() > 311) {
-            abort("Too much HP to beat Yog-Urt (need < 312 after debuff) — check what's granting HP (ash CCS:1231-1232).");
+            abort(
+              "Too much HP to beat Yog-Urt (need < 312 after debuff) — check what's granting HP (ash CCS:1231-1232).",
+            );
           }
         },
         do: () => void adv1($location`Mer-kin Temple (Right Door)`, -1, yogUrtFilter()),
         outfit: () => ({
-          modifier: "moxie, hot damage, cold damage, spooky damage, sleaze damage, stench damage, -hp, -equip tiny yam cannon",
+          modifier:
+            "moxie, hot damage, cold damage, spooky damage, sleaze damage, stench damage, -hp, -equip tiny yam cannon",
           equip: [
             $item`Mer-kin scholar mask`,
             $item`Mer-kin scholar tailpiece`,
@@ -2290,7 +2534,16 @@ git commit -m "feat: yog-urt — gummiheart burn, prep ladder, right-door fight"
 - [ ] **Step 1: Write `src/tasks/sorceress/shub.ts`**
 
 ```ts
-import { abort, adv1, cliExecute, itemAmount, myBuffedstat, myMaxhp, use, useSkill } from "kolmafia";
+import {
+  abort,
+  adv1,
+  cliExecute,
+  itemAmount,
+  myBuffedstat,
+  myMaxhp,
+  use,
+  useSkill,
+} from "kolmafia";
 import { $effect, $item, $location, $skill, $stat, get, have } from "libram";
 
 import { Quest } from "../../engine/task";
@@ -2298,6 +2551,7 @@ import { recover } from "../../lib";
 import { shubPrepShort } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 import { pulledToday, pullSequence } from "../../resources/pulls";
+
 import { shubFilter } from "./fights";
 
 export function shubQuest(): Quest {
@@ -2341,7 +2595,10 @@ export function shubQuest(): Quest {
             if (itemAmount($item`gremlin juice`) === 0 && !pulledToday($item`gremlin juice`)) {
               pullSequence($item`gremlin juice`);
             }
-            if (itemAmount($item`handful of hand chalk`) === 0 && !pulledToday($item`handful of hand chalk`)) {
+            if (
+              itemAmount($item`handful of hand chalk`) === 0 &&
+              !pulledToday($item`handful of hand chalk`)
+            ) {
               pullSequence($item`handful of hand chalk`);
             }
           }
@@ -2357,7 +2614,11 @@ export function shubQuest(): Quest {
           equip: [$item`Mer-kin gladiator mask`, $item`Mer-kin gladiator tailpiece`],
         },
         underwater: true,
-        limit: { tries: 4, message: "Shub keeps winning; stock more delevelers (each loss also weakens him) and rerun." },
+        limit: {
+          tries: 4,
+          message:
+            "Shub keeps winning; stock more delevelers (each loss also weakens him) and rerun.",
+        },
       },
     ],
   };
@@ -2367,12 +2628,21 @@ export function shubQuest(): Quest {
 - [ ] **Step 2: Write `src/tasks/sorceress/finale.ts`**
 
 ```ts
-import { adv1, availableAmount, buy, cliExecute, equippedItem, itemAmount, unequip } from "kolmafia";
+import {
+  adv1,
+  availableAmount,
+  buy,
+  cliExecute,
+  equippedItem,
+  itemAmount,
+  unequip,
+} from "kolmafia";
 import { $coinmaster, $item, $location, EternityCodpiece, get, have } from "libram";
 
 import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
+
 import { centerDoorFilter } from "./fights";
 
 const pearl = $item`unblemished pearl`;
@@ -2440,7 +2710,8 @@ export function finaleQuest(): Quest {
             if (!buy($coinmaster`Wet Crap For Sale`, 1, $item`water-logged pill`)) break;
           }
           while (itemAmount($item`sand penny`) > 10) {
-            if (!buy($coinmaster`Wet Crap For Sale`, 1, $item`waterlogged scroll of healing`)) break;
+            if (!buy($coinmaster`Wet Crap For Sale`, 1, $item`waterlogged scroll of healing`))
+              break;
           }
           cliExecute("council");
           cliExecute("council");
@@ -2453,7 +2724,7 @@ export function finaleQuest(): Quest {
 }
 ```
 
-- [ ] **Step 3: Verify** — Run: `yarn check && yarn lint` — Expected: pass. `EternityCodpiece.SLOTS` are `$slots\`codpiece1..5\`` (libram dist/resources/2026/EternityCodpiece.d.ts); `equippedItem`/`unequip` accept them.
+- [ ] **Step 3: Verify** — Run: `yarn check && yarn lint` — Expected: pass. `EternityCodpiece.SLOTS` are `$slots\`codpiece1..5\``(libram dist/resources/2026/EternityCodpiece.d.ts);`equippedItem`/`unequip` accept them.
 
 - [ ] **Step 4: Commit**
 

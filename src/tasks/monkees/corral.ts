@@ -30,7 +30,7 @@ const lasso = $item`sea lasso`;
 // eslint-disable-next-line libram/verify-constants
 const sword = $familiar`Sword of S Words`;
 
-/** Ash doneWithSeaCow (UTS:1446-1453). */
+/** Ash doneWithSeaCow (G:652-660 at c84c28b). */
 function leatherDone(): boolean {
   return (
     availableAmount($item`sea leather`) +
@@ -40,9 +40,13 @@ function leatherDone(): boolean {
   );
 }
 
-/** Ash doneWithCowboy (UTS:1439-1444): banked lassos finish the training. */
+/** Ash doneWithCowboy (G:638-650 at c84c28b): banked lassos finish the
+ * training. Threshold 23, not 21 (upstream 611a915): each lasso is 3 training
+ * points, but the tame itself consumes a lasso beyond the 20 points, so one
+ * must stay in reserve — 21 scores 7 lassos from scratch as "done" even though
+ * training to 20 eats all 7, stranding the seahorse as a fight with no ending. */
 function lassosDone(): boolean {
-  return get("lassoTrainingCount", 0) + 3 * availableAmount(lasso) >= 21;
+  return get("lassoTrainingCount", 0) + 3 * availableAmount(lasso) >= 23;
 }
 
 function tamed(): boolean {
@@ -188,6 +192,11 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           availableAmount(lasso) >= 1,
         completed: tamed,
         do: corral,
+        // Upstream 611a915's guard — never banish the cowboy/cow while its
+        // drop is still needed — is satisfied structurally here: this task
+        // sits after Corral Leather and Corral Lassos, so the engine only
+        // reaches it once leatherDone() and lassosDone() hold, and the
+        // farming tasks above kill (never banish) both sources.
         combat: new CombatStrategy()
           .macro(tamingMacro, seahorse)
           .banish($monsters`Mer-kin rustler, sea cowboy, sea cow`)
