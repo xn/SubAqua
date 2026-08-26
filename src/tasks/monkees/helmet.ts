@@ -1,4 +1,13 @@
-import { adv1, buy, itemAmount, retrieveItem, use, useSkill, visitUrl } from "kolmafia";
+import {
+  adv1,
+  buy,
+  itemAmount,
+  pullsRemaining,
+  retrieveItem,
+  use,
+  useSkill,
+  visitUrl,
+} from "kolmafia";
 import {
   $coinmaster,
   $effect,
@@ -16,7 +25,8 @@ import { CombatStrategy } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
-import { pullSequence } from "../../resources/pulls";
+import { pawWish, pawWishesLeft } from "../../resources/paw";
+import { pulledToday, pullSequence } from "../../resources/pulls";
 import { diverHuntActive } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
@@ -35,6 +45,19 @@ function rivetsDone(): boolean {
 
 function helmetDone(): boolean {
   return !diverHuntActive() || rivetsDone();
+}
+
+const rivet = $item`rusty rivet`;
+
+/** A 6-7/8 rivet gap with the porthole and broken helmet already in hand:
+ * cheaper to close with a wish or a pull than with another diver. */
+function rivetGapOpen(): boolean {
+  return (
+    have($item`rusty porthole`) &&
+    have($item`rusty broken diving helmet`) &&
+    itemAmount(rivet) > 5 &&
+    itemAmount(rivet) < 8
+  );
 }
 
 /** Ash getSandDollar ladder (UTS:1379-1390): thingpouches -> the sand-penny
@@ -105,6 +128,28 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         freeaction: true,
         limit: { tries: 2 },
       },
+      {
+        // Sits ahead of both hunt lanes so a near-complete rivet set never
+        // spends another summon or Wreck turn: monkey paw wishes first
+        // (upstream rivetHunt(), UTS:1457-1463 at 89982f5 — a wish is
+        // cheaper than a pull), then the ash's one-rivet pull backstop
+        // (UTS:2103-2105 at ab1105e). The old Craft Helmet prepare carried
+        // the pull behind a `ready: rivetsDone` gate and could never fire.
+        // ready() drops out once both budgets are spent, so the hunt resumes.
+        name: "Rivet Gap",
+        ready: () =>
+          rivetGapOpen() && (pawWishesLeft() > 0 || (!pulledToday(rivet) && pullsRemaining() > 0)),
+        completed: () => !rivetGapOpen(),
+        do: (): void => {
+          while (rivetGapOpen() && pawWish(rivet));
+          if (itemAmount(rivet) === 7) pullSequence(rivet);
+        },
+        freeaction: true,
+        limit: {
+          tries: 3,
+          message: "Rivet wishes/pull are not landing; check the paw and Hagnk's.",
+        },
+      },
       ...(opts.summonLane
         ? [
             {
@@ -152,10 +197,6 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         ready: rivetsDone,
         completed: () => !diverHuntActive(),
         do: () => void retrieveItem($item`aerated diving helmet`),
-        prepare: (): void => {
-          // Ash backstop (UTS:2103-2105): one pulled rivet closes a 7/8 gap.
-          if (itemAmount($item`rusty rivet`) < 8) pullSequence($item`rusty rivet`);
-        },
         freeaction: true,
         limit: { tries: 1 },
       },

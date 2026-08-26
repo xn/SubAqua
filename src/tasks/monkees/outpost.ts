@@ -6,6 +6,7 @@ import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { pawWish } from "../../resources/paw";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const outpost = $location`The Mer-Kin Outpost`;
@@ -119,6 +120,11 @@ export function outpostQuest(): Quest {
         effects: sneakEffects,
         prepare: (): void => {
           recover();
+          // Monkey paw wishes before the pull and the farm (upstream
+          // farmPrayerbeads(), UTS:1013-1014 at 89982f5 wishes ahead of the
+          // outpost loop; we also put the wish ahead of the pull — five
+          // wishes a day are the cheaper budget).
+          while (availableAmount(beads) < 3 && pawWish(beads));
           if (availableAmount(beads) < 3 && pullBudgetAllows(beads)) pullSequence(beads);
         },
         limit: { soft: 12, message: "Prayerbeads are not accumulating; check healer handling." },

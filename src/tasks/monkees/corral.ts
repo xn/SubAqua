@@ -78,7 +78,15 @@ function seahorseMacro(): Macro {
 }
 
 export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Quest {
-  const swordOut = () => opts.swordLane && have(sword) && get("swordOfSWordsMonster") !== null;
+  // Ash doSWord() (G:773-780 at 89982f5): the imprinted sword rides only
+  // while lassos are still short — seven banked (upstream bumped 6 → 7 to
+  // match the 23-point lassosDone reserve); past that an item familiar earns
+  // more on the leather/cowbell fights.
+  const swordOut = () =>
+    opts.swordLane &&
+    have(sword) &&
+    get("swordOfSWordsMonster") !== null &&
+    availableAmount(lasso) < 7;
   return {
     name: "Corral",
     tasks: [

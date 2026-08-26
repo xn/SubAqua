@@ -1,5 +1,18 @@
 import { appearanceRates, itemAmount, Location, Monster } from "kolmafia";
-import { $effect, $item, $locations, $phylum, $skill, get, have, Macro } from "libram";
+import {
+  $effect,
+  $familiar,
+  $item,
+  $locations,
+  $phylum,
+  $skill,
+  get,
+  have,
+  Macro,
+  totalFamiliarWeight,
+} from "libram";
+
+import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
 
 import { banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
@@ -15,6 +28,14 @@ export type FreeRunSource = CombatResource & {
 /** The ash zone-excludes snokebomb at three surface farm zones
  * (UnderTheSeaCCS.ash:86-89). */
 const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Sleazy Back Alley, The Haunted Pantry`;
+
+const boots = $familiar`Pair of Stomping Boots`;
+const navelSources = ["GAP runaway", "navel ring runaway"];
+
+function bootsRunawaysLeft(): number {
+  if (!have(boots)) return 0;
+  return Math.max(0, Math.floor(totalFamiliarWeight(boots) / 5) - get("_banderRunaways"));
+}
 
 /** Ordered per ash freeRun() (UnderTheSea.ash:255-265) with the CCS spenders
  * folded in. Spring shoes appear twice on purpose: banish mode upgrades
@@ -39,15 +60,23 @@ export const freeRunSources: FreeRunSource[] = [
   },
   {
     // Underwater the GAP runaway only works while Driving Waterproofly
-    // (ash freeRun():257).
+    // (ash freeRun():257) — the selector enforces that by zone; on the
+    // surface (guild tests, UTS:1121-1128 at 89982f5) it is unconditional.
     name: "GAP runaway",
-    available: () =>
-      have($item`Greatest American Pants`) &&
-      get("_navelRunaways") < 3 &&
-      have($effect`Driving Waterproofly`),
+    available: () => have($item`Greatest American Pants`) && get("_navelRunaways") < 3,
     remaining: () =>
       have($item`Greatest American Pants`) ? Math.max(0, 3 - get("_navelRunaways")) : 0,
     equip: $item`Greatest American Pants`,
+    do: Macro.runaway(),
+    banishes: false,
+  },
+  {
+    // Same three-a-day counter as the GAP (FightRequest.java:11866-11868).
+    name: "navel ring runaway",
+    available: () => have($item`navel ring of navel gazing`) && get("_navelRunaways") < 3,
+    remaining: () =>
+      have($item`navel ring of navel gazing`) ? Math.max(0, 3 - get("_navelRunaways")) : 0,
+    equip: $item`navel ring of navel gazing`,
     do: Macro.runaway(),
     banishes: false,
   },
@@ -76,6 +105,19 @@ export const freeRunSources: FreeRunSource[] = [
     equip: $item`latte lovers member's mug`,
     do: Macro.trySkill($skill`Throw Latte on Opponent`),
     banishes: true,
+  },
+  {
+    // One free runaway per five full pounds, on the Bandersnatch counter
+    // (FightRequest.java:11861-11865: modifiedWeight / 5 > _banderRunaways).
+    // Ash freeRun() G:487-494 + CCS free_run() ladder at 89982f5. Takes the
+    // familiar slot, so it only lands on tasks that set no familiar of
+    // their own (equip-gated provide in engine.customize()).
+    name: "Release the Boots",
+    available: () => bootsRunawaysLeft() > 0,
+    remaining: bootsRunawaysLeft,
+    equip: $familiar`Pair of Stomping Boots`,
+    do: Macro.trySkill($skill`Release the Boots`),
+    banishes: false,
   },
   {
     name: "Feel Hatred",
@@ -161,6 +203,27 @@ export function selectFreeRun(
   const snokebomb = banishSources.find((source) => source.name === "snokebomb");
   const run = freeRunSources.find((source) => {
     if (source.banishes && !banish) return false;
+    // The navel runaways need Driving Waterproofly underwater (ash
+    // freeRun():257); an unknown zone is treated as underwater — every
+    // caller that omits the location is a sea task.
+    if (
+      navelSources.includes(source.name) &&
+      (!location || location.environment === "underwater") &&
+      !have($effect`Driving Waterproofly`)
+    ) {
+      return false;
+    }
+    // The boots cannot breathe: underwater they need a familiar breather
+    // (else engine.customize()'s familiar check would throw on a familiar
+    // the task never asked for).
+    if (
+      source.name === "Release the Boots" &&
+      (!location || location.environment === "underwater") &&
+      !hasBreathingEffect() &&
+      !familiarWaterBreathingEquipment.some((it) => have(it))
+    ) {
+      return false;
+    }
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;
       // Skip when snokebomb's existing banish already covers this zone

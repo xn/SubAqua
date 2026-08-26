@@ -144,7 +144,9 @@ export const freeKillSources: FreeKillSource[] = [
     do: Macro.trySkill($skill`Club 'Em Back in Time`),
     colosseumSafe: true,
     colosseumOnly: true,
-    dropSafe: true,
+    // Sends the monster back in time — no drops (upstream CCS free_kill()
+    // `|| drop` gate, 9eb5cd7).
+    dropSafe: false,
   },
 ];
 

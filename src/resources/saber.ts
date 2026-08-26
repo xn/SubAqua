@@ -32,11 +32,14 @@ export function saberAllowedAt(location: Location): boolean {
 export function diverHuntActive(): boolean {
   const scubaTank = $item`Elf Guard SCUBA tank`;
   const blocklisted = diverPayoffGear.filter((it) => it !== scubaTank);
-  return (
-    itemAmount($item`rusty rivet`) < 8 &&
-    !blocklisted.some((it) => have(it)) &&
-    !haveAnywhere(scubaTank)
-  );
+  // The helmet needs the porthole and the broken helmet as well as eight
+  // rivets — eight rivets with no porthole used to end the hunt with nothing
+  // to craft (upstream rivetHunt() fix, UnderTheSea 6b7cd80 / UTS:1373-1377).
+  const partsMissing =
+    itemAmount($item`rusty rivet`) < 8 ||
+    !have($item`rusty porthole`) ||
+    !have($item`rusty broken diving helmet`);
+  return partsMissing && !blocklisted.some((it) => have(it)) && !haveAnywhere(scubaTank);
 }
 
 export function prayerbeadsShort(): boolean {

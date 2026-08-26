@@ -24,11 +24,17 @@ export class CombatStrategy extends BaseCombatStrategy.withActions(myActions) {}
 /**
  * Defaults when the resources layer provides nothing for an action.
  * Degradations are deliberate and explicit per spec §2: banish, the ignore family,
- * killItem, yellowRay and forceItems all degrade to kill; freeRun is taffy-or-nothing;
+ * killItem, yellowRay and forceItems all degrade to kill; freeRun is taffy-or-nothing
+ * underwater and a plain kill on the surface (the indigo taffy only works underwater,
+ * modifiers.txt:11752-11754, so "nothing" there would stall the fight);
  * killFree ABORTS (a task that requires a free kill must be given one).
  */
 export class MyActionDefaults implements ActionDefaults<CombatActions> {
-  freeRun(_target?: Monster | Location) {
+  freeRun(target?: Monster | Location) {
+    // grimoire hands the default action its task location (combat.js:269).
+    if (target instanceof Location && target.environment !== "underwater") {
+      return killMacro(false);
+    }
     return runMacro();
   }
   ignore(target?: Monster | Location) {

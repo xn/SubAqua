@@ -43,7 +43,11 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
 // Elf Guard SCUBA tank is pullable in-path (not on InventoryManager.pullableInSeaPath's
 // blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
 // spec §3/§4's softcore exceptions list confirms it.
-const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Flash Liquidizer Ultra Dousing Accessory, Elf Guard SCUBA tank`;
+// The FLUDA is deliberately absent: the ash equips it only in the shadow-rift
+// outfits and douses the shadow slab (UTS:866-885, 2379; CCS:543-546 at
+// 89982f5) — a subsystem SubAqua dropped — and upstream itself now skips the
+// pull without a pay phone (9eb5cd7). For us it is a dead pull slot.
+const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Elf Guard SCUBA tank`;
 // eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
 // (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
 // eslint-disable-next-line libram/verify-constants
