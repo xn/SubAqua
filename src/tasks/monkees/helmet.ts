@@ -199,7 +199,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               // as the engine sees it.
               prepare: (): void => {
                 recover();
-                if (!forceGranted("diver")) applyEffects(squintEffects());
+                if (!forceGranted("diver")) applyEffects(squintEffects(), "Diver Summon");
               },
               limit: { tries: 5 },
             },
@@ -225,7 +225,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // the same way (engine.ts:198).
         prepare: (): void => {
           recover();
-          if (!forceGranted("diver", wreck)) applyEffects(squintEffects());
+          if (!forceGranted("diver", wreck)) applyEffects(squintEffects(), "Wreck Rivets");
         },
         limit: { soft: 30, message: "Diver parts are not dropping; check item-drop gear." },
       },

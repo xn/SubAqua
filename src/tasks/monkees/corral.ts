@@ -174,7 +174,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
               // engine.js:101 vs :108).
               prepare: (): void => {
                 recover();
-                applyEffects(squintEffects());
+                applyEffects(squintEffects(), "Corral Opener");
               },
               limit: { tries: 3 },
             },

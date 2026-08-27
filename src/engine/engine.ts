@@ -51,6 +51,7 @@ import {
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
 import {
+  isEnsureError,
   reserveMpFor,
   resolveWantedEffects,
   routeDamageEffects,
@@ -524,6 +525,11 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       try {
         ensureEffect(effect);
       } catch (e) {
+        // Fail-soft ONLY on libram's EnsureError: in mafia's JS runtime an
+        // abort() is a catchable exception, and a blanket catch here would
+        // print `failed <effect>` and carry the run right past it
+        // (moods.ts isEnsureError).
+        if (!isEnsureError(e)) throw e;
         print(`failed ${effect}: ${e}`, "yellow");
       }
     }

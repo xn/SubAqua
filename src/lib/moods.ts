@@ -22,6 +22,7 @@ import {
   AprilingBandHelmet,
   CinchoDeMayo,
   ensureEffect,
+  EnsureError,
   get,
   have,
   isSong,
@@ -304,6 +305,30 @@ export function resolveWantedEffects(effects: Effect[]): {
  * @param context optional label for the transparency line below (e.g. a task
  * or call-site name); omitted callers just get "Effects: …".
  */
+/**
+ * Is this thrown value libram's ensureEffect() giving up on a buff?
+ *
+ * The fail-soft catches around ensureEffect() (applyEffects below, and the
+ * engine's acquireEffects() override) exist to honour "buffs are optional"
+ * (user rule 2026-08-27) — NOT to swallow anything else that comes out of the
+ * runtime. In mafia's JS runtime an abort() surfaces as a catchable exception,
+ * so a blanket `catch` would print `failed <effect>: …` and march on past a
+ * real abort. Only an EnsureError is fail-soft; everything else rethrows.
+ *
+ * The name check is not redundant. libram's EnsureError extends the built-in
+ * Error, and this script is transpiled by Babel, whose _wrapNativeSuper /
+ * _callSuper path only preserves the subclass prototype when Reflect.construct
+ * is available; without it the thrown value is a plain Error that still carries
+ * EnsureError's own `this.name = "Ensure Error"` (libram lib.ts:550-555). Rhino's
+ * Reflect support is not something this script should bet a run on, and the cost
+ * of a missed `instanceof` is the exact regression this guard is meant to
+ * prevent in reverse — a hard abort on an optional buff.
+ */
+export function isEnsureError(e: unknown): boolean {
+  if (e instanceof EnsureError) return true;
+  return typeof e === "object" && e !== null && (e as { name?: unknown }).name === "Ensure Error";
+}
+
 export function applyEffects(effects: Effect[], context?: string): void {
   reserveMpFor(effects);
   const { wanted, skipLines } = resolveWantedEffects(effects);
@@ -330,6 +355,9 @@ export function applyEffects(effects: Effect[], context?: string): void {
     try {
       ensureEffect(effect);
     } catch (e) {
+      // Only libram's own "could not get this buff" is optional; anything else
+      // (an abort() in particular) has to keep propagating. See isEnsureError.
+      if (!isEnsureError(e)) throw e;
       print(`failed ${effect}: ${e}`, "yellow");
     }
   }

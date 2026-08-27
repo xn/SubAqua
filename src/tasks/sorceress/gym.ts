@@ -58,7 +58,7 @@ export function gymnasiumTurn(): void {
   // ...plus the damage-mitigation mood (the garbo fork mood.ts:104-126): the gym's
   // Mer-kin roster hits as hard as the corral's and this turn runs to an 800 HP
   // floor. Cast before the maximize for the same reason the +combat buffs are.
-  applyEffects(combineMoods(combatEffects(), survivalEffects()));
+  applyEffects(combineMoods(combatEffects(), survivalEffects()), "Guard Grind");
   const warOpen = skateWarOpen();
   const pieces: string[] = [];
   if (warOpen) {

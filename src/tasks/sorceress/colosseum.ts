@@ -119,7 +119,7 @@ export function colosseumRoundTurn(): void {
   // rides along — these fifteen rounds are the longest sustained damage the
   // route takes. This wrapper dresses itself, so the engine's acquireEffects()
   // never runs for it; recover() below restores the MP these casts spend.
-  applyEffects(combineMoods(colosseumEffects(), survivalEffects()));
+  applyEffects(combineMoods(colosseumEffects(), survivalEffects()), "Colosseum round");
   // Favored by Lyle, the ash's way (mood():158-168 casts it through the same
   // fail-silent cli_execute): the monorail buff has no "is it reachable"
   // predicate, only the once-a-day pref (MonorailCommand:15-18), so it cannot
