@@ -3,7 +3,6 @@ import {
   adv1,
   availableAmount,
   buy,
-  equip,
   Item,
   itemAmount,
   myAdventures,
@@ -23,7 +22,6 @@ import {
   $items,
   $location,
   $skill,
-  $slot,
   $stat,
   get,
   have,
@@ -333,27 +331,39 @@ export function yogUrtQuest(): Quest {
         ready: () => yogPrepComplete() && gummiheartWaitOver() && get("isMerkinHighPriest", false),
         completed: () => get("yogUrtDefeated"),
         prepare: (): void => {
-          for (const slot of [$slot`acc1`, $slot`acc2`, $slot`acc3`].slice(
-            0,
-            availableAmount(beads),
-          )) {
-            equip(slot, beads);
-          }
+          // The prayerbeads are in the `outfit` below, not here (audit item 5):
+          // prepare() runs AFTER dress(), so equipping them here overrode the
+          // three accessory slots the -hp/elemental maximize had just chosen.
           if (have($skill`Cannelloni Cocoon`)) useSkill($skill`Cannelloni Cocoon`);
           recover(myMaxhp());
           yogHpCheck();
         },
         do: () => void adv1($location`Mer-kin Temple (Right Door)`, -1, yogUrtFilter()),
-        outfit: () => ({
-          modifier:
-            "moxie, hot damage, cold damage, spooky damage, sleaze damage, stench damage, -hp, -equip tiny yam cannon",
-          equip: [
-            $item`Mer-kin scholar mask`,
-            $item`Mer-kin scholar tailpiece`,
-            ...(currentPolicy().conserveFreeFights ? [] : [$item`bat wings`]),
-          ],
-          familiar: expFamiliar(),
-        }),
+        outfit: () => {
+          // Every prayerbead on hand goes in an accessory slot (UTS:2871-2891),
+          // capped at the three slots. Declared as acc1/acc2/acc3 keys rather
+          // than repeated `equip:` entries: grimoire's slotless equip()
+          // short-circuits on haveEquipped() for a duplicate
+          // (outfit.js:85-88 + :270-277), so `[beads, beads, beads]` would
+          // place exactly ONE. The slot keys route through equipAccessory(),
+          // whose isAvailable() gate is quantity-aware (`have(item, n + 1)`),
+          // and _dress() then verifies every copy actually went on — which is
+          // what fights.ts's `equippedAmount(prayerbeads)` heal ladder reads.
+          const beadCount = Math.min(3, availableAmount(beads));
+          return {
+            modifier:
+              "moxie, hot damage, cold damage, spooky damage, sleaze damage, stench damage, -hp, -equip tiny yam cannon",
+            equip: [
+              $item`Mer-kin scholar mask`,
+              $item`Mer-kin scholar tailpiece`,
+              ...(currentPolicy().conserveFreeFights ? [] : [$item`bat wings`]),
+            ],
+            ...(beadCount >= 1 ? { acc1: beads } : {}),
+            ...(beadCount >= 2 ? { acc2: beads } : {}),
+            ...(beadCount >= 3 ? { acc3: beads } : {}),
+            familiar: expFamiliar(),
+          };
+        },
         underwater: true,
         limit: { tries: 3, message: "Yog-Urt is not dying; check the deleveler/heal stock." },
       },
