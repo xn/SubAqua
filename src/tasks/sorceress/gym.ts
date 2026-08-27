@@ -47,7 +47,7 @@ const gladTail = $item`Mer-kin gladiator tailpiece`;
 export function gymnasiumTurn(): void {
   if (get("noncombatForcerActive")) {
     abort(
-      "An NC forcer is pending while headed to the Mer-kin Gymnasium — it would be wasted on the zone NC (ash UTS:638-639). Spend it (e.g. at the Skate Park) and rerun.",
+      "An NC forcer is pending while headed to the Mer-kin Gymnasium — it would be wasted on the zone NC (ash UTS:663-664). Spend it (e.g. at the Skate Park) and rerun.",
     );
   }
   // Ash gymnasium() runs tempEquipment THEN mood("combat") (UTS:660-662 at

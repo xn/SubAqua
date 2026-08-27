@@ -227,10 +227,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // (loopstar engine.ts:512-522 + paths/sea/engine.ts:87-90, which provides
     // killFree and then replaceActions("kill" -> "killFree")); here the trigger
     // is the ash's own free_kill() call sites rather than "free kills are no
-    // longer needed", and the free-kill step is PREPENDED instead of replacing
-    // the action, so the kill ladder stays as the fallback when the source
-    // fails to end the fight. The site table and its CCS cites live in
-    // freeKillTargetDropsMatter() (resources/freekill.ts).
+    // longer needed", and the free-kill step is APPENDED as a macro instead of
+    // replacing the action — macros run ahead of every action, so the kill
+    // ladder stays as the fallback when the source fails to end the fight,
+    // while the task's own macros keep their place in front of it. The site
+    // table and its CCS cites live in freeKillTargetDropsMatter()
+    // (resources/freekill.ts).
     //
     // Out of scope by construction: killHard, and the Phase 4 adv1-filter
     // fights (Yog-Urt, Shub, the Center Door, the colosseum and gym rounds),
@@ -246,8 +248,8 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     {
       // Monsters this task handles with something OTHER than a plain kill. A
       // general macro runs ahead of every monster-specific ACTION (grimoire
-      // combat.js compile order), so an unguarded prepend would burn the free
-      // kill on the monster we meant to banish, Force or run from.
+      // combat.js compile order), so an unguarded general step would burn the
+      // free kill on the monster we meant to banish, Force or run from.
       const reserved = [
         ...combatActions
           .filter((action) => action !== "kill")
@@ -266,7 +268,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           monster === undefined && reserved.length > 0
             ? Macro.ifNot(reserved, source.do)
             : source.do;
-        // NOT prepended. grimoire compiles startingMacro -> monster macros ->
+        // Appended, never prepended. grimoire compiles startingMacro -> monster macros ->
         // general macros -> monster actions -> general action (combat.js
         // :242-272), so appending still puts the free kill ahead of every
         // ACTION — the kill ladder stays the fallback — while leaving the

@@ -115,18 +115,22 @@ export function killMacro(hard?: boolean): Macro {
   // on every fight too; over-casting only walks that decay down sooner.
   //
   // Weaksauce keeps the ash's SECOND condition, my_mp() >= mp_cost, which BALLS
-  // CAN express as `mpabove`: the cost is read at macro-build time (mpCost
-  // moves with buffs, so a mid-task shift is not tracked) and the macro tests
-  // live MP each round.
+  // CAN express — as the negation of `mpbelow`. There is no `mpabove`: mafia's
+  // predicate table (relay/macrohelper.6.js:101-116) has mpbelow /
+  // mppercentbelow / hpbelow / hppercentbelow / monsterhpabove / monsterhpbelow
+  // and no mp- or hp-above at all, and mafia writes this very test as
+  // `if !mpbelow <cost>` (Macrofier.java:537). The cost is read at macro-build
+  // time (mpCost moves with buffs, so a mid-task shift is not tracked); the
+  // macro tests live MP each round.
   //
   // Never on `hard`: killMacro(true) is the boss / already-free path, and both
   // openers deal damage — enough to trip Shub-Jigguwatt's retaliation.
   if (!hard) {
     if (have($skill`Micrometeorite`)) result.trySkill($skill`Micrometeorite`);
     if (have($skill`Curse of Weaksauce`)) {
-      // `mpabove N` is MP > N, so the ash's >= becomes cost - 1.
+      // !mpbelow cost is exactly my_mp() >= cost.
       const cost = mpCost($skill`Curse of Weaksauce`);
-      result.if_(`mpabove ${Math.max(0, cost - 1)}`, Macro.trySkill($skill`Curse of Weaksauce`));
+      result.ifNot(`mpbelow ${cost}`, Macro.trySkill($skill`Curse of Weaksauce`));
     }
   }
 
