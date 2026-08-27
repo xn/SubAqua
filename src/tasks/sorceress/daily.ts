@@ -1,4 +1,4 @@
-import { cliExecute, use } from "kolmafia";
+import { use } from "kolmafia";
 import { $item, get, have, SourceTerminal } from "libram";
 
 import { Quest } from "../../engine/task";
@@ -22,22 +22,15 @@ export function sorceressDailies(): Quest {
     name: "Sorceress Dailies",
     tasks: [
       {
-        // Free daily buff the ash never claims (MomRequest.java:43-55; 7
-        // options). "stats" = Cereal Killer, +200 exp -> mys -> spell damage.
-        // Mafia auto-equips underwater gear for the visit (Checkpoint).
-        name: "Mom Buff",
-        ready: () => get("questS02Monkees") === "finished",
-        completed: () => get("_momFoodReceived", false),
-        do: () => void cliExecute("mom stats"),
-        freeaction: true,
-        limit: { tries: 1 },
-      },
-      {
         // PYEC (ash UTS:2323-2330, !highShiny gate -> usePyec policy). The
         // storage take is a real ronin pull — pullSequence keeps the books.
         name: "PYEC",
         ready: () => currentPolicy().usePyec && haveAnywhere(pyec),
-        completed: () => get("expressCardUsed", false),
+        // Complete OR not applicable: an account with no PYEC anywhere (and a
+        // tier whose policy declines it) would otherwise sit
+        // incomplete-but-unavailable for the whole run.
+        completed: () =>
+          get("expressCardUsed", false) || !currentPolicy().usePyec || !haveAnywhere(pyec),
         do: (): void => {
           if (!have(pyec)) pullSequence(pyec);
           if (have(pyec)) use(pyec);
@@ -50,7 +43,12 @@ export function sorceressDailies(): Quest {
         // spent by the school monitor macro (Task 10).
         name: "Terminal Educate",
         ready: () => SourceTerminal.have(),
-        completed: () => SourceTerminal.getSkills().includes(SourceTerminal.Skills.Duplicate),
+        // Terminal-less accounts report complete rather than
+        // incomplete-but-unavailable (and getSkills() is never asked about a
+        // terminal that isn't there).
+        completed: () =>
+          !SourceTerminal.have() ||
+          SourceTerminal.getSkills().includes(SourceTerminal.Skills.Duplicate),
         do: () => void SourceTerminal.educate(SourceTerminal.Skills.Duplicate),
         freeaction: true,
         limit: { tries: 1 },
