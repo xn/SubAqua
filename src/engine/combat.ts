@@ -91,6 +91,30 @@ export function killMacro(hard?: boolean): Macro {
     }
   }
 
+  // Delevel openers, ash CCS develOpeners() (CCS:171-198), which cleanUp()
+  // (CCS:238-300) throws before the nuke on every ordinary fight — freeRounds()
+  // is 1 only for the colosseum six, so leadWithNuke is false and the openers
+  // go first. Time-Spinner is in the ash's ladder and deliberately not here:
+  // SubAqua dropped the item.
+  //
+  // The ash gates each on my_buffedstat(moxie) + 10 < monster_attack(). BALLS
+  // has no monster-attack predicate (its conditions are hp/mp/monsterhp,
+  // round/pastround, has(combat)item/skill, haseffect, monstername/id/phylum/
+  // element, snarfblat, match, times — nothing reads the monster's attack), and
+  // killMacro is built once per task at customize() time, before the monster is
+  // known, so the comparison cannot be pre-computed either. Cast them
+  // unconditionally instead: Micrometeorite has NO daily ration
+  // (_micrometeoriteUses models a 25% -> 10% potency decay, not a cap — the
+  // ten-a-day limit belongs to Macrometeorite) and Curse of Weaksauce costs
+  // only MP, so the divergence buys an over-cast of two cheap skills.
+  //
+  // Never on `hard`: killMacro(true) is the boss / already-free path, and both
+  // openers deal damage — enough to trip Shub-Jigguwatt's retaliation.
+  if (!hard) {
+    if (have($skill`Micrometeorite`)) result.trySkill($skill`Micrometeorite`);
+    if (have($skill`Curse of Weaksauce`)) result.trySkill($skill`Curse of Weaksauce`);
+  }
+
   if (!haveEquipped($item`June cleaver`) && have($skill`Saucegeyser`)) {
     // Fail-soft so MP gating never hard-stops combat.
     result.trySkill($skill`Saucegeyser`);
