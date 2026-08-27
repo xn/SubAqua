@@ -570,14 +570,31 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       "rest at your campground",
       "free rest",
     ];
+    // User rule 2026-08-27 — healing SKILLS are limited to Cannelloni Cocoon
+    // and Tongue of the Walrus (the garbo fork/UTS use nothing else; UTS relies on
+    // mafia's `recover hp` with the default list, which otherwise lets
+    // restoreHp()/recover() cast Lasagna Bandages, Saucy Salve, Disco Power
+    // Nap, etc.). "Is a skill" is resolved via libram's $skill.get (backed by
+    // kolmafia's Skill.get/toSkill), not a hardcoded denylist, so any unusual
+    // entry in the user's own pref list is still handled correctly: a pref
+    // entry that resolves to a real skill is dropped unless it's on the
+    // allow-list; item (non-skill) entries pass through untouched.
+    const keepRestorer = (allowedSkills: ReadonlySet<string>) => (s: string) => {
+      if (bannedRestorers.includes(s)) return false;
+      return $skill.get(s) === null || allowedSkills.has(s.toLowerCase());
+    };
+    const allowedHpSkills = new Set(["cannelloni cocoon", "tongue of the walrus"]);
     const hpItems = get("hpAutoRecoveryItems")
       .split(";")
-      .filter((s) => !bannedRestorers.includes(s))
+      .filter(keepRestorer(allowedHpSkills))
       .join(";");
+    // No MP skill is on the allow-list (Cocoon/Walrus are both HP heals), so
+    // every skill entry is dropped here; there normally are none in the MP
+    // list, so this is a no-op today and only matters if one appears.
     const mpItems = Array.from(
       new Set([...get("mpAutoRecoveryItems").split(";"), "doc galaktik's invigorating tonic"]),
     )
-      .filter((s) => !bannedRestorers.includes(s))
+      .filter(keepRestorer(new Set()))
       .join(";");
     manager.set({
       autoSatisfyWithCloset: false,

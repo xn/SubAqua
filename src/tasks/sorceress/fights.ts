@@ -405,6 +405,33 @@ export function yogUrtFilter(): CombatFilter {
         return Macro.tryItem(heal).toString();
       }
     }
+    // User rule 2026-08-27 — Yog-Urt opens with More Like a Suckrament
+    // (statuseffects.txt:1262; Mus/Mys/Mox limit 30, modifiers.txt:7290),
+    // which blocks skill casts outright. The ash's own ladder
+    // (UnderTheSeaCCS.ash ~1091-1112) never casts a skill during this
+    // stretch — it only throws items, then cleanUp()s — so if the effect
+    // outlasts our scripted ladder above, trySkill fails silently, the round
+    // never advances, and the `stuck > 3` counter aborts the fight. Never
+    // attempt a skill while the effect is up: throw the next spare kit item
+    // instead (a deleveler while her attack still outpaces moxie, else a
+    // heal), or fall back to a plain attack once the kit is empty. Every
+    // branch here still submits an action, so the fight cannot stall; once
+    // the effect drops, the Saucegeyser/Saucestorm tail below resumes.
+    if (have($effect`More Like a Suckrament`)) {
+      const deleveler =
+        myBuffedstat($stat`Moxie`) + 10 > monsterAttack() ? undefined : next(yogDelevelOrder);
+      if (deleveler) {
+        thrown.add(deleveler);
+        return Macro.tryItem(deleveler).toString();
+      }
+      const heal = next(yogHealOrder);
+      if (heal) {
+        thrown.add(heal);
+        healsThrown += 1;
+        return Macro.tryItem(heal).toString();
+      }
+      return Macro.attack().toString();
+    }
     if (have($skill`Saucegeyser`) && myMp() >= mpCost($skill`Saucegeyser`)) {
       return Macro.trySkill($skill`Saucegeyser`).toString();
     }
