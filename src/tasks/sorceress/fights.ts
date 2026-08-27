@@ -268,9 +268,15 @@ const yogHealOrder = $items`sea gel, Mer-kin healscroll, waterlogged scroll of h
  * elixir+unguent pair, then the spell ladder.
  */
 export function yogUrtFilter(): CombatFilter {
-  // Five heal throws at one prayerbead, three at two, two at three
-  // (YogHealingsNeeded, G:709-714 at 89982f5).
+  // Five heal throws at one prayerbead, three at two, two at three — the CCS
+  // ladder (CCS:1095-1108 at a29c9dc), unchanged by upstream 7b57121, which
+  // only lowered the PREP requirement (yogurt.ts yogHealingsNeeded) at three
+  // beads from two distinct types to one. The counts may therefore differ by
+  // one at three beads: the second throw of the pair loop below rides along
+  // free, funkslung with a deleveler, so it is thrown when a second type
+  // happens to be on hand and skipped — not aborted on — when it isn't.
   const thrown = new Set<Item>();
+  let healsThrown = 0;
   let step = 0;
   let lastRound = -1;
   let stuck = 0;
@@ -294,17 +300,28 @@ export function yogUrtFilter(): CombatFilter {
       const deleveler =
         myBuffedstat($stat`Moxie`) + 10 > monsterAttack() ? undefined : next(yogDelevelOrder);
       const heal = next(yogHealOrder);
-      if (!heal) {
+      if (heal) {
+        healsThrown += 1;
+        if (deleveler && have($skill`Ambidextrous Funkslinging`)) {
+          thrown.add(deleveler);
+          thrown.add(heal);
+          return Macro.tryItem([deleveler, heal]).toString();
+        }
+        thrown.add(heal);
+        return Macro.tryItem(heal).toString();
+      }
+      // No distinct heal left. At three prayerbeads the prep only guarantees
+      // ONE type (upstream 7b57121), so the second pass having nothing to
+      // throw is the expected case, not a failure — take the deleveler alone
+      // and fall through. A fight that cannot throw a single heal IS hopeless.
+      if (healsThrown === 0) {
         abort(
           "Out of Yog-Urt healing items mid-fight (CCS:510-517) — acquire sea gel / Mer-kin healscroll / waterlogged scroll of healing and rerun.",
         );
-      } else if (deleveler && have($skill`Ambidextrous Funkslinging`)) {
+      }
+      if (deleveler) {
         thrown.add(deleveler);
-        thrown.add(heal);
-        return Macro.tryItem([deleveler, heal]).toString();
-      } else {
-        thrown.add(heal);
-        return Macro.tryItem(heal).toString();
+        return Macro.tryItem(deleveler).toString();
       }
     }
     if (step === 2) {
@@ -313,6 +330,7 @@ export function yogUrtFilter(): CombatFilter {
         const heal = next(yogHealOrder);
         if (heal) {
           thrown.add(heal);
+          healsThrown += 1;
           return Macro.tryItem(heal).toString();
         }
       }
@@ -323,6 +341,7 @@ export function yogUrtFilter(): CombatFilter {
         const heal = next(yogHealOrder);
         if (heal) {
           thrown.add(heal);
+          healsThrown += 1;
           return Macro.tryItem(heal).toString();
         }
       }
@@ -335,6 +354,7 @@ export function yogUrtFilter(): CombatFilter {
         const heal = next(yogHealOrder);
         if (heal) {
           thrown.add(heal);
+          healsThrown += 1;
           return Macro.tryItem(heal).toString();
         }
       }

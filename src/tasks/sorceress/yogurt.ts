@@ -73,11 +73,19 @@ const healingHP = new Map<Item, number>([
   [crystal, 500],
 ]);
 
-/** ash YogHealingsNeeded (G:709-714): healing throws the fight makes, by
- * prayerbeads on hand. Beyond three beads the ash's ternary pins the index at
- * 3 (G:730). Zero beads (21 throws) is out of reach of a five-type kit — the
- * prep abort says so. */
-const yogHealingsNeeded = [21, 5, 3, 2];
+/** ash YogHealingsNeeded (G:709-714): DISTINCT healing item types the fight
+ * needs, by prayerbeads on hand. Beyond three beads the ash's ternary pins the
+ * index at 3 (G:730). Zero beads (21 throws) is out of reach of a five-type
+ * kit — the prep abort says so.
+ *
+ * The three-bead rung is 1, not 2, since upstream 7b57121: three beads blunt
+ * her enough that a single healing type carries the fight. The CCS throw
+ * ladder still THROWS two heals at three beads (CCS:1095-1104 at a29c9dc, and
+ * fights.ts yogUrtFilter to match) because the second one rides along free,
+ * funkslung with a deleveler — so the throw count may exceed this requirement,
+ * and the filter treats that second throw as optional rather than aborting
+ * when the kit only guarantees one type. */
+const yogHealingsNeeded = [21, 5, 3, 1];
 
 function healsNeeded(): number {
   return yogHealingsNeeded[Math.min(availableAmount(beads), 3)];
@@ -149,7 +157,11 @@ function yogHpCheck(): void {
   const heal = maxHeal();
   let predicted = predictedHP();
   print(`Yog-Urt: predicted post-debuff HP ${predicted} vs a ${heal} HP heal`, "blue");
-  if (predicted * 0.9 > heal && have($effect`Gummiheart`)) {
+  // Upstream 7b57121 loosened the threshold from `predicted * 0.9 > heal` to
+  // `predicted * 0.9 * 2 > predicted + heal`, which is exactly this.
+  if (0.8 * predicted > heal && have($effect`Gummiheart`)) {
+    // pullBudgetAllows() is our equivalent of upstream's
+    // `pulls_remaining() > reservedPulls()` guard on the same pull.
     if (itemAmount(antidote) === 0 && pullBudgetAllows(antidote)) pullSequence(antidote);
     if (itemAmount(antidote) > 0 && !uneffect($effect`Gummiheart`)) {
       print("Couldn't remove Gummiheart before Yog-Urt.", "red");
@@ -161,11 +173,14 @@ function yogHpCheck(): void {
       print(`Yog-Urt: predicted HP after antidote ${predicted}`, "blue");
     }
   }
-  if (predicted * 0.9 > heal) {
+  // Same loosened threshold (upstream 7b57121), re-evaluated against the
+  // post-antidote prediction when the block above cleared Gummiheart.
+  if (0.8 * predicted > heal) {
     abort(
       `Muscle/HP too high for Yog-Urt: ${predicted} predicted HP against a ${heal} HP heal. ` +
         "Shed Muscle/max-HP effects (uneffect them, or drop max-HP gear), or stock a stronger " +
-        "heal (soggy used band-aid heals 1000), then rerun (ash G:741-757 at 89982f5).",
+        "heal (soggy used band-aid heals 1000), then rerun (ash G:741-757 at 89982f5, " +
+        "threshold per upstream 7b57121).",
     );
   }
 }
