@@ -258,7 +258,16 @@ function fishyOpportunityCost(source: Item, fullnessOverride?: number): number {
 }
 
 function cheapestFishySource(): Fishysource | null {
-  const available = FISHY_SOURCES.filter((source) => source.available());
+  const available = FISHY_SOURCES.filter((source) => {
+    if (!source.available()) return false;
+    // Spleen rungs need the room, same guard rung 3 below already carries: a
+    // chew() with no spleen left fails, the ladder finds Fishy still missing,
+    // and — now that the daily harvest keeps a sea jelly reliably on hand — the
+    // optimizer would pick that same rung again on the next call.
+    const spleen = source.item.spleen;
+    if (spleen > 0 && mySpleenUse() + spleen > spleenLimit()) return false;
+    return true;
+  });
 
   if (available.length === 0) return null;
 

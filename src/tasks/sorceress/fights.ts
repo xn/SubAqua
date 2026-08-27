@@ -30,7 +30,7 @@ import {
 } from "libram";
 
 import { killMacro } from "../../engine/combat";
-import { belowHpFloor, combatHealSkill, stallSpare } from "../../lib";
+import { belowHpFloor, floorClearingHeal, stallSpare } from "../../lib";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 
@@ -66,19 +66,20 @@ function reflectStall(monster: Monster, text: string): number {
  * (once-per-combat skills may already be spent — a refused submission would
  * not advance the round, CCS:305-328). */
 function stallAction(): string {
-  // HP floor (the garbo fork combat.ts:509-519, which refuses to stasis below 25%). A
-  // stall round is a free swing for the monster, so a breached floor is
-  // answered ahead of the ordinary ladder — and answered with MP first, since
-  // every item below is rationed against the Yog-Urt kit by stallSpare(). A
-  // heal skill deals no damage, so it is as reflect-safe as a thrown item, and
-  // combatHealSkill() checks MP itself, so it cannot be the refused submission
-  // the deleveler ban is about.
-  if (belowHpFloor()) {
-    const skill = combatHealSkill();
-    if (skill) return Macro.trySkill(skill).toString();
-  }
+  // The ash's lead stays the lead (CCS:228-236): sea gel below half HP, before
+  // anything the floor adds.
   if (myHp() * 2 < myMaxhp() && stallSpare($item`sea gel`)) {
     return Macro.tryItem($item`sea gel`).toString();
+  }
+  // HP floor (the garbo fork combat.ts:509-519, which refuses to stasis below 25%),
+  // reached only when the lead above could not fire — no spare sea gel. Take
+  // the biggest spare heal that CLEARS the floor; floorClearingHeal() returns
+  // nothing otherwise, because a heal that leaves HP under the floor would be
+  // returned again next round and every round after it. That is also why no
+  // skill heal appears here: see the note above floorClearingHeal().
+  if (belowHpFloor()) {
+    const heal = floorClearingHeal();
+    if (heal) return Macro.tryItem(heal).toString();
   }
   if (stallSpare($item`Doc Galaktik's Pungent Unguent`)) {
     return Macro.tryItem($item`Doc Galaktik's Pungent Unguent`).toString();
@@ -391,12 +392,12 @@ export function yogUrtFilter(): CombatFilter {
     // HP floor (the garbo fork combat.ts:509-519), applied to the damage race that
     // follows the scripted ladder: past step 5 nothing above ever heals again,
     // so a fight that has gone long trades a nuke round for a heal rather than
-    // walking into a loss. MP first; the item fallback draws only on Yog-Urt's
-    // OWN kit, in her own fight, and only on throws the ladder above has not
-    // already made — no other task's reserve is touched.
+    // walking into a loss. Items only — a skill heal here would be re-returned
+    // every round ahead of the Saucegeyser tail and never end the fight (see
+    // the note above floorClearingHeal()). The draw is Yog-Urt's OWN kit, in
+    // her own fight, and only types the ladder above has not already thrown, so
+    // `thrown` bounds this to at most five rounds before the tail resumes.
     if (belowHpFloor()) {
-      const skill = combatHealSkill();
-      if (skill) return Macro.trySkill(skill).toString();
       const heal = next(yogHealOrder);
       if (heal) {
         thrown.add(heal);

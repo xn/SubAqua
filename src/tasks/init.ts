@@ -106,16 +106,28 @@ export function initQuest(): Quest {
         // the harvest is what makes that rung fire.
         name: "Sea Jelly",
         ready: () => have($familiar`Space Jellyfish`) && get("questS01OldGuy") !== "unstarted",
-        // Jellyfish-less accounts report complete rather than
-        // incomplete-but-unavailable, same shape as Terminal Educate below.
-        completed: () => !have($familiar`Space Jellyfish`) || get("_seaJellyHarvested"),
+        // _seaJellyHarvested is the primary completion, but it is only stamped
+        // on DECISION 1 (ChoiceControl.java:6386-6393). mafia's breakfast writes
+        // choiceAdventure1219 = 1 permanently (BreakfastManager.java:893), so on
+        // an account where that pref has since been changed the choice would be
+        // auto-resolved to another option, the pref would never be stamped, and
+        // a `tries: 1` task that never completes is a grimoire throw. The daily
+        // marker is the backstop — same pattern as "Toot" below, whose quest
+        // pref likewise never flips on this path.
+        completed: () =>
+          !have($familiar`Space Jellyfish`) ||
+          get("_seaJellyHarvested") ||
+          get("_subaqua_sea_jelly_visited", false),
         do: (): void => {
           visitUrl("place.php?whichplace=thesea&action=thesea_left2");
-          // mafia auto-resolves the choice when choiceAdventure1219 happens to
-          // be set (BreakfastManager.java:894-897 sets it for exactly that);
-          // answer it ourselves otherwise.
+          // Belt to the `choices` braces below: if mafia auto-resolved the
+          // choice there is nothing left to handle, otherwise answer it.
           if (handlingChoice()) runChoice(1);
+          set("_subaqua_sea_jelly_visited", true);
         },
+        // The engine applies task choices before `do`, which pins decision 1
+        // whatever the account's own choiceAdventure1219 says.
+        choices: { 1219: 1 },
         outfit: () =>
           have($familiar`Space Jellyfish`) ? { familiar: $familiar`Space Jellyfish` } : {},
         freeaction: true,

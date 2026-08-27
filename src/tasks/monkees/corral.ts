@@ -14,7 +14,7 @@ import {
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
-import { combatHealSkill, HP_FLOOR_PERCENT, recover, spareStallHeal } from "../../lib";
+import { HP_FLOOR_PERCENT, recover, runawayHeal } from "../../lib";
 import {
   applyEffects,
   combineMoods,
@@ -88,30 +88,26 @@ function seahorseMacro(): Macro {
   // `!hppercentbelow 25` into every stall/stasis predicate). the garbo fork's floor
   // SKIPS the stall round; here the round cannot be skipped — the Run Away
   // button is the only exit a boss allows — so the floor heals on the way
-  // instead. Every failed run is a free swing from an Atk 500 boss with Init
-  // 10000 (monsters.txt:797) against a ~570 HP character, and a lost combat
-  // here is a hard post() abort.
+  // instead, and only when it is breached: above the floor the guard is false
+  // and the runaway is still the first thing tried. Every failed run is a free
+  // swing from an Atk 500 boss with Init 10000 (monsters.txt:797) against a
+  // ~570 HP character, and a lost combat here is a hard post() abort.
   //
-  // MP heal first (free), then a thrown heal, and only ever a copy the Yog-Urt
-  // reserve does not want (spareStallHeal -> stallSpare, CCS:288-303) — an HP
-  // floor must never eat that kit. Both are chosen when the macro is built, but
-  // `hppercentbelow` is a real BALLS numeric predicate (macrohelper.6.js:
-  // 101-116) evaluated live, and `repeat` re-runs the whole macro from the top,
-  // so the guard tracks HP round by round.
-  const heal = new Macro();
-  let healed = false;
-  const skill = combatHealSkill();
-  if (skill) {
-    heal.trySkill(skill);
-    healed = true;
-  }
-  const item = spareStallHeal();
-  if (item) {
-    heal.tryItem(item);
-    healed = true;
-  }
-  return healed
-    ? Macro.if_(`hppercentbelow ${HP_FLOOR_PERCENT}`, heal).runaway().repeat()
+  // One item, never a skill and never the Yog kit — see runawayHeal() for why
+  // sea gel in particular is excluded (a build-time reserve check cannot hold
+  // inside a `repeat`, whose only guard is `hascombatitem`). `!pastround 6`
+  // bounds the drain and the wasted rounds to the window where the loop is
+  // actually dangerous; past it the macro is a pure runaway spam again.
+  //
+  // Both predicates are real BALLS numerics (macrohelper.6.js:101-116
+  // `numPreds`: hppercentbelow, pastround) evaluated live, and `repeat` re-runs
+  // the whole macro from the top, so a macro built once still tracks HP round
+  // by round.
+  const heal = runawayHeal();
+  return heal
+    ? Macro.if_(`!pastround 6 && hppercentbelow ${HP_FLOOR_PERCENT}`, Macro.tryItem(heal))
+        .runaway()
+        .repeat()
     : Macro.runaway().repeat();
 }
 

@@ -203,15 +203,19 @@ export function pickBanishSource(location?: Location): BanishSource | undefined 
  * banished now" is.
  *
  * Bounded four ways, so a normal turn can never trip it:
- *  - a turn must have been spent since this script invocation started. Both
- *    `lastEncounter` and `banishedMonsters` outlive the script, but only the
- *    latter is cleared at rollover — so a run resumed the day after its last
- *    corral fight would otherwise read a stale rustler encounter against an
- *    emptied banish list and abort on turn zero. Once one turn has passed,
- *    `lastEncounter` is this session's.
- *  - `lastEncounter` must BE one of the task's banish targets. Before the first
- *    such fight it is not, so the first-turn absence the garbo fork warns about is a
- *    no-op here.
+ *  - RECENCY: the encounter must be the one this task produced since its last
+ *    prepare(), i.e. at most one turn has passed since the previous check of
+ *    the SAME task. `lastEncounter` outlives the script and is never cleared,
+ *    while banishes are turn-limited and rollover-reset (BanishManager.java:
+ *    stuffed yam stinkbomb 15 turns, snokebomb / Spring-Loaded Front Bumper 30,
+ *    and the whole pref is emptied at rollover) — so an older encounter may
+ *    have been banished perfectly well and simply expired since, and a run
+ *    resumed the day after its last corral fight would otherwise read a stale
+ *    rustler against an emptied banish list and abort on turn zero. Only a turn
+ *    this function watched happen tells it anything. That makes the first call
+ *    on each task a free pass, which is also the garbo fork's "a first-turn absence is
+ *    normal".
+ *  - `lastEncounter` must BE one of the task's banish targets.
  *  - the banish must not currently hold (banishActive).
  *  - a source must still be pickable at `location`. Charges only decrease
  *    within a day, so a source available NOW was available on the turn just
@@ -224,14 +228,19 @@ export function pickBanishSource(location?: Location): BanishSource | undefined 
  * engine never emitted one (e.g. its gear failed to land in the outfit, which
  * customize() deliberately fails through instead of announcing).
  */
-let firstCheckedTurn = -1;
+const lastCheckedTurn = new Map<string, number>();
 
 export function assertBanishHeld(targets: Monster[], location: Location, taskName: string): void {
-  // Lazily stamped rather than read at module load: this file is imported
+  // Stamped per task and lazily, never at module load: this file is imported
   // before the first turn of the invocation, and a module-level myTurncount()
   // is the same defect lib/index.ts grandpaZone() calls out.
-  if (firstCheckedTurn < 0) firstCheckedTurn = myTurncount();
-  if (myTurncount() <= firstCheckedTurn) return;
+  const now = myTurncount();
+  const previous = lastCheckedTurn.get(taskName);
+  lastCheckedTurn.set(taskName, now);
+  // 0 covers a free fight (which still writes lastEncounter but spends no
+  // turn); anything past 1 means other tasks adventured in between and
+  // lastEncounter is not ours to judge.
+  if (previous === undefined || now - previous < 0 || now - previous > 1) return;
   const last = toMonster(get("lastEncounter"));
   if (!targets.includes(last)) return;
   if (banishActive(last)) return;

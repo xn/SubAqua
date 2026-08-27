@@ -20,14 +20,14 @@ function stashboxDone(): boolean {
 /** Shared +item farm shape for the pre-stashbox outpost regimes (ash
  * UTS:1924-2003: itdrop + freeKill while the lockkey is unknown; the CCS
  * banishes burglar/raider as non-droppers, CCS:702-707). */
-const farmCombat = () =>
-  new CombatStrategy().banish($monsters`Mer-kin burglar, Mer-kin raider`).kill();
-
-/** The banished half of the roster the two farm lanes above share. Both lanes
- * pay for the banish in turn economy — burglar and raider drop nothing these
- * grinds want — so a banish that quietly stops holding is a 25-30 turn bleed
- * (the garbo fork farmTurn.ts:124-130; see assertBanishHeld for the bounds). */
+/** The banished half of the roster, shared by farmCombat() and by the
+ * unbanished-monster invariant the two lanes that use it run in prepare().
+ * Both lanes pay for the banish in turn economy — burglar and raider drop
+ * nothing these grinds want — so a banish that quietly stops holding is a 25-30
+ * turn bleed (the garbo fork farmTurn.ts:124-130; see assertBanishHeld for the bounds). */
 const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
+
+const farmCombat = () => new CombatStrategy().banish(farmBanished).kill();
 
 export function outpostQuest(): Quest {
   return {

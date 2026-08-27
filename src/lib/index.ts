@@ -2,7 +2,6 @@ import {
   Item,
   itemAmount,
   Location,
-  mpCost,
   myHp,
   myMaxhp,
   myMaxmp,
@@ -11,11 +10,10 @@ import {
   print,
   restoreHp,
   restoreMp,
-  Skill,
   Stat,
   storageAmount,
 } from "kolmafia";
-import { $items, $location, $skills, $stat, get, have } from "libram";
+import { $item, $location, $stat, get, have } from "libram";
 
 import { args } from "../args";
 
@@ -76,33 +74,65 @@ export function belowHpFloor(): boolean {
   return myHp() * (100 / HP_FLOOR_PERCENT) < myMaxhp();
 }
 
-/** In-combat heals that cost only MP — the one resource this run may spend
- * freely (spec §2 recovery model). classskills.txt:396 tags Lasagna Bandages
- * `combat,nc,heal` and :458 tags Saucy Salve `combat,spell`; both are pure
- * heals, so neither hands damage back through a live reflect. Preferred over
- * any thrown heal, since nothing here is rationed against the Yog-Urt kit. */
-const combatHeals = $skills`Lasagna Bandages, Saucy Salve`;
-
-export function combatHealSkill(): Skill | undefined {
-  // MP is checked here rather than left to `trySkill`: a submission the fight
-  // page refuses does not advance the round, and the stall loops abort after
-  // three stuck rounds.
-  return combatHeals.find((skill) => have(skill) && myMp() >= mpCost(skill));
-}
+/**
+ * NO SKILL HEALS live behind this floor, deliberately. The two in-combat heal
+ * skills a Sea run could have restore a flat 20 HP (Lasagna Bandages,
+ * HPRestoreItemList.java:123) and nothing mafia models at all (Saucy Salve is
+ * absent from that table) — neither can clear a ~142 HP floor on the route's
+ * ~570 max-HP baseline, so returning one below the floor leaves the floor
+ * breached and returns the same trickle on the next round, forever. Rounds
+ * advance, so no stuck-round guard fires: it is a lost fight, not an abort.
+ * Only a heal big enough to CLEAR the floor may answer it.
+ */
 
 /** Stall stock guard (CCS:288-303): while Yog-Urt is pending, one sea gel and
- * one Pungent Unguent are hers. Lives here rather than in the Yog fight file
- * because the corral's runaway floor needs the same reserve. */
+ * one Pungent Unguent are hers. Applied per item, so it equally reserves one
+ * copy of every other Yog heal TYPE (yogurt.ts yogHealingsOwned() counts
+ * distinct types with availableAmount > 0, so the last copy of a type is the
+ * kit). Lives here rather than in the Yog fight file because the corral's
+ * runaway floor needs the same reserve. */
 export function stallSpare(it: Item): boolean {
   const reserved = !get("yogUrtDefeated") ? 1 : 0;
   return itemAmount(it) > reserved;
 }
 
-/** The throwable heals a stall or runaway round may spend, biggest heal first
- * (sea gel 500 HP, yogurt.ts healingHP), and only ever the copies the Yog-Urt
- * reserve above does not want. Returns undefined rather than breaking the kit. */
-export function spareStallHeal(): Item | undefined {
-  return $items`sea gel, Doc Galaktik's Pungent Unguent`.find(stallSpare);
+/** Throwable combat heals by HP restored, biggest first. The five sea-side
+ * values are the ash's own table (yogurt.ts healingHP <- ash HealingHP,
+ * G:695-701); the unguent's 30 is mafia's (HPRestoreItemList.java:64), which is
+ * exactly why the ash uses it as a stall FILLER rather than a rescue. */
+const throwableHeals: [Item, number][] = [
+  [$item`soggy used band-aid`, 1000],
+  [$item`sea gel`, 500],
+  [$item`New Age healing crystal`, 500],
+  [$item`Mer-kin healscroll`, 300],
+  [$item`waterlogged scroll of healing`, 250],
+  [$item`Doc Galaktik's Pungent Unguent`, 30],
+];
+
+/**
+ * The biggest spare throwable heal that actually CLEARS the floor. Two
+ * properties matter and both are load-bearing:
+ *  - it clears the floor, so `belowHpFloor()` is false on the next round and
+ *    the caller cannot return the same heal forever;
+ *  - it is spare past the Yog-Urt reserve, so a floor can never eat that kit.
+ * Undefined when nothing qualifies — the caller then falls through to its own
+ * ladder rather than burning a round on a heal that changes nothing.
+ */
+export function floorClearingHeal(): Item | undefined {
+  const deficit = (myMaxhp() * HP_FLOOR_PERCENT) / 100 - myHp();
+  return throwableHeals.find(([it, hp]) => hp >= deficit && stallSpare(it))?.[0];
+}
+
+/** The one heal the corral's runaway loop may throw. NOT sea gel and not the
+ * rest of the Yog kit: the loop's guard is BALLS `hascombatitem`, which only
+ * asks whether a copy is in inventory, so a build-time reserve check cannot
+ * hold across the `repeat` — successive passes would drain straight through
+ * the reserved copy. The unguent is the ash's own stall filler and the only
+ * heal here that is not a distinct Yog heal TYPE (yogurt.ts healingHP), so
+ * spending a spare copy costs the kit nothing. */
+export function runawayHeal(): Item | undefined {
+  const unguent = $item`Doc Galaktik's Pungent Unguent`;
+  return stallSpare(unguent) ? unguent : undefined;
 }
 
 const grandpaZones: Map<Stat, Location> = new Map([

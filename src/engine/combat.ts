@@ -118,8 +118,11 @@ export function killMacro(hard?: boolean): Macro {
   // Delevel openers, ash CCS develOpeners() (CCS:171-198), which cleanUp()
   // (CCS:238-300) throws before the nuke on every ordinary fight — freeRounds()
   // is 1 only for the colosseum six, so leadWithNuke is false and the openers
-  // go first. Time-Spinner is in the ash's ladder and deliberately not here:
-  // SubAqua dropped the item.
+  // go first. The Time-Spinner is in the ash's ladder and deliberately not in
+  // killMacro's: SubAqua throws it only from the gladiator filter
+  // (fights.ts gladiatorFilter), which can read the monster's attack and so
+  // knows when a delevel is worth the round; a blind cast on every ordinary
+  // fight would spend the item for nothing.
   //
   // The ash gates each on my_buffedstat(moxie) + 10 < monster_attack(). BALLS
   // has no monster-attack predicate (its conditions are hp/mp/monsterhp,
