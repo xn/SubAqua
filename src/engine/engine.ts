@@ -109,6 +109,26 @@ function equipResource(
 }
 
 /**
+ * The kill ladder appended behind every provided resource macro, per the
+ * zero-action invariant in customize() below.
+ *
+ * `bullseye: false`: this ladder runs only when the banish / run / free kill
+ * that was actually provided failed to fire, and the character has exactly one
+ * Everything Looks Red charge for the day. The free-kill ladder
+ * (resources/freekill.ts, and the opportunistic upgrade at the end of
+ * customize()) spends that charge deliberately, on the fights the ash spends it
+ * on; a monster we failed to run from or banish must not beat it to it.
+ * killMacro(true) is NOT the alternative — it also drops the delevel openers,
+ * which a fallback fight still wants.
+ *
+ * Called from inside each provide's delayed `do`, so it sees the dressed
+ * outfit.
+ */
+function fallbackMacro(): Macro {
+  return killMacro(false, { bullseye: false });
+}
+
+/**
  * Walk a resource ladder until one candidate's gear actually lands in the
  * outfit, and return it (or undefined when the ladder is exhausted).
  *
@@ -219,10 +239,21 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // not castable or an item that is not held therefore compiles to a macro
     // that takes no action at all, which is what KoL kills the fight over
     // ("N instructions executed without any actions being taken"). So each
-    // provided macro carries its own fallback: the kill ladder for
+    // provided macro carries its own fallback: fallbackMacro() for
     // banish/freeRun/forceItems/yellowRay (matching the degradations those
     // actions already have in MyActionDefaults), and an explicit abort for
     // killFree, whose default is likewise an abort.
+    //
+    // Every one of those fallbacks is DELAYED — `do: () => …` rather than a
+    // built macro. customize() runs before dress() (grimoire engine.js:95-108),
+    // but killMacro() reads live gear and effects (haveEquipped(Everfull Dart
+    // Holster) picks the dart branch, and the openerOnce() round guard is sized
+    // off it), so a macro built here would describe the PREVIOUS task's outfit.
+    // grimoire undelays `resource.do` at compile time, after the outfit is on
+    // (combat.js:412 getMacro -> undelay), which is the same point
+    // MyActionDefaults' functions are evaluated at. The source half of each
+    // macro stays eager: it is chosen from the outfit we are building right
+    // here. killFree needs no delay either — its fallback is a constant abort.
     const location = task.do instanceof Location ? task.do : undefined;
     if (combat.can("banish")) {
       // Equip-gated ladder walk: provide only over gear that actually landed in
@@ -234,7 +265,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           banisher.skill instanceof Skill
             ? Macro.trySkill(banisher.skill)
             : Macro.tryItem(banisher.skill);
-        resources.provide("banish", { do: banish.step(killMacro(false)) });
+        // Macro.step() copies rather than appending to `banish` in place, so
+        // a re-compile cannot double the fallback onto it.
+        resources.provide("banish", { do: () => Macro.step(banish).step(fallbackMacro()) });
       }
     }
     if (combat.can("killFree")) {
@@ -259,7 +292,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       if (source) {
         resources.provide("freeRun", {
           prepare: source.prepare,
-          do: Macro.step(source.do).step(killMacro(false)),
+          do: () => Macro.step(source.do).step(fallbackMacro()),
         });
       }
     }
@@ -282,7 +315,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // killItem -> kill in MyActionDefaults, so the fallback is the same
         // fight either way.
         resources.provide("forceItems", {
-          do: Macro.trySkill($skill`Use the Force`).step(killMacro(false)),
+          do: () => Macro.trySkill($skill`Use the Force`).step(fallbackMacro()),
         });
         return true;
       };
@@ -292,7 +325,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         if (ray.equip !== undefined && !equipResource(outfit, ray.equip)) return false;
         // Same fallback, same reason; Macro.step() copies the shared ladder
         // entry instead of appending to it in place.
-        resources.provide(action, { do: Macro.step(ray.do).step(killMacro(false)) });
+        resources.provide(action, { do: () => Macro.step(ray.do).step(fallbackMacro()) });
         return true;
       };
       if (saberFirst) {

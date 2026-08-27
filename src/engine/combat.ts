@@ -47,7 +47,20 @@ export class CombatStrategy extends BaseCombatStrategy.withActions(myActions) {}
  * ladder never executes; with no taffy the ladder acts and the turn is at
  * worst spent rather than lost. The same invariant is enforced on the RESOURCE
  * side in engine.ts customize(), where every provided conditional macro is
- * likewise followed by killMacro(false).
+ * likewise followed by a fallback kill ladder.
+ *
+ * WHICH ladder, though: freeRun's — here and in the engine's provide — passes
+ * `{ bullseye: false }`, so a fallback never opens with the five-dart
+ * Everything Looks Red chain. ELR is one charge for the whole day and
+ * killMacro's chain claims it on the first ordinary kill that has the holster
+ * on, so this is about ORDER, not about hoarding: the fight that spends it
+ * should be one the route meant to fight, not one it tried to run from or
+ * banish and failed. The other degradations here (banish/ignore/killItem/
+ * yellowRay -> kill) keep the chain, because they fire when no resource existed
+ * at all and the fight was always going to be won the ordinary way. That line
+ * is the reviewer's scope call of 2026-08-27, not a law of nature: if the dart
+ * ever becomes worth reserving outright, the flag is already plumbed and the
+ * other degradations are one argument away.
  */
 export class MyActionDefaults implements ActionDefaults<CombatActions> {
   freeRun(target?: Monster | Location) {
@@ -56,9 +69,9 @@ export class MyActionDefaults implements ActionDefaults<CombatActions> {
     // for a function `do`), so "unknown" has to mean underwater: every
     // function-`do` task in this route is a sea task.
     if (target instanceof Location && target.environment !== "underwater") {
-      return killMacro(false);
+      return killMacro(false, { bullseye: false });
     }
-    return runMacro().step(killMacro(false));
+    return runMacro().step(killMacro(false, { bullseye: false }));
   }
   ignore(target?: Monster | Location) {
     return this.kill(target);
@@ -98,14 +111,36 @@ export class MyActionDefaults implements ActionDefaults<CombatActions> {
   }
 }
 
-export function killMacro(hard?: boolean): Macro {
+/**
+ * The general kill ladder: dart opener, delevel openers, nuke, `attack;repeat`.
+ *
+ * `hard` is the boss / already-free path: it drops both the bullseye chain and
+ * the damaging delevel openers (see below).
+ *
+ * `bullseye: false` keeps everything else but swaps the five-dart Everything
+ * Looks Red chain for the ordinary `Darts: Throw at %part1`. It exists for
+ * FALLBACK ladders — the one behind MyActionDefaults.freeRun and the ones the
+ * engine appends to every provided resource macro (engine.ts customize()). Such
+ * a ladder runs only when the banish / run / free kill we selected did not
+ * happen, and the day has exactly one ELR charge: the free-kill ladder
+ * (resources/freekill.ts) spends it deliberately, on the fights the ash spends
+ * it on, and a failed run must not beat it to the punch. `killMacro(true)`
+ * would also suppress the chain but is the wrong tool — it drops the delevel
+ * openers too, which a fallback fight still wants.
+ *
+ * Read live state (haveEquipped, have, myLevel), so it must be built AFTER
+ * dress(): the resource provides in engine.ts wrap it in a delayed function for
+ * exactly that reason.
+ */
+export function killMacro(hard = false, options: { bullseye?: boolean } = {}): Macro {
+  const { bullseye = true } = options;
   const result = new Macro();
 
   // Rounds the macro can burn ahead of the delevel openers, for their
   // openerOnce() guard below. Every submitted action advances a round.
   let leadingActions = 0;
   if (haveEquipped($item`Everfull Dart Holster`)) {
-    if (!hard && myLevel() >= 12 && !have($effect`Everything Looks Red`)) {
+    if (bullseye && !hard && myLevel() >= 12 && !have($effect`Everything Looks Red`)) {
       result
         .trySkill($skill`Darts: Aim for the Bullseye`)
         .trySkill($skill`Darts: Aim for the Bullseye`)
