@@ -92,7 +92,12 @@ export function gearQuest(): Quest {
         // The && is deliberate (ash UTS:2854-2857): the colosseum outfit needs
         // BOTH pieces, so the grind is only complete once the mask AND the
         // tailpiece are in hand — either one alone still leaves work to do.
-        ready: () => get("yogUrtDefeated"),
+        // A pending NC forcer must be spent (skate park) before another
+        // gymnasium turn: the gym banks forcers in-combat while the war is open
+        // (fights.ts gladiatorFilter gym extras) and gymnasiumTurn() then hard-
+        // aborts on the pending one, so without this guard the very next
+        // selection pass kills the run.
+        ready: () => get("yogUrtDefeated") && !get("noncombatForcerActive"),
         completed: () => availableAmount(gladMask) > 0 && availableAmount(gladTail) > 0,
         do: gladiatorGearStep,
         underwater: true,

@@ -26,17 +26,20 @@ export function burnTurnElsewhere(): boolean {
     skateParkTurn();
     return true;
   }
-  if (
-    !get("noncombatForcerActive") &&
-    (availableAmount($item`Mer-kin gladiator mask`) === 0 ||
-      availableAmount($item`Mer-kin gladiator tailpiece`) === 0)
-  ) {
+  const gearReady =
+    availableAmount($item`Mer-kin gladiator mask`) > 0 &&
+    availableAmount($item`Mer-kin gladiator tailpiece`) > 0;
+  if (!gearReady && !get("noncombatForcerActive")) {
     if (get("yogUrtDefeated")) gladiatorGearStep();
     else gymnasiumTurn();
     claimIceBuff();
     return true;
   }
-  if (get("lastColosseumRoundWon", 0) < 15) {
+  // The colosseum is an outfit-required zone: without the gladiator set
+  // hasRequiredOutfit() refuses the turn ("you've gotta be especially
+  // gladitorial", KoLAdventure.java:4392) — reporting `true` for a turn that
+  // never happened would spin the Deep-Tainted / Gummiheart wait loops forever.
+  if (gearReady && get("lastColosseumRoundWon", 0) < 15) {
     colosseumRoundTurn();
     return true;
   }

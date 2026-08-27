@@ -1,7 +1,11 @@
 import {
   adv1,
+  availableAmount,
   buy,
+  cliExecute,
+  Familiar,
   itemAmount,
+  myFamiliar,
   maximize,
   myBuffedstat,
   myMaxhp,
@@ -24,6 +28,7 @@ import {
   set,
 } from "libram";
 
+import { bestFamUnderwaterGear, hasBreathingEffect } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
@@ -69,13 +74,15 @@ export function colosseumRoundPrep(): void {
  * riders per tier policy; never the saber, never free runs). */
 export function colosseumRoundTurn(): void {
   colosseumRoundPrep();
+  let chosen: Familiar | undefined;
   if (have($familiar`Patriotic Eagle`) && get("screechCombats", 0) > 0 && have(cmoi)) {
     // Worthless-for-screech fights tick the recharge down (940514c; recharge
     // counts only plain wins, UTS:1647-1650).
-    useFamiliar($familiar`Patriotic Eagle`);
+    chosen = $familiar`Patriotic Eagle`;
   } else if (have($familiar`Foul Ball`)) {
-    useFamiliar($familiar`Foul Ball`);
+    chosen = $familiar`Foul Ball`;
   }
+  if (chosen) useFamiliar(chosen);
   const pieces = ["+equip Mer-kin gladiator mask", "+equip Mer-kin gladiator tailpiece"];
   if (have(cmoi)) pieces.push("+equip Congressional Medal of Insanity");
   const policy = currentPolicy();
@@ -90,9 +97,22 @@ export function colosseumRoundTurn(): void {
     if (get("_batWingsFreeFights", 0) < 5 && have($item`bat wings`)) {
       pieces.push("+equip bat wings");
     } else if (have($item`unwrapped knock-off retro superhero cape`)) {
+      // `+equip` never switches a Modeable's mode, so the mode must be set
+      // first or the free fight is silently lost (ash sets modes alongside the
+      // cape, UTS:2192-2196) — same dance as gym.ts's parka.
+      cliExecute("retrocape heck kill");
       // items.txt spells it lowercase-u (eslint-plugin-libram normalizes it).
       pieces.push("+equip unwrapped knock-off retro superhero cape");
     }
+  }
+  // Familiar breathing: the Mer-kin outfit mafia forces for this zone covers
+  // the PLAYER, but every Sea zone still refuses a familiar that can't breathe
+  // (KoLAdventure.java:2867-2884). Reuse the engine's rule rather than a second
+  // one; the eagle and Foul Ball are both non-aquatic (familiars.txt:330,353).
+  const familiar = chosen ?? myFamiliar();
+  if (familiar !== $familiar.none && !familiar.underwater && !hasBreathingEffect()) {
+    const famBreather = bestFamUnderwaterGear(familiar);
+    if (have(famBreather)) pieces.push(`+equip ${famBreather.name}`);
   }
   // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
   // against mys by the current multiplier.
@@ -114,10 +134,14 @@ export function colosseumQuest(): Quest {
     tasks: [
       {
         name: "Fifteen Rounds",
+        // availableAmount, NOT itemAmount: mafia WEARS the Gladiatorial Gear
+        // for this outfit-required zone (KoLAdventure.java:2339) and
+        // itemAmount() excludes equipped items — after round 1 both counts are
+        // 0 and the grind would stall. Matches gearQuest.completed.
         ready: () =>
-          itemAmount($item`Mer-kin gladiator mask`) +
-            itemAmount($item`Mer-kin gladiator tailpiece`) >=
-            2 || get("isMerkinGladiatorChampion"),
+          (availableAmount($item`Mer-kin gladiator mask`) > 0 &&
+            availableAmount($item`Mer-kin gladiator tailpiece`) > 0) ||
+          get("isMerkinGladiatorChampion"),
         completed: () => get("lastColosseumRoundWon", 0) >= 15 || get("isMerkinGladiatorChampion"),
         do: colosseumRoundTurn,
         underwater: true,

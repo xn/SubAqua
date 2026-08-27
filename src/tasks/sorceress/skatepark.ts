@@ -12,6 +12,7 @@ import {
 import { $item, $location, $slot, get } from "libram";
 
 import { killMacro } from "../../engine/combat";
+import { hasBreathingEffect } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
@@ -65,6 +66,13 @@ export function skateParkTurn(): void {
     if (itemAmount(blade) > 0) equip($slot`weapon`, blade);
   } else {
     maximize("-combat, -equip Peridot of Peril", false);
+    // The Skate Park is NOT an outfit zone, so mafia supplies no breathing here
+    // (KoLAdventure.java:2867-2884) and the -combat maximize need not land a
+    // breather. Same rule as the engine's enforcement, not a second one; the
+    // item name's commas keep it out of the maximizer string.
+    if (!hasBreathingEffect() && !booleanModifier("Adventure Underwater")) {
+      equip($item`really, really nice swimming trunks`);
+    }
     if (availableAmount(blade) > 0) equip($slot`weapon`, blade);
   }
   recover();
