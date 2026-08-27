@@ -13,6 +13,7 @@ import { $effect, $item, $location, $skill, $stat, get, have } from "libram";
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
+import { survivalEffects } from "../../lib/moods";
 import { shubPrepShort } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
@@ -74,6 +75,14 @@ export function shubQuest(): Quest {
         name: "Shub-Jigguwatt",
         ready: () => get("isMerkinGladiatorChampion", false) && !shubPrepShort(0),
         completed: () => get("shubJigguwattDefeated", false),
+        // Damage mitigation, damage-free: the whole point of his filter is
+        // that we deal no damage until the swings, so anything with Thorns /
+        // Damage Aura is filtered out by survivalEffects({ damageFree: true })
+        // (see also the Scarysauce removal in prepare, which is that same rule
+        // applied to an effect an earlier res mood may have left up). What
+        // survives is pure Damage Absorption / resistance, which pairs with
+        // this task's own "damage absorption, mus" maximize.
+        effects: () => survivalEffects({ damageFree: true }),
         prepare: (): void => {
           if (have($effect`Scarysauce`)) cliExecute("uneffect Scarysauce");
           if (currentPolicy().shubInsurancePulls || myBuffedstat($stat`Muscle`) < 1250) {

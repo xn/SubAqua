@@ -29,6 +29,7 @@ import {
 import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
+import { applyEffects, colosseumEffects, combineMoods, survivalEffects } from "../../lib/moods";
 import { currentPolicy } from "../../resources/policy";
 
 import { gladiatorFilter } from "./fights";
@@ -112,6 +113,13 @@ export function colosseumRoundTurn(): void {
   // also covers a non-aquatic familiar left up by an earlier task.
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
+  // The ash's own order (colosseumRound(), UTS:2317-2318): mood("colosseum")
+  // THEN the coefficient, so Ultraheart's +50/+50% mysticality is already in
+  // my_buffedstat when the spell-damage weight is priced. survivalEffects()
+  // rides along — these fifteen rounds are the longest sustained damage the
+  // route takes. This wrapper dresses itself, so the engine's acquireEffects()
+  // never runs for it; recover() below restores the MP these casts spend.
+  applyEffects(combineMoods(colosseumEffects(), survivalEffects()));
   // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
   // against mys by the current multiplier.
   const coeff =

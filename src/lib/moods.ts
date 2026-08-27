@@ -1,4 +1,4 @@
-import { Effect, getClanLounge, itemAmount } from "kolmafia";
+import { Effect, getClanLounge, itemAmount, numericModifier } from "kolmafia";
 import {
   $effect,
   $item,
@@ -239,5 +239,110 @@ export function resEffects(): Effect[] {
     effects.push($effect`Minor Invulnerability`);
   if (have($skill`Elemental Saucesphere`)) effects.push($effect`Elemental Saucesphere`);
   if (have($skill`Scarysauce`)) effects.push($effect`Scarysauce`);
+  return trimSongs(effects);
+}
+
+/**
+ * Does this effect hit the monster on its own, without us acting? The four
+ * modifiers the garbo fork enumerates for exactly this question (mood.ts:335-341).
+ * Two consumers: the damage-free Shub filter (fights.ts shubFilter — delevel
+ * items deal no damage because his retaliation doubles on damage) and the
+ * bladeswitcher's reflect stall (fights.ts:56-61), where a passive tick is
+ * damage we cannot see coming.
+ */
+export function dealsPassiveDamage(effect: Effect): boolean {
+  return (
+    numericModifier(effect, "Thorns") > 0 ||
+    numericModifier(effect, "Sporadic Thorns") > 0 ||
+    numericModifier(effect, "Damage Aura") > 0 ||
+    numericModifier(effect, "Sporadic Damage Aura") > 0
+  );
+}
+
+/**
+ * Damage-mitigation mood for the fights that can actually be lost (the garbo fork
+ * mood.ts:104-126 "Sea farming survivability", :83-86). Sea cow Atk 600 /
+ * cowboy 750 / rustler 700 (monsters.txt:583,584,441) against an in-run moxie
+ * of ~200 means every corral round lands for 110-175 (CCS:227) into a 570 HP
+ * floor; the gym, the colosseum and the two temple bosses are the same shape.
+ * MP only — every entry is a castable skill buff.
+ *
+ * Astral Shell and Elemental Saucesphere overlap resEffects(); combineMoods()
+ * de-duplicates, so a task may carry both lists.
+ *
+ * Three of the garbo fork's entries are deliberately absent:
+ *  - Blood Bubble. It is a Vampyre book skill costing 30 HP a cast
+ *    (SkillDatabase.getHPCost, :1291 — mpcost 0 in classskills.txt:4042) with
+ *    a THREE turn duration, so it would recast on nearly every adventure and
+ *    pay in HP, which our restore then buys back. The MP-only rule excludes it.
+ *  - Shield of the Pastalord. One cast, two possible effects — Flimsy Shield
+ *    of the Pastalord (10% physical DR) and Shield of the Pastalord (30%),
+ *    statuseffects.txt:1443-1444, both with default "cast 1 Shield of the
+ *    Pastalord" — and which one lands is account state. That is exactly the
+ *    Thoughtful Empathy case this file already drops: ensureEffect would throw
+ *    whenever the cast produced the other one. mafia models neither
+ *    numerically (modifiers.txt:6575, :7823 are comments), so nothing else is
+ *    lost by leaving it out.
+ *  - Get Big / Song of Bravado / Carol of the Bulls / Disco over Matter, which
+ *    the garbo fork casts only in its OVERDRUNK branch (mood.ts:104-118); the sober
+ *    sea branch (:122-126) is Ghostly Shell + Shield of the Pastalord alone.
+ *
+ * Tenacity of the Snapper is kept although mafia models it as Weapon Damage
+ * +8 (modifiers.txt:8230), not mitigation: on these fights a faster kill IS
+ * mitigation (fewer rounds taken), and it costs only MP.
+ *
+ * `damageFree` drops anything that would hit the monster by itself — the Shub
+ * filter's premise (fights.ts:392-397). Nothing in the list trips it today;
+ * the filter is here so a later addition cannot silently break that fight.
+ */
+export function survivalEffects(opts: { damageFree?: boolean } = {}): Effect[] {
+  const effects: Effect[] = [];
+  if (have($skill`Ghostly Shell`)) effects.push($effect`Ghostly Shell`);
+  if (have($skill`Astral Shell`)) effects.push($effect`Astral Shell`);
+  if (have($skill`Elemental Saucesphere`)) effects.push($effect`Elemental Saucesphere`);
+  if (have($skill`Tenacity of the Snapper`)) effects.push($effect`Tenacity of the Snapper`);
+  return trimSongs(
+    opts.damageFree ? effects.filter((effect) => !dealsPassiveDamage(effect)) : effects,
+  );
+}
+
+/**
+ * "colosseum" mood (ash mood():158-168), never ported until now. The round's
+ * own maximize prices spell damage against mysticality (colosseum.ts coeff),
+ * so the two big entries are Carol of the Hells (+100 spell damage percent,
+ * modifiers.txt:6004) and Ultraheart (+50 flat and +50% to all three stats,
+ * :8436).
+ *
+ * Three ash entries are dropped, each for a rule this file already applies:
+ *  - Tubes of Universal Meat and Mariachi Moisture. Their defaults are
+ *    "cast 1 Manicotti Meditation ^ Tubes of Universal Meat" and "cast 1 Moxie
+ *    of the Mariachi ^ Mariachi Moisture" (statuseffects.txt:2988, 2991) — the
+ *    same cast grants either the plain or the upgraded effect, the Thoughtful
+ *    Empathy problem, and ensureEffect throws on the other outcome.
+ *  - Everybody Calls Him Gorgon. Its default is "fortune buff gorgonzola", the
+ *    clan fortune teller (FortuneCommand:30-52), which needs that specific
+ *    lounge furnishing; the ash also gates it to lowShiny accounts only. Not
+ *    predictable enough for ensureEffect.
+ */
+export function colosseumEffects(): Effect[] {
+  const effects: Effect[] = [];
+  // dailylimits.txt:127 caps Heartstone: %buff at 5/day, and the ash gates on
+  // the unlock pref (mood():165).
+  if (
+    have($skill`Heartstone: %buff`) &&
+    get("heartstoneBuffUnlocked", false) &&
+    get("_heartstoneBuffUsed", 0) < 5
+  ) {
+    effects.push($effect`Ultraheart`);
+  }
+  if (have($skill`Carol of the Hells`)) effects.push($effect`Carol of the Hells`);
+  if (have($skill`Elron's Explosive Etude`)) effects.push($effect`Elron's Explosive Etude`);
+  if (have($skill`Get Big`)) effects.push($effect`Big`);
+  // to_skill() is none, so the ash's have_skill gate never fires: the real
+  // limit is the once-a-day monorail visit (MonorailCommand:15-18 refuses a
+  // second, which would make ensureEffect throw).
+  if (!get("_lyleFavored")) effects.push($effect`Favored by Lyle`);
+  if (have($skill`The Magical Mojomuscular Melody`))
+    effects.push($effect`The Magical Mojomuscular Melody`);
   return trimSongs(effects);
 }

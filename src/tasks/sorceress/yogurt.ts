@@ -32,6 +32,7 @@ import {
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
+import { survivalEffects } from "../../lib/moods";
 import { currentPolicy } from "../../resources/policy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
@@ -331,6 +332,14 @@ export function yogUrtQuest(): Quest {
         name: "Yog-Urt",
         ready: () => yogPrepComplete() && gummiheartWaitOver() && get("isMerkinHighPriest", false),
         completed: () => get("yogUrtDefeated"),
+        // Damage mitigation only (the garbo fork mood.ts:104-126). Checked against
+        // yogHpCheck() above, which aborts when the post-debuff HP pool
+        // outgrows one heal throw: its prediction reads Muscle, Muscle Percent
+        // and Maximum HP, and not one of the four survival entries touches any
+        // of those (Damage Absorption / elemental resistance / weapon damage,
+        // modifiers.txt:6662, 5697, 6392, 8230), so the mood cannot push this
+        // fight over its own abort.
+        effects: () => survivalEffects(),
         prepare: (): void => {
           // The prayerbeads are in the `outfit` below, not here (audit item 5):
           // prepare() runs AFTER dress(), so equipping them here overrode the

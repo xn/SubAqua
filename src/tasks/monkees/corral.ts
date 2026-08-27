@@ -21,6 +21,7 @@ import {
   itemDropEffects,
   squintEffects,
   superItemDropEffects,
+  survivalEffects,
 } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
@@ -119,7 +120,8 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
               outfit: { modifier: "item", equip: $items`pro skateboard` },
               // Ash UTS:1650-1651 spends the once-a-day squint on this
               // one-turn corral opener when it is still unused.
-              effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
+              effects: () =>
+                combineMoods(superItemDropEffects(), itemDropEffects(), survivalEffects()),
               // The squint doubles the +item that is ON when it is cast, so it
               // goes in prepare() — the only hook after dress() (grimoire
               // engine.js:101 vs :108).
@@ -152,7 +154,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           equip: $items`pro skateboard`,
           familiar: swordOut() ? sword : undefined,
         }),
-        effects: itemDropEffects,
+        effects: () => combineMoods(itemDropEffects(), survivalEffects()),
         prepare: (): void => {
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
@@ -197,7 +199,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           .banish(rustler)
           .macro(seahorseMacro, seahorse),
         outfit: () => ({ modifier: "item", familiar: swordOut() ? sword : undefined }),
-        effects: itemDropEffects,
+        effects: () => combineMoods(itemDropEffects(), survivalEffects()),
         prepare: () => recover(),
         limit: { soft: 15, message: "Sea lassos are not accumulating." },
       },
@@ -224,6 +226,11 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           .banish($monsters`Mer-kin rustler, sea cowboy, sea cow`)
           .kill(),
         outfit: { modifier: "initiative" },
+        // The unready-seahorse branch of seahorseMacro() is Macro.runaway()
+        // .repeat() against Atk 500 with Init 10000 — every failed run is a
+        // free round of damage, and enough of them is a lost combat and a hard
+        // post() abort. Damage absorption is the only lever the task has.
+        effects: () => survivalEffects(),
         prepare: (): void => {
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);

@@ -19,7 +19,7 @@ import {
 } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
-import { applyEffects, combatEffects } from "../../lib/moods";
+import { applyEffects, combatEffects, combineMoods, survivalEffects } from "../../lib/moods";
 
 import { gladiatorFilter } from "./fights";
 import { skateWarOpen } from "./skatepark";
@@ -55,7 +55,10 @@ export function gymnasiumTurn(): void {
   // then in place when the maximize prices gear against them, so no slot is
   // spent on combat rate a buff already covers. This wrapper dresses itself,
   // so the engine's acquireEffects() never runs for it — cast them here.
-  applyEffects(combatEffects());
+  // ...plus the damage-mitigation mood (the garbo fork mood.ts:104-126): the gym's
+  // Mer-kin roster hits as hard as the corral's and this turn runs to an 800 HP
+  // floor. Cast before the maximize for the same reason the +combat buffs are.
+  applyEffects(combineMoods(combatEffects(), survivalEffects()));
   const warOpen = skateWarOpen();
   const pieces: string[] = [];
   if (warOpen) {
