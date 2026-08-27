@@ -22,6 +22,7 @@ import {
   Monster,
   myFamiliar,
   myMeat,
+  myTurncount,
   print,
   runCombat,
   Skill,
@@ -125,6 +126,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (!options.combat_defaults) options.combat_defaults = new MyActionDefaults();
     super(tasks, options);
   }
+
+  // Task-scoped combat-loss detection (post() below): _lastCombatLost is a
+  // daily property that mafia flips to true on a lost combat and back to
+  // false on the next WON one — it does NOT reset to false on its own, so it
+  // can still read true long after the task that actually lost the fight.
+  // Snapshotting these three values in prepare(), before this task has done
+  // anything, lets post() tell "this task lost a fight" apart from "some
+  // earlier task lost a fight and nothing has beaten it since."
+  private preTaskCombatLost = false;
+  private preTaskTurncount = 0;
+  private preTaskLastEncounter = "";
 
   // NOTE deliberately no getNextTask() override: grimoire's available() honors
   // `after` dependencies and limit.skip; the old repo's override silently broke both.
@@ -379,6 +391,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
   }
 
   override prepare(task: Task): void {
+    // Snapshot for post()'s task-scoped loss check — see the field comments
+    // above. Must happen before anything below can trigger a fight.
+    this.preTaskCombatLost = get("_lastCombatLost");
+    this.preTaskTurncount = myTurncount();
+    this.preTaskLastEncounter = get("lastEncounter");
+
     // Fishy/Waterproofly upkeep before every underwater adventuring turn
     // (spec §2; ash restores at zero in post_adv UTS:811-843). Never from
     // post() — the ladder may eat, chew, or pull.
@@ -477,12 +495,34 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
   override post(task: Task): void {
     super.post(task);
     if (have($effect`Beaten Up`)) {
+      // Cure first, judge second: uneffect unconditionally, before any throw,
+      // so an abort below never leaves the character Beaten Up for whatever
+      // runs (or doesn't) next.
+      uneffect($effect`Beaten Up`);
+
       // Shub's encounter name — losing to him is a sanctioned retry path (spec §9).
       const shubLoss = get("lastEncounter").includes(
         "Sssshhsssblllrrggghsssssggggrrgglsssshhssslblgl",
       );
-      if (get("_lastCombatLost") && !shubLoss) throw `Lost a combat during ${task.name}; stopping.`;
-      uneffect($effect`Beaten Up`);
+
+      // _lastCombatLost is a daily property (see prepare()'s field comments):
+      // it stays true from the losing task all the way until the next WON
+      // combat, so on its own it can't tell "this task just lost" apart from
+      // "some earlier task lost and nothing has won since." Only throw when
+      // the loss can be attributed to THIS task: either the flag was clean
+      // when the task started (so this task is the one that dirtied it), or
+      // a fight demonstrably happened during the task (turncount ticked, or
+      // lastEncounter changed — covers free fights that cost no turn). A
+      // free, non-combat task (e.g. Init/Sea Jelly) trips neither of those,
+      // so a stale Beaten Up from an earlier loss gets cured here without
+      // aborting the run.
+      const combatLostDuringTask =
+        !this.preTaskCombatLost ||
+        myTurncount() !== this.preTaskTurncount ||
+        get("lastEncounter") !== this.preTaskLastEncounter;
+      if (get("_lastCombatLost") && !shubLoss && combatLostDuringTask) {
+        throw `Lost a combat during ${task.name}; stopping.`;
+      }
     }
 
     // Poison cure — the ash handles exactly one tier (UTS:763-764).
