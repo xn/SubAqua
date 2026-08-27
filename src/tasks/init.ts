@@ -4,6 +4,7 @@ import {
   buy,
   cliExecute,
   getWorkshed,
+  print,
   retrieveItem,
   storageAmount,
   turnsPlayed,
@@ -94,9 +95,25 @@ export function initQuest(): Quest {
           visitUrl("council.php");
           visitUrl("tutorial.php?action=toot");
           visitUrl("council.php");
+          // On the Sea path the item drops from the council visit, not the
+          // Toot Oriole page, so TutorialRequest's own flip never fires — it
+          // only sets Quest.TOOT to FINISHED when its response contains
+          // "You acquire an item:" or "You've learned everything I can
+          // teach you" (TutorialRequest.java:24-29). Re-visiting the quest
+          // log forces the other flip site: QuestLogRequest's which=1 parse
+          // sets Quest.TOOT to FINISHED once the log no longer mentions
+          // "Toot!" (QuestLogRequest.java:121-123), which is what actually
+          // happens once council.php has handed over the letter.
+          visitUrl("questlog.php?which=1");
+          if (get("questM05Toot") === "started") {
+            print(
+              "Toot: mafia still shows the quest log open after the questlog refresh; continuing anyway.",
+              "yellow",
+            );
+          }
         },
         freeaction: true,
-        limit: { tries: 1 },
+        limit: { tries: 2 },
       },
       {
         name: "Daily Items",
