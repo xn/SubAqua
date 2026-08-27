@@ -112,6 +112,13 @@ export function colosseumRoundTurn(): void {
   // against mys by the current multiplier.
   const coeff =
     (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
+  // Audit item 4, deliberately NOT applied here: engine customize() pins sea
+  // cowboy hat + sea chaps for this underwater task and this maximize strips
+  // them, but the Colosseum is an outfit-required zone — mafia wears the
+  // Gladiatorial Gear regardless (KoLAdventure.java:2339) and `pieces` above
+  // already claims both of those slots with the gladiator mask (hat) and
+  // tailpiece (pants), which the round cannot be fought without. Re-pinning the
+  // lasso gear here would fight the zone's own outfit for no gain.
   // ...seaKeyword(): mafia forces the Mer-kin outfit for this zone, which already
   // breathes, but the keyword costs nothing there and keeps every self-dressing
   // Sea helper on the same rule (omitted under a breathing effect).

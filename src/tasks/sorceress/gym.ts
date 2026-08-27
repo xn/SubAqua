@@ -11,7 +11,12 @@ import {
 } from "kolmafia";
 import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
-import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
+import {
+  ensureHelperBreathing,
+  isTrainingLasso,
+  requiredFamiliarBreather,
+  seaKeyword,
+} from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 
@@ -55,6 +60,13 @@ export function gymnasiumTurn(): void {
   // refuse the zone (KoLAdventure.java:2867-2884).
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
+  // Re-pin the lasso gear (audit item 4). `Guard Grind` is `underwater: true`
+  // and non-`freeaction`, so engine customize() pins sea cowboy hat + sea chaps
+  // and dress() wears them — and then this maximize, which runs afterwards,
+  // strips both and drops lasso training to the un-geared rate. Neither slot is
+  // wanted by anything else here (the war gear is shirt/off-hand), and putting
+  // the terms in `pieces` carries them through the no-`sea` retry below.
+  if (isTrainingLasso()) pieces.push("+equip sea cowboy hat", "+equip sea chaps");
   // ...seaKeyword(): the gymnasium is a Sea zone and this wrapper task dresses
   // itself, so the breather has to come from this maximize. The keyword forces
   // "Adventure Underwater" (Evaluator.java:396-404) and lets the maximizer pick

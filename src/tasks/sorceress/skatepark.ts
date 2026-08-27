@@ -11,7 +11,12 @@ import {
 import { $item, $location, $slot, get } from "libram";
 
 import { killMacro } from "../../engine/combat";
-import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
+import {
+  ensureHelperBreathing,
+  isTrainingLasso,
+  requiredFamiliarBreather,
+  seaKeyword,
+} from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
@@ -83,6 +88,13 @@ export function skateParkTurn(): void {
     // ...seaKeyword() makes the breather the maximizer's job (Evaluator.java:
     // 396-404); ensureHelperBreathing() below is the one fallback behind it.
     const terms = ["-combat", "-equip Peridot of Peril"];
+    // Re-pin the lasso gear (audit item 4), same as gym.ts: `War Resolution` is
+    // `underwater: true` and non-`freeaction`, so engine customize() pinned sea
+    // cowboy hat + sea chaps and dress() wore them — this maximize runs after
+    // dress() and would strip both. Only the maximizing branch needs this; the
+    // forcer branch above maximizes nothing, so the engine's pins survive it.
+    // In `terms`, so the no-`sea` retry below keeps them too.
+    if (isTrainingLasso()) terms.push("+equip sea cowboy hat", "+equip sea chaps");
     const sea = seaKeyword();
     // A `sea` maximize can FAIL — the keyword masks Underwater Familiar too
     // (Evaluator.java:396-401) and getScore() fails any candidate missing
