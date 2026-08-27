@@ -237,7 +237,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         }
       }
 
-      if (outfit.familiar && !outfit.familiar.underwater) {
+      // $familiar.none is a truthy Familiar whose `underwater` is false, so it
+      // has to be excluded explicitly (same special case as outfit.ts:85's
+      // requiredFamiliarBreather): fielding no familiar needs no breather, and
+      // a famslot item set for a familiar that never comes out makes dress()
+      // fail its post-equip verification.
+      if (outfit.familiar && outfit.familiar !== $familiar.none && !outfit.familiar.underwater) {
         const famequip = outfit.equips.get($slot`familiar`) ?? $item.none;
         if (!familiarWaterBreathingEquipment.includes(famequip)) {
           const famBreather = familiarWaterBreathingEquipment.find((item) => have(item));

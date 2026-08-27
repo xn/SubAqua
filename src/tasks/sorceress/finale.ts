@@ -86,7 +86,8 @@ export function finaleQuest(): Quest {
               : []),
           ],
           // The "exp" non-attacking familiar rides along for the free
-          // experience (UTS:3040-3047); the engine adds its breather.
+          // experience (UTS:3040-3047); when the ladder actually fields one,
+          // the engine adds its breather (none is fielded, none is needed).
           familiar: expFamiliar(),
         }),
         underwater: true,
