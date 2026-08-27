@@ -15,7 +15,13 @@ import {
 import { CombatStrategy } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
-import { combineMoods, itemDropEffects, superItemDropEffects } from "../../lib/moods";
+import {
+  applyEffects,
+  combineMoods,
+  itemDropEffects,
+  squintEffects,
+  superItemDropEffects,
+} from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -114,7 +120,13 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
               // Ash UTS:1650-1651 spends the once-a-day squint on this
               // one-turn corral opener when it is still unused.
               effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
-              prepare: () => recover(),
+              // The squint doubles the +item that is ON when it is cast, so it
+              // goes in prepare() — the only hook after dress() (grimoire
+              // engine.js:101 vs :108).
+              prepare: (): void => {
+                recover();
+                applyEffects(squintEffects());
+              },
               limit: { tries: 3 },
             },
           ]

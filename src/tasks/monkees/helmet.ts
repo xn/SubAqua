@@ -24,7 +24,13 @@ import {
 import { CombatStrategy } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
-import { combineMoods, itemDropEffects, superItemDropEffects } from "../../lib/moods";
+import {
+  applyEffects,
+  combineMoods,
+  itemDropEffects,
+  squintEffects,
+  superItemDropEffects,
+} from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
 import { diverHuntActive } from "../../resources/saber";
@@ -178,7 +184,14 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               // the once-a-day squint only earns its keep on a probabilistic
               // roll, and the ash's switch case falls through into "itdrop".
               effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
-              prepare: () => recover(),
+              // The squint doubles whatever +item is ON at cast time, so it
+              // waits for prepare() — the only hook that runs after dress()
+              // (grimoire engine.js:101 vs :108), matching the ash's order
+              // after tempEquipment at UTS:1402.
+              prepare: (): void => {
+                recover();
+                applyEffects(squintEffects());
+              },
               limit: { tries: 5 },
             },
           ]
@@ -197,7 +210,11 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // Same diver table as the summon lane above, same ash mood.
         effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
         choices: { 299: 1 },
-        prepare: () => recover(),
+        // Squint after dress(), as above (ash UTS:1433).
+        prepare: (): void => {
+          recover();
+          applyEffects(squintEffects());
+        },
         limit: { soft: 30, message: "Diver parts are not dropping; check item-drop gear." },
       },
       {

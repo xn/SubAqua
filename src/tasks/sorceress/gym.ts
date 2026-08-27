@@ -9,7 +9,7 @@ import {
   maximize,
   visitUrl,
 } from "kolmafia";
-import { $coinmaster, $item, $location, $slot, ensureEffect, get, have } from "libram";
+import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
 import {
   ensureHelperBreathing,
@@ -19,7 +19,7 @@ import {
 } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
-import { combatEffects } from "../../lib/moods";
+import { applyEffects, combatEffects } from "../../lib/moods";
 
 import { gladiatorFilter } from "./fights";
 import { skateWarOpen } from "./skatepark";
@@ -54,7 +54,7 @@ export function gymnasiumTurn(): void {
   // at 89982f5): the +combat buffs' own slots and levels have to be in place
   // before the maximize prices gear against them. This wrapper dresses itself,
   // so the engine's acquireEffects() never runs for it — cast them here.
-  for (const effect of combatEffects()) ensureEffect(effect);
+  applyEffects(combatEffects());
   const warOpen = skateWarOpen();
   const pieces: string[] = [];
   if (warOpen) {

@@ -235,15 +235,15 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // Out of scope by construction: killHard, and the Phase 4 adv1-filter
     // fights (Yog-Urt, Shub, the Center Door, the colosseum and gym rounds),
     // whose tasks declare no CombatStrategy at all — neither branch below can
-    // see a monster or a default action for them. dropSafe and freeKillMode
-    // are enforced inside selectFreeKill().
+    // see a monster or a default action for them.
     //
-    // conserveFreeFights (true only at high shiny) switches the whole upgrade
-    // off. That is stricter than the ash, whose free_kill() still throws a dart
-    // at high shiny (CCS:7-14) — but high shiny is exactly the tier that banks
-    // its free-fight resources for aftercore, and the explicitly requested
-    // killFree/forceItems ladders above are untouched by this gate.
-    if (!currentPolicy().conserveFreeFights) {
+    // Policy rides entirely inside selectFreeKill(): freeKillMode is the real
+    // limiter (high shiny is "dartsOnly", which is exactly the ash's own
+    // high-shiny free_kill() — it still throws a dart, CCS:7-14), and dropSafe
+    // keeps the drop-forfeiting sources off drop-mattering fights. No
+    // conserveFreeFights gate: that policy banks the bat-wings/retro-cape free
+    // FIGHTS, not the instakill ladder.
+    {
       // Monsters this task handles with something OTHER than a plain kill. A
       // general macro runs ahead of every monster-specific ACTION (grimoire
       // combat.js compile order), so an unguarded prepend would burn the free

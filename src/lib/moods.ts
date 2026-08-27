@@ -5,6 +5,7 @@ import {
   $skill,
   AprilingBandHelmet,
   CinchoDeMayo,
+  ensureEffect,
   get,
   have,
   isSong,
@@ -120,25 +121,18 @@ export function itemDropEffects(): Effect[] {
 }
 
 /**
- * "superitdrop" mood (ash mood():71-75). The ash's switch case FALLS THROUGH
- * into "itdrop", so callers get both — use combineMoods(superItemDropEffects(),
- * itemDropEffects()) at the ash's mood("superitdrop") sites.
+ * "superitdrop" mood (ash mood():71-75), minus Steely-Eyed Squint — see
+ * squintEffects() for why that one cannot ride in task.effects. The ash's
+ * switch case FALLS THROUGH into "itdrop", so callers get both: use
+ * combineMoods(superItemDropEffects(), itemDropEffects()) at the ash's
+ * mood("superitdrop") sites.
  *
  * Hustlin' is deliberately absent: its default is "pool 3", one stylish game at
  * the clan pool table, and the effect only lands on a WIN. ensureEffect throws
  * on a loss, so the ash's optimism is not portable here.
- *
- * NOTE Steely-Eyed Squint doubles the item bonus in force when it is cast, and
- * grimoire acquires a task's effects BEFORE it dresses the outfit
- * (engine.js:95 vs :98-101) — so here it squints the bare-gear bonus. The ash
- * casts it after tempEquipment at UTS:1402/1433 and before it at UTS:1651.
- * Moving it into those tasks' `prepare` (which runs after dress()) would
- * recover the difference; left as-is to keep the port a list-for-list one.
  */
 export function superItemDropEffects(): Effect[] {
   const effects: Effect[] = [];
-  if (have($skill`Steely-Eyed Squint`) && !get("_steelyEyedSquintUsed"))
-    effects.push($effect`Steely-Eyed Squint`);
   if (
     CinchoDeMayo.have() &&
     have($skill`Cincho: Party Soundtrack`) &&
@@ -148,6 +142,34 @@ export function superItemDropEffects(): Effect[] {
   }
   if (have($skill`Heartstone: %pals`)) effects.push($effect`Best Pals`);
   return trimSongs(effects);
+}
+
+/**
+ * The rest of the ash's "superitdrop": Steely-Eyed Squint, which DOUBLES the
+ * item bonus in force at the moment it is cast and is once a day
+ * (_steelyEyedSquintUsed). grimoire acquires a task's effects BEFORE it builds
+ * and wears the outfit (engine.js:95 vs :98-101), so an `effects` entry would
+ * spend the day's squint on the bare-gear bonus. `prepare` runs AFTER dress()
+ * (engine.js:101 vs :108), which is where the ash casts it too — after
+ * tempEquipment at UTS:1402/1433.
+ *
+ * Apply with applyEffects(squintEffects()) at the tail of a task's prepare(),
+ * after recover() has topped the MP back up.
+ */
+export function squintEffects(): Effect[] {
+  if (!have($skill`Steely-Eyed Squint`) || get("_steelyEyedSquintUsed")) return [];
+  return [$effect`Steely-Eyed Squint`];
+}
+
+/**
+ * Acquire a mood list by hand, for the two places the engine's own
+ * acquireEffects() cannot serve: a task's prepare() (which is the only hook
+ * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
+ * Same ensureEffect the engine uses, so the same abort-on-failure contract —
+ * which is why every list above is gated to what the account can actually get.
+ */
+export function applyEffects(effects: Effect[]): void {
+  for (const effect of effects) ensureEffect(effect);
 }
 
 /** "combat" mood (ash mood():116-134). */
