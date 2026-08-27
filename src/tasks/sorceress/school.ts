@@ -5,14 +5,25 @@ import {
   equip,
   itemAmount,
   maximize,
-  pullsRemaining,
   putCloset,
   restoreHp,
   takeCloset,
   use,
   useSkill,
 } from "kolmafia";
-import { $coinmaster, $item, $location, $monster, $skill, $slot, get, have, Macro } from "libram";
+import {
+  $coinmaster,
+  $effect,
+  $item,
+  $location,
+  $monster,
+  $skill,
+  $slot,
+  get,
+  have,
+  Macro,
+  uneffect,
+} from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
@@ -20,7 +31,7 @@ import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
-import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
+import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 import { sourceEnhanceItems } from "./daily";
 
@@ -41,6 +52,27 @@ function cowlAndRope(): boolean {
   );
 }
 
+/** "A cheatsheet is obtainable by pull" — a live check, never
+ * `pullsRemaining() > 0`. The cheatsheet pull is once per day
+ * (`pullSequence` refuses a repeat, pulls.ts:32) and every wordquiz use
+ * consumes the sheet (UseItemRequest.java:4731-4733), so the stale proxy
+ * deadlocks the long route: Use Wordquiz stays ready and no-ops while Farm
+ * School believes a sheet is still coming. The ash falls back to farming
+ * (UTS:2552-2560). Budget-gated so this pull can never eat a slot a live
+ * reservation is holding (pulls.ts:148-151). */
+function cheatsheetPullable(): boolean {
+  return !pulledToday(cheatsheet) && pullBudgetAllows(cheatsheet);
+}
+
+/** The ash uneffects the sonata before the +item loop (UTS:2605). A 10-turn
+ * -combat song carried out of School Unlocks would suppress the very monitor
+ * and teacher combats the +item tasks farm. Only the sonata: the rest of
+ * `sneakEffects` (Smooth Movements, Feeling Lonely) is what the ash leaves
+ * alone. */
+function dropSneakEffects(): void {
+  if (have($effect`The Sonata of Sneakiness`)) uneffect($effect`The Sonata of Sneakiness`);
+}
+
 function vocabularyDone(): boolean {
   return get("merkinVocabularyMastery", 0) >= 90 || isKnucklebonesAndSushiEnough();
 }
@@ -48,6 +80,11 @@ function vocabularyDone(): boolean {
 export function schoolQuest(): Quest {
   return {
     name: "School",
+    // The ash wraps the whole school block in `if (isMerkinHighPriest ==
+    // false)` (UTS:2501). Without it, gym.ts:82-87 selling the scholar gear
+    // back after Yog-Urt flips cowlAndRope() false and re-opens "Cowl and
+    // Rope" for another soft:20 turns of a job already done.
+    completed: () => get("isMerkinHighPriest", false),
     tasks: [
       {
         // Clue 3 first — it feeds the seed scan before any school turn is
@@ -70,7 +107,18 @@ export function schoolQuest(): Quest {
         // 2582-2598). Choice handlers 396-398 take every unlock. The short
         // route escapes as soon as the cowl+rope pair lands.
         name: "School Unlocks",
-        completed: () => get("merkinElementaryTeacherUnlock", false) || cowlAndRope(),
+        // The cowl+rope escape belongs to the SHORT route only: the ash's
+        // long branch loops `while (teacherUnlock == false && !libraryReady())`
+        // with no break (UTS:2509), and the break exists solely in the short
+        // branch (UTS:2596-2597). Escaping early on a long-route run whose
+        // drops land first would leave all three unlock prefs unset
+        // (ChoiceControl.java:5084-5103), putting NC 401 (wordquiz), NC 399
+        // (monitor/cheatsheet) and the Mer-kin teacher — the only bunwig
+        // source, monsters.txt:444 — out of reach while Farm School burns
+        // soft:30 chasing an unobtainable hat.
+        completed: () =>
+          get("merkinElementaryTeacherUnlock", false) ||
+          (isKnucklebonesAndSushiEnough() && cowlAndRope()),
         prepare: (): void => {
           putCloset(itemAmount(hallpass), hallpass);
           recover();
@@ -91,10 +139,10 @@ export function schoolQuest(): Quest {
         ready: () =>
           !isKnucklebonesAndSushiEnough() &&
           itemAmount(wordquiz) > 0 &&
-          (itemAmount(cheatsheet) > 0 || pullsRemaining() > 0),
+          (itemAmount(cheatsheet) > 0 || cheatsheetPullable()),
         completed: vocabularyDone,
         do: (): void => {
-          if (itemAmount(cheatsheet) === 0) pullSequence(cheatsheet);
+          if (itemAmount(cheatsheet) === 0 && cheatsheetPullable()) pullSequence(cheatsheet);
           if (itemAmount(cheatsheet) > 0) use(wordquiz);
         },
         freeaction: true,
@@ -110,9 +158,10 @@ export function schoolQuest(): Quest {
         ready: () => !isKnucklebonesAndSushiEnough(),
         completed: () =>
           vocabularyDone() ||
-          (itemAmount(wordquiz) > 0 && (itemAmount(cheatsheet) > 0 || pullsRemaining() > 0)),
+          (itemAmount(wordquiz) > 0 && (itemAmount(cheatsheet) > 0 || cheatsheetPullable())),
         prepare: (): void => {
           takeCloset(closetAmount(hallpass), hallpass);
+          dropSneakEffects();
           sourceEnhanceItems();
           recover();
         },
@@ -133,6 +182,7 @@ export function schoolQuest(): Quest {
         completed: cowlAndRope,
         prepare: (): void => {
           takeCloset(closetAmount(hallpass), hallpass);
+          dropSneakEffects();
           sourceEnhanceItems();
           if (
             (availableAmount(facecowl) > 0 || availableAmount(waistrope) > 0) &&
