@@ -11,7 +11,7 @@ import {
 } from "kolmafia";
 import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
-import { requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
+import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 
@@ -59,7 +59,18 @@ export function gymnasiumTurn(): void {
   // itself, so the breather has to come from this maximize. The keyword forces
   // "Adventure Underwater" (Evaluator.java:396-404) and lets the maximizer pick
   // the piece; it is omitted while Driving Waterproofly / Wet Willied covers us.
-  maximize(["combat rate", ...pieces, ...seaKeyword()].join(", "), false);
+  const terms = ["combat rate", ...pieces];
+  const sea = seaKeyword();
+  // A `sea` maximize can FAIL outright — the keyword masks Underwater Familiar
+  // too (Evaluator.java:396-401) and getScore() fails any candidate missing
+  // either boolean (Evaluator.java:980-984), which no familiar out cannot
+  // satisfy (Modifiers.java:1228-1231). A failed maximize applies NOTHING, so
+  // the objectives above would be silently dropped: re-run them without the
+  // keyword and let ensureHelperBreathing() below breathe (or stop loudly).
+  if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
+    maximize(terms.join(", "), false);
+  }
+  ensureHelperBreathing("the Mer-kin Gymnasium");
   recover(800);
   adv1($location`Mer-kin Gymnasium`, -1, gladiatorFilter({ gym: true, warOpen }));
 }

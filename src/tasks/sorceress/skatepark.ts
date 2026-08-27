@@ -12,7 +12,12 @@ import {
 import { $item, $location, $slot, get } from "libram";
 
 import { killMacro } from "../../engine/combat";
-import { hasBreathingEffect, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
+import {
+  ensureHelperBreathing,
+  hasBreathingEffect,
+  requiredFamiliarBreather,
+  seaKeyword,
+} from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
@@ -76,7 +81,17 @@ export function skateParkTurn(): void {
   } else {
     // ...seaKeyword() makes the breather the maximizer's job (Evaluator.java:
     // 396-404) instead of the explicit trunks below, which stay as the fallback.
-    maximize(["-combat", "-equip Peridot of Peril", ...seaKeyword()].join(", "), false);
+    const terms = ["-combat", "-equip Peridot of Peril"];
+    const sea = seaKeyword();
+    // A `sea` maximize can FAIL outright — the keyword masks Underwater Familiar
+    // too (Evaluator.java:396-401) and getScore() fails any candidate missing
+    // either boolean (Evaluator.java:980-984), which no familiar out cannot
+    // satisfy (Modifiers.java:1228-1231). A failed maximize applies NOTHING, so
+    // the objectives above would be silently dropped: re-run them without the
+    // keyword and let ensureHelperBreathing() below breathe (or stop loudly).
+    if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
+      maximize(terms.join(", "), false);
+    }
     // The Skate Park is NOT an outfit zone, so mafia supplies no breathing here
     // (KoLAdventure.java:2867-2884): the sea keyword above is the primary, and
     // this is the fallback for when it was skipped or found nothing. Same rule
@@ -87,6 +102,10 @@ export function skateParkTurn(): void {
     }
     if (availableAmount(blade) > 0) equip($slot`weapon`, blade);
   }
+  // Both branches: the forcer branch's trunks equip is just as capable of
+  // leaving us unable to breathe (trunkless account, lasso-pinned pants), and
+  // this zone has no engine dress() pass behind it.
+  ensureHelperBreathing("The Skate Park");
   // Familiar breathing, BOTH branches (and after the maximize, which may fill
   // the familiar slot itself): no `outfit` on the wrapper task means the
   // engine's enforcement never runs, and a non-aquatic familiar left up by an

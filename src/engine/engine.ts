@@ -19,6 +19,7 @@ import {
   Item,
   itemAmount,
   Location,
+  myFamiliar,
   myMeat,
   print,
   runCombat,
@@ -243,7 +244,40 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
             outfit.equips.delete($slot`hat`);
           }
         }
-        outfit.modifier.push(...seaKeyword());
+        // "sea" masks BOTH Adventure Underwater and Underwater Familiar
+        // (Evaluator.java:396-401) and getScore() fails any candidate whose
+        // modifier set doesn't satisfy the whole mask (Evaluator.java:980-984).
+        // With no familiar fielded, lookupFamiliarModifiers returns early
+        // (Modifiers.java:1228-1231) and Underwater Familiar can never be
+        // satisfied — the maximize would fail outright. So the keyword goes in
+        // only when a real familiar is coming out; otherwise keep the old
+        // hard-equip path.
+        const fieldedFamiliar = outfit.familiar ?? myFamiliar();
+        if (fieldedFamiliar !== $familiar.none) {
+          // A lone `sea` objective scores every candidate 0, and the default
+          // tiebreaker (Evaluator.java:133) outranks "prefer worn" in
+          // MaximizerSpeculation.compareTo:164-186 — so without `-tie` a
+          // bare-outfit task would re-dress every free slot to generic BiS on
+          // each dress(). `-tie` zeroes the tiebreaker
+          // (Evaluator.getTiebreaker, Evaluator.java:1022-1024), leaving
+          // "prefer worn"/simplicity to decide, i.e. a minimal change. When
+          // the outfit already carries a real objective, that objective is
+          // the ranking and `-tie` would fight it.
+          const keyword = seaKeyword();
+          const noOtherObjective = outfit.modifier.length === 0;
+          outfit.modifier.push(...keyword);
+          if (keyword.length > 0 && noOtherObjective) outfit.modifier.push("-tie");
+        } else {
+          const breather = owned[0];
+          if (!outfit.equip(breather)) {
+            if (outfit.equips.get($slot`hat`) === $item`sea cowboy hat`) {
+              outfit.equips.delete($slot`hat`);
+            }
+            if (!outfit.equip(breather)) {
+              throw `Unable to provide player water breathing for ${task.name}`;
+            }
+          }
+        }
       }
 
       // $familiar.none is a truthy Familiar whose `underwater` is false, so it

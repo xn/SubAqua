@@ -2,6 +2,7 @@ import {
   abort,
   booleanModifier,
   canEquip,
+  equip,
   equippedItem,
   Familiar,
   Item,
@@ -46,6 +47,37 @@ export function hasBreathingEffect(): boolean {
  */
 export function seaKeyword(): string[] {
   return hasBreathingEffect() ? [] : ["sea"];
+}
+
+/**
+ * Post-maximize breathing fallback + loud stop for the SELF-DRESSING Sea
+ * helpers (gym, colosseum, skate park), which call `maximize()` by hand and so
+ * never see the engine `dress()` last-chance pass.
+ *
+ * Needed because `sea` masks Underwater Familiar as well as Adventure
+ * Underwater (Evaluator.java:396-401) and getScore() fails any candidate that
+ * misses either (Evaluator.java:980-984) — with no familiar out,
+ * lookupFamiliarModifiers returns early (Modifiers.java:1228-1231), so the
+ * whole maximize can fail and then applies NOTHING. The helpers re-run their
+ * terms without `sea` in that case, which leaves breathing to this.
+ *
+ * Same rule as the engine's enforcement, not a second one: nothing to do when
+ * an effect or the zone's forced outfit already breathes; otherwise the same
+ * `preferredBreathingGear()` pick `dress()` makes — a superset of the ash's
+ * bare trunks equip, since it also covers lasso training and trunkless
+ * accounts.
+ */
+export function ensureHelperBreathing(where: string): void {
+  if (booleanModifier("Adventure Underwater")) return;
+  if (!hasBreathingEffect()) {
+    const breather = preferredBreathingGear().find((item) => have(item) && canEquip(item));
+    if (breather) equip(breather);
+  }
+  if (!booleanModifier("Adventure Underwater")) {
+    abort(
+      `Unable to establish water breathing for ${where}: the maximizer could not place a breather and no owned piece would equip. Acquire or pull breathing gear (really, really nice swimming trunks, an Elf Guard SCUBA tank, a Mer-kin mask), or get Driving Waterproofly up, then rerun.`,
+    );
+  }
 }
 
 export function canBreatheUnderwater(): boolean {

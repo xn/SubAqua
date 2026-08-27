@@ -26,7 +26,7 @@ import {
   set,
 } from "libram";
 
-import { requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
+import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
@@ -115,10 +115,18 @@ export function colosseumRoundTurn(): void {
   // ...seaKeyword(): mafia forces the Mer-kin outfit for this zone, which already
   // breathes, but the keyword costs nothing there and keeps every self-dressing
   // Sea helper on the same rule (omitted under a breathing effect).
-  maximize(
-    [`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces, ...seaKeyword()].join(", "),
-    false,
-  );
+  const terms = [`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces];
+  const sea = seaKeyword();
+  // A `sea` maximize can FAIL outright — the keyword masks Underwater Familiar
+  // too (Evaluator.java:396-401) and getScore() fails any candidate missing
+  // either boolean (Evaluator.java:980-984), which no familiar out cannot
+  // satisfy (Modifiers.java:1228-1231). A failed maximize applies NOTHING, so
+  // the objectives above would be silently dropped: re-run them without the
+  // keyword and let ensureHelperBreathing() below breathe (or stop loudly).
+  if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
+    maximize(terms.join(", "), false);
+  }
+  ensureHelperBreathing("the Mer-kin Colosseum");
   recover(myMaxhp()); // colosseum floor is FULL HP (setRecoveryTargets UTS:219-220)
   adv1($location`Mer-kin Colosseum`, -1, gladiatorFilter());
   if (get("lastEncounter") === "Been There, Won That") {
