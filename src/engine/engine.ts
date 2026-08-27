@@ -26,6 +26,7 @@ import {
   print,
   runCombat,
   Skill,
+  toMonster,
   toSlot,
   use,
   writeCcs,
@@ -35,6 +36,7 @@ import {
   $familiar,
   $item,
   $items,
+  $monster,
   $skill,
   $slot,
   get,
@@ -524,15 +526,23 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // "some earlier task lost and nothing has won since." Only throw when
       // the loss can be attributed to THIS task: either the flag was clean
       // when the task started (so this task is the one that dirtied it), or
-      // a fight demonstrably happened during the task (turncount ticked, or
-      // lastEncounter changed — covers free fights that cost no turn). A
-      // free, non-combat task (e.g. Init/Sea Jelly) trips neither of those,
-      // so a stale Beaten Up from an earlier loss gets cured here without
-      // aborting the run.
-      const combatLostDuringTask =
-        !this.preTaskCombatLost ||
-        myTurncount() !== this.preTaskTurncount ||
-        get("lastEncounter") !== this.preTaskLastEncounter;
+      // a fight demonstrably happened during the task. "A fight happened"
+      // needs its own gate, not just turncount/lastEncounter having moved:
+      // lastEncounter is set for combats, choices, AND noncombats alike
+      // (AdventureRequest.java:597), and a noncombat can also consume a
+      // turn — so either clause can fire on a plain NC/choice with no fight
+      // at all. Gate both on toMonster(lastEncounter) resolving to an actual
+      // monster: a choice/NC name resolves to $monster.none, while a lost
+      // fight always leaves lastEncounter as the monster's name. A free,
+      // non-combat task (e.g. Init/Sea Jelly) or a task that only hits an
+      // NC/choice trips neither clause, so a stale Beaten Up from an earlier
+      // loss gets cured here without aborting the run.
+      const currentEncounter = get("lastEncounter");
+      const encounterIsMonster = toMonster(currentEncounter) !== $monster.none;
+      const fightHappenedThisTask =
+        encounterIsMonster &&
+        (myTurncount() !== this.preTaskTurncount || currentEncounter !== this.preTaskLastEncounter);
+      const combatLostDuringTask = !this.preTaskCombatLost || fightHappenedThisTask;
       if (get("_lastCombatLost") && !shubLoss && combatLostDuringTask) {
         throw `Lost a combat during ${task.name}; stopping.`;
       }
