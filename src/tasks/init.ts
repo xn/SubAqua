@@ -4,7 +4,9 @@ import {
   buy,
   cliExecute,
   getWorkshed,
+  handlingChoice,
   retrieveItem,
+  runChoice,
   storageAmount,
   turnsPlayed,
   use,
@@ -91,9 +93,17 @@ export function initQuest(): Quest {
         name: "Toot",
         completed: () => get("questM05Toot") !== "started" || get("_subaqua_toot_visited", false),
         do: (): void => {
+          // On the Sea path the Toot/council pages open a one-option
+          // acknowledgement dialog ("Right, okay") that mafia leaves
+          // pending; nothing downstream can act (e.g. the next task's
+          // `use` calls) until it is answered. Drain after each visit
+          // rather than once at the end so a second dialog can't stack.
           visitUrl("council.php");
+          if (handlingChoice()) runChoice(1);
           visitUrl("tutorial.php?action=toot");
+          if (handlingChoice()) runChoice(1);
           visitUrl("council.php");
+          if (handlingChoice()) runChoice(1);
           // On the overworld the item drops from the Toot Oriole page, so
           // TutorialRequest's own flip fires there — it sets Quest.TOOT to
           // FINISHED when its response contains "You acquire an item:" or
