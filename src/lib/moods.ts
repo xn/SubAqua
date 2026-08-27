@@ -89,6 +89,44 @@ function trimSongs(effects: Effect[]): Effect[] {
   });
 }
 
+/** Currently active AT songs, by isSong() — same myEffects()-walk shape as
+ * activeBadEffects() below, kept next to trimSongs()/maxSongs() since it
+ * serves the same song-cap accounting. */
+function activeSongs(): Effect[] {
+  return Object.keys(myEffects())
+    .map((name) => toEffect(name))
+    .filter((effect) => isSong(effect));
+}
+
+/**
+ * Shrug active songs the given list doesn't want, until the wanted songs plus
+ * whatever's left active fits the shrine cap — the same algorithm grimoire's
+ * own ContextualEngine.acquireEffects runs for task.effects (engine.js:162-
+ * 181), reproduced here for applyEffects(), which casts OUTSIDE that path (a
+ * task's prepare(), after dress() — squintEffects()'s own doc comment — and
+ * the self-dressing gymnasiumTurn() helper) and so gets none of grimoire's
+ * protection.
+ *
+ * Live case this fixes: gym.ts/colosseum.ts call
+ * applyEffects(combineMoods(combatEffects(), survivalEffects())) directly.
+ * Donho's, Fat Leon's, and Polka of Plenty were already active (3 = the
+ * cap), and the trimmed wanted list was {Fat Leon's, Donho's, The Ballad of
+ * Richie Thingfinder} — Polka is not wanted but nothing ever shrugged it, so
+ * ensureEffect(Richie) had no slot and threw. trimSongs() only caps the
+ * REQUESTED list; it has no idea what's already active.
+ */
+function shrugForSongs(wanted: Effect[]): void {
+  const wantedSongs = wanted.filter((effect) => isSong(effect));
+  if (wantedSongs.length === 0) return;
+  const cap = maxSongs();
+  const extra = activeSongs().filter((effect) => !wantedSongs.includes(effect));
+  while (wantedSongs.length + extra.length > cap) {
+    const toRemove = extra.pop();
+    if (toRemove === undefined) break;
+    uneffect(toRemove);
+  }
+}
+
 /** Concatenate mood regimes for a task that wants several (the ash calls
  * mood() twice in a row at such sites, e.g. UTS:1746-1747, 2698-2699).
  * De-duplicates and re-applies the song cap across the union. */
@@ -206,6 +244,7 @@ export function squintEffects(): Effect[] {
  */
 export function applyEffects(effects: Effect[]): void {
   reserveMpFor(effects);
+  shrugForSongs(effects);
   for (const effect of effects) {
     const skill = toSkill(effect);
     if (!have(effect) && skill !== $skill.none && myMp() < mpCost(skill)) {
@@ -505,6 +544,14 @@ function myMoodList(): string[] {
  * user whose mood says `gain_effect | Foo | use 1 hot dog` would have us eat a
  * hot dog. mood_list() is that same trigger list (RuntimeLibrary:5413-5423,
  * "type | name | action"), so we can see it coming and decline.
+ *
+ * Belt-and-braces since the engine now forces `currentMood` to "apathetic"
+ * (engine.ts initPropertiesManager) — mafia's built-in trigger-free mood, so
+ * moodList() should read empty for the whole run and this should never fire.
+ * It stays anyway: currentMood is one property write, and this is what
+ * caught the live bug in the first place (the user's own mood was re-casting
+ * a song we had just shrugged, out from under grimoire's/our own
+ * shrug-before-cast — see shrugForSongs() above and its cite).
  */
 export function moodWouldSpend(effect: Effect): boolean {
   const prefix = `gain_effect | ${effect.name} | `;

@@ -645,6 +645,20 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       hpAutoRecoveryItems: hpItems,
       mpAutoRecoveryItems: mpItems,
       choiceAdventureScript: "subaqua_choice.js",
+      // Live case: with the user's own currentMood active, shrugging a song
+      // we don't want (grimoire's ContextualEngine.acquireEffects shrug loop,
+      // or moods.ts's shrugForSongs() for the applyEffects() path) didn't
+      // stick — the user's mood immediately re-cast it via its own
+      // gain_effect/lose_effect triggers, so the next ensureEffect in the
+      // same cast pass had no song slot and threw ("Failed to ensure The
+      // Ballad of Richie Thingfinder!" with Polka/Fat Leon's/Donho's already
+      // up at the 3-song cap). "apathetic" is mafia's reserved no-op mood
+      // name, so this makes our own effects/moods lists (moods.ts) the sole
+      // buff owner for the run — the ash's own mood() was always a
+      // hand-rolled caster, never mafia moods, so this is parity, not a
+      // behavior change. Managed like every other property here: restored
+      // on exit.
+      currentMood: "apathetic",
     });
   }
 }
