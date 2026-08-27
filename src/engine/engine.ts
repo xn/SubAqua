@@ -22,6 +22,7 @@ import {
   myMeat,
   print,
   runCombat,
+  Skill,
   use,
   writeCcs,
 } from "kolmafia";
@@ -156,7 +157,11 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // through to MyActionDefaults degrades loudly instead.
         const equipped = banisher.equip ? outfit.equip(banisher.equip) : true;
         if (equipped) {
-          resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+          if (banisher.skill instanceof Skill) {
+            resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
+          } else {
+            resources.provide("banish", { do: Macro.tryItem(banisher.skill) });
+          }
         }
       }
     }
