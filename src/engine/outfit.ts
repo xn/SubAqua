@@ -1,9 +1,11 @@
 import {
+  abort,
   booleanModifier,
   canEquip,
   equippedItem,
   Familiar,
   Item,
+  myFamiliar,
   numericModifier,
   print,
 } from "kolmafia";
@@ -67,6 +69,27 @@ export function bestFamUnderwaterGear(fam: Familiar): Item {
     : have($item`das boot`)
       ? $item`das boot`
       : $item`little bitty bathysphere`;
+}
+
+/**
+ * The familiar-slot breather a SELF-DRESSING helper must add before a Sea
+ * zone, or `$item.none` when none is needed (no familiar, an aquatic one, or a
+ * breathing effect). The engine's own enforcement (engine.ts:240-246) only
+ * covers tasks that declare an `outfit` with a familiar; function-`do` tasks
+ * get a bare Outfit whose `familiar` is undefined, so their helpers must ask
+ * here. Aborts loudly when a breather IS needed and the account owns neither —
+ * mafia would otherwise refuse the zone outright
+ * (KoLAdventure.java:2867-2884), exactly as engine.ts:245 does.
+ */
+export function requiredFamiliarBreather(familiar: Familiar = myFamiliar()): Item {
+  if (familiar === $familiar.none || familiar.underwater || hasBreathingEffect()) return $item.none;
+  const breather = bestFamUnderwaterGear(familiar);
+  if (!have(breather)) {
+    abort(
+      `${familiar} cannot breathe underwater and no familiar breather is on hand — pull or acquire a das boot or a little bitty bathysphere (or take an aquatic familiar), then rerun.`,
+    );
+  }
+  return breather;
 }
 
 function equipmentlessFamiliarWeight(fam: Familiar): number {

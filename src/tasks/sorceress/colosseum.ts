@@ -3,9 +3,7 @@ import {
   availableAmount,
   buy,
   cliExecute,
-  Familiar,
   itemAmount,
-  myFamiliar,
   maximize,
   myBuffedstat,
   myMaxhp,
@@ -28,7 +26,7 @@ import {
   set,
 } from "libram";
 
-import { bestFamUnderwaterGear, hasBreathingEffect } from "../../engine/outfit";
+import { requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
@@ -74,15 +72,13 @@ export function colosseumRoundPrep(): void {
  * riders per tier policy; never the saber, never free runs). */
 export function colosseumRoundTurn(): void {
   colosseumRoundPrep();
-  let chosen: Familiar | undefined;
   if (have($familiar`Patriotic Eagle`) && get("screechCombats", 0) > 0 && have(cmoi)) {
     // Worthless-for-screech fights tick the recharge down (940514c; recharge
     // counts only plain wins, UTS:1647-1650).
-    chosen = $familiar`Patriotic Eagle`;
+    useFamiliar($familiar`Patriotic Eagle`);
   } else if (have($familiar`Foul Ball`)) {
-    chosen = $familiar`Foul Ball`;
+    useFamiliar($familiar`Foul Ball`);
   }
-  if (chosen) useFamiliar(chosen);
   const pieces = ["+equip Mer-kin gladiator mask", "+equip Mer-kin gladiator tailpiece"];
   if (have(cmoi)) pieces.push("+equip Congressional Medal of Insanity");
   const policy = currentPolicy();
@@ -107,13 +103,11 @@ export function colosseumRoundTurn(): void {
   }
   // Familiar breathing: the Mer-kin outfit mafia forces for this zone covers
   // the PLAYER, but every Sea zone still refuses a familiar that can't breathe
-  // (KoLAdventure.java:2867-2884). Reuse the engine's rule rather than a second
-  // one; the eagle and Foul Ball are both non-aquatic (familiars.txt:330,353).
-  const familiar = chosen ?? myFamiliar();
-  if (familiar !== $familiar.none && !familiar.underwater && !hasBreathingEffect()) {
-    const famBreather = bestFamUnderwaterGear(familiar);
-    if (have(famBreather)) pieces.push(`+equip ${famBreather.name}`);
-  }
+  // (KoLAdventure.java:2867-2884). The eagle and Foul Ball are both non-aquatic
+  // (familiars.txt:330,353); reading myFamiliar() (useFamiliar has already run)
+  // also covers a non-aquatic familiar left up by an earlier task.
+  const famBreather = requiredFamiliarBreather();
+  if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
   // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
   // against mys by the current multiplier.
   const coeff =

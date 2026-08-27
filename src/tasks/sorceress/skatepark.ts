@@ -12,7 +12,7 @@ import {
 import { $item, $location, $slot, get } from "libram";
 
 import { killMacro } from "../../engine/combat";
-import { hasBreathingEffect } from "../../engine/outfit";
+import { hasBreathingEffect, requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
@@ -75,6 +75,12 @@ export function skateParkTurn(): void {
     }
     if (availableAmount(blade) > 0) equip($slot`weapon`, blade);
   }
+  // Familiar breathing, BOTH branches (and after the maximize, which may fill
+  // the familiar slot itself): no `outfit` on the wrapper task means the
+  // engine's enforcement never runs, and a non-aquatic familiar left up by an
+  // earlier task makes mafia refuse the zone (KoLAdventure.java:2867-2884).
+  const famBreather = requiredFamiliarBreather();
+  if (famBreather !== $item.none) equip($slot`familiar`, famBreather);
   recover();
   adv1($location`The Skate Park`, -1, () => killMacro(false).toString());
   claimIceBuff();

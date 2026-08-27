@@ -11,6 +11,7 @@ import {
 } from "kolmafia";
 import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
+import { requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 
@@ -48,6 +49,12 @@ export function gymnasiumTurn(): void {
       pieces.push("+equip Jurassic Parka");
     }
   }
+  // Familiar breathing: this wrapper task declares no `outfit`, so the engine's
+  // enforcement (engine.ts:240-246, which needs outfit.familiar) never runs and
+  // whatever non-aquatic familiar an earlier task left up would make mafia
+  // refuse the zone (KoLAdventure.java:2867-2884).
+  const famBreather = requiredFamiliarBreather();
+  if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
   maximize(["combat rate", ...pieces].join(", "), false);
   recover(800);
   adv1($location`Mer-kin Gymnasium`, -1, gladiatorFilter({ gym: true, warOpen }));
