@@ -316,6 +316,27 @@ export function isEnsureError(e: unknown): e is Error {
 }
 
 /**
+ * Diagnostic tail for a `failed <effect>: …` line (live case: `failed The
+ * Ballad of Richie Thingfinder: Ensure Error: Failed to ensure …`, which
+ * gives no clue WHY the cast failed). Reports the three things that make a
+ * skill-sourced ensureEffect() fail after resolveWantedEffects() already
+ * cleared the obvious cases: the song shrine is still full (another cast
+ * filled a slot resolveWantedEffects counted as free), MP got spent between
+ * the pre-check and the cast, or the skill isn't actually known (a caller
+ * bypassed the mood lists and handed applyEffects/acquireEffects a raw
+ * effect list). Item-sourced effects (toSkill() === $skill.none) report 0/0
+ * MP and "skill n/a" rather than a misleading skill-known/unknown verdict.
+ */
+export function effectFailureContext(effect: Effect): string {
+  const skill = toSkill(effect);
+  const cap = maxSongs();
+  const activeCount = activeSongs().length;
+  const cost = skill === $skill.none ? 0 : mpCost(skill);
+  const skillState = skill === $skill.none ? "n/a" : have(skill) ? "known" : "unknown";
+  return `songs ${activeCount}/${cap}, MP ${myMp()}/${cost}, skill ${skillState}`;
+}
+
+/**
  * Acquire a mood list by hand, for the two places the engine's own
  * acquireEffects() cannot serve: a task's prepare() (which is the only hook
  * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
@@ -358,7 +379,7 @@ export function applyEffects(effects: Effect[], context?: string): void {
       // Only libram's own "could not get this buff" is optional; anything else
       // (an abort() in particular) has to keep propagating. See isEnsureError.
       if (!isEnsureError(e)) throw e;
-      print(`failed ${effect}: ${e}`, "yellow");
+      print(`failed ${effect}: ${e} (${effectFailureContext(effect)})`, "yellow");
     }
   }
 }

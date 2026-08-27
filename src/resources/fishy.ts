@@ -239,15 +239,31 @@ const FISHY_SOURCES: Fishysource[] = [
   },
 ];
 
+/**
+ * Item.adventures is a string, not a number: a flat food/booze/spleen item
+ * reports a plain integer ("5"), but a ranged one reports "N-M" (e.g.
+ * "2-3", "4-8"). toInt() on a ranged string logs "The string ... is not an
+ * integer; returning 0" and silently returns 0 — which made the (7 -
+ * toInt(...)) term in fishyOpportunityCost() a no-op 7 for every ranged
+ * item. Average the range instead so the term reflects the real expected
+ * adventure yield.
+ */
+function averageAdventures(item: Item): number {
+  const raw = item.adventures;
+  if (!raw) return 0;
+  const [low, high] = raw.split("-").map((n) => toInt(n));
+  return high !== undefined ? (low + high) / 2 : low;
+}
+
 function fishyOpportunityCost(source: Item, fullnessOverride?: number): number {
   const cost = mallPrice(source);
   const fullness = fullnessOverride ?? source.fullness;
   if (fullness > 0) {
-    return get("valueOfAdventure") * (7 - toInt(source.adventures)) * fullness + 12_500 + cost;
+    return get("valueOfAdventure") * (7 - averageAdventures(source)) * fullness + 12_500 + cost;
   }
 
   if (source.inebriety > 0) {
-    return get("valueOfAdventure") * (7 - toInt(source.adventures)) * source.inebriety + cost;
+    return get("valueOfAdventure") * (7 - averageAdventures(source)) * source.inebriety + cost;
   }
 
   if (source.spleen > 0) {

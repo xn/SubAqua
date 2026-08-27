@@ -196,6 +196,13 @@ export function main(choice: number, _page: string) {
     } else {
       runChoice(6);
     }
+  } else if (choice === 1599) {
+    // Legendary Digestion (legendary pasta wand's Summon Legendary Noodles;
+    // ChoiceControl.java:6884-6894 case 1599 — options 1-5 are Spleen /
+    // Amygdala / Skin / Heart / Stomach). Option 1 sets
+    // _legendaryNoodlesSpleen and banks a free spleen point; user rule: it
+    // should always be that.
+    runChoice(1);
   }
 }
 

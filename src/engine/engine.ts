@@ -20,13 +20,16 @@ import {
   itemAmount,
   Location,
   Monster,
+  mpCost,
   myFamiliar,
   myMeat,
+  myMp,
   myTurncount,
   print,
   runCombat,
   Skill,
   toMonster,
+  toSkill,
   toSlot,
   use,
   writeCcs,
@@ -51,6 +54,7 @@ import {
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
 import {
+  effectFailureContext,
   isEnsureError,
   reserveMpFor,
   resolveWantedEffects,
@@ -669,6 +673,15 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // lets the task continue instead of aborting the run.
     shrugForSongs(wanted);
     for (const effect of wanted) {
+      const skill = toSkill(effect);
+      if (!have(effect) && skill !== $skill.none && myMp() < mpCost(skill)) {
+        // Skip rather than cast: ensureEffect would throw. Mirrors
+        // applyEffects' own pre-check (moods.ts) — MP can still have drained
+        // below the cast's cost between reserveMpFor() above and here (a
+        // shrugForSongs shrug, an earlier cast in this same loop, etc.).
+        print(`skipped ${effect}: needs ${mpCost(skill)} MP, have ${myMp()}`, "yellow");
+        continue;
+      }
       try {
         ensureEffect(effect);
       } catch (e) {
@@ -677,7 +690,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // print `failed <effect>` and carry the run right past it
         // (moods.ts isEnsureError).
         if (!isEnsureError(e)) throw e;
-        print(`failed ${effect}: ${e}`, "yellow");
+        print(`failed ${effect}: ${e} (${effectFailureContext(effect)})`, "yellow");
       }
     }
   }
