@@ -5,7 +5,7 @@ import { CombatStrategy } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
-import { resEffects, sneakEffects } from "../../lib/moods";
+import { combineMoods, resEffects, sneakEffects } from "../../lib/moods";
 import { discretionaryPull } from "../../resources/pulls";
 import { summon } from "../../resources/summon";
 
@@ -36,7 +36,7 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
           familiar: sneakFamiliar(),
           equip: $items`Mer-kin sneakmask`,
         }),
-        effects: () => [...sneakEffects(), ...resEffects()],
+        effects: () => combineMoods(sneakEffects(), resEffects()),
         choices: { 302: 1, 303: 1, 304: 2, 305: 2, 306: 1, 307: 1, 308: 1, 309: 2 },
         prepare: (): void => {
           recover();

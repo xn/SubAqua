@@ -29,7 +29,7 @@ import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
-import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { combatEffects, combineMoods, itemDropEffects, sneakEffects } from "../../lib/moods";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 import { sourceEnhanceItems } from "./daily";
@@ -198,7 +198,9 @@ export function schoolQuest(): Quest {
         do: school,
         combat: new CombatStrategy().kill(),
         outfit: { modifier: "item", equip: crappyPieces },
-        effects: itemDropEffects,
+        // Ash UTS:2698-2699 runs mood("combat") AND mood("itdrop") on this
+        // cowl/waistrope grind: the zone's NCs are pure delay here.
+        effects: () => combineMoods(combatEffects(), itemDropEffects()),
         limit: { soft: 20, message: "The facecowl/waistrope pair is not dropping." },
       },
       {

@@ -24,7 +24,7 @@ import {
 import { CombatStrategy } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
-import { itemDropEffects } from "../../lib/moods";
+import { combineMoods, itemDropEffects, superItemDropEffects } from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
 import { diverHuntActive } from "../../resources/saber";
@@ -174,7 +174,10 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
                 modifier: "item",
                 familiar: have(mimic) && mimic.experience >= 100 ? mimic : undefined,
               }),
-              effects: itemDropEffects,
+              // Ash mood("superitdrop") on the summon lane (UTS:1402, 1433):
+              // the once-a-day squint only earns its keep on a probabilistic
+              // roll, and the ash's switch case falls through into "itdrop".
+              effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
               prepare: () => recover(),
               limit: { tries: 5 },
             },
@@ -191,7 +194,8 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         saberPurpose: "diver" as const,
         combat: new CombatStrategy().forceItems(diver).banish(),
         outfit: { modifier: "item" },
-        effects: itemDropEffects,
+        // Same diver table as the summon lane above, same ash mood.
+        effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
         choices: { 299: 1 },
         prepare: () => recover(),
         limit: { soft: 30, message: "Diver parts are not dropping; check item-drop gear." },

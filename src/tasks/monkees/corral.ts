@@ -15,7 +15,7 @@ import {
 import { CombatStrategy } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
-import { itemDropEffects } from "../../lib/moods";
+import { combineMoods, itemDropEffects, superItemDropEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -111,7 +111,9 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                 .macro(seahorseMacro, seahorse)
                 .kill(),
               outfit: { modifier: "item", equip: $items`pro skateboard` },
-              effects: itemDropEffects,
+              // Ash UTS:1650-1651 spends the once-a-day squint on this
+              // one-turn corral opener when it is still unused.
+              effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
               prepare: () => recover(),
               limit: { tries: 3 },
             },

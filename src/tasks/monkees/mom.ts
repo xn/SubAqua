@@ -29,7 +29,7 @@ import {
 import { CombatStrategy } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
-import { itemDropEffects, resEffects } from "../../lib/moods";
+import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const abyss = $location`The Caliginous Abyss`;
@@ -208,7 +208,7 @@ export function wandererTasks(): Task[] {
     underwater: true,
     combat: new CombatStrategy().kill(),
     outfit: () => ({ modifier: `item, ${pearlResModifier()}` }),
-    effects: () => [...itemDropEffects(), ...resEffects()],
+    effects: () => combineMoods(itemDropEffects(), resEffects()),
     prepare: () => recover(),
     limit: { soft: 4 },
   });
