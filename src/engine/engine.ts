@@ -23,6 +23,7 @@ import {
   print,
   runCombat,
   Skill,
+  toSlot,
   use,
   writeCcs,
 } from "kolmafia";
@@ -56,6 +57,7 @@ import {
   hasBreathingEffect,
   preferredBreathingGear,
   isTrainingLasso,
+  seaKeyword,
   waterBreathingEquipment,
 } from "./outfit";
 import { Task } from "./task";
@@ -220,28 +222,40 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         waterBreathingEquipment.includes(it),
       );
       if (!hasBreathingGearInOutfit) {
-        const breather = preferredBreathingGear().find((item) => have(item));
-        if (!breather) throw `Unable to provide player water breathing for ${task.name}`;
-        if (!outfit.equip(breather)) {
-          // Lasso training pins the hat slot with the sea cowboy hat (see
-          // above); if the only breather on hand is itself a hat-slot item
-          // (e.g. a freshly crafted aerated diving helmet), the equip above
-          // fails silently. Release the pinned hat and retry — chaps alone
-          // still trains the lasso at +2/toss.
+        // The maximizer picks the breather (ash "sea" keyword, upstream
+        // 42e796f): it forces the "Adventure Underwater" boolean
+        // (Evaluator.java:396-404), so whichever free slot is cheapest takes
+        // the gear instead of the script pinning one. It cannot CONJURE gear,
+        // though, so the ownership check stays and throws exactly as before.
+        const owned = preferredBreathingGear().filter((item) => have(item));
+        if (owned.length === 0) throw `Unable to provide player water breathing for ${task.name}`;
+        // Lasso training pins hat AND pants (sea cowboy hat + sea chaps,
+        // above), and grimoire hands the maximizer `preventSlot` for every
+        // slot it already filled (outfit.js:621-628) — so if every breather on
+        // hand lives in a pinned slot the maximize has nowhere to put one and
+        // fails outright. Release the pinned hat in that case, as the old
+        // hard-equip path did; chaps alone still trains the lasso at +2/toss.
+        // (No breathing piece is an accessory, so toSlot() is unambiguous
+        // here.)
+        const pinned = new Set(outfit.equips.keys());
+        if (owned.every((item) => pinned.has(toSlot(item)))) {
           if (outfit.equips.get($slot`hat`) === $item`sea cowboy hat`) {
             outfit.equips.delete($slot`hat`);
           }
-          if (!outfit.equip(breather)) {
-            throw `Unable to provide player water breathing for ${task.name}`;
-          }
         }
+        outfit.modifier.push(...seaKeyword());
       }
 
       // $familiar.none is a truthy Familiar whose `underwater` is false, so it
-      // has to be excluded explicitly (same special case as outfit.ts:85's
+      // has to be excluded explicitly (same special case as outfit.ts's
       // requiredFamiliarBreather): fielding no familiar needs no breather, and
       // a famslot item set for a familiar that never comes out makes dress()
       // fail its post-equip verification.
+      //
+      // "sea" also forces the "Underwater Familiar" boolean, so this explicit
+      // famequip set is belt-and-braces with the keyword above — kept because
+      // it also covers the outfits that already carry breathing gear (and so
+      // never push the keyword) and because it names the exact item.
       if (outfit.familiar && outfit.familiar !== $familiar.none && !outfit.familiar.underwater) {
         const famequip = outfit.equips.get($slot`familiar`) ?? $item.none;
         if (!familiarWaterBreathingEquipment.includes(famequip)) {

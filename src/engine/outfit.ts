@@ -34,6 +34,20 @@ export function hasBreathingEffect(): boolean {
   return have($effect`Driving Waterproofly`) || have($effect`Wet Willied`);
 }
 
+/**
+ * The `sea` maximizer keyword, or nothing when an effect already breathes for
+ * us. `sea` forces the "Adventure Underwater" and "Underwater Familiar"
+ * booleans (Evaluator.java:396-404), so the maximizer picks the breathing gear
+ * itself instead of the script pinning a slot. User rule (2026-08-27): add it
+ * ONLY while Driving Waterproofly / Wet Willied is down — under the effect the
+ * keyword would spend a slot on gear the effect already provides.
+ *
+ * Spread into a maximize term list: `maximize([..., ...seaKeyword()].join(", "))`.
+ */
+export function seaKeyword(): string[] {
+  return hasBreathingEffect() ? [] : ["sea"];
+}
+
 export function canBreatheUnderwater(): boolean {
   return (
     booleanModifier("Adventure Underwater") ||

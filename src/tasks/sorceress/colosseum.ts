@@ -26,7 +26,7 @@ import {
   set,
 } from "libram";
 
-import { requiredFamiliarBreather } from "../../engine/outfit";
+import { requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { currentPolicy } from "../../resources/policy";
@@ -112,7 +112,13 @@ export function colosseumRoundTurn(): void {
   // against mys by the current multiplier.
   const coeff =
     (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
-  maximize([`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces].join(", "), false);
+  // ...seaKeyword(): mafia forces the Mer-kin outfit for this zone, which already
+  // breathes, but the keyword costs nothing there and keeps every self-dressing
+  // Sea helper on the same rule (omitted under a breathing effect).
+  maximize(
+    [`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces, ...seaKeyword()].join(", "),
+    false,
+  );
   recover(myMaxhp()); // colosseum floor is FULL HP (setRecoveryTargets UTS:219-220)
   adv1($location`Mer-kin Colosseum`, -1, gladiatorFilter());
   if (get("lastEncounter") === "Been There, Won That") {

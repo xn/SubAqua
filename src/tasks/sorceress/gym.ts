@@ -11,7 +11,7 @@ import {
 } from "kolmafia";
 import { $coinmaster, $item, $location, $slot, get, have } from "libram";
 
-import { requiredFamiliarBreather } from "../../engine/outfit";
+import { requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 
@@ -55,7 +55,11 @@ export function gymnasiumTurn(): void {
   // refuse the zone (KoLAdventure.java:2867-2884).
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
-  maximize(["combat rate", ...pieces].join(", "), false);
+  // ...seaKeyword(): the gymnasium is a Sea zone and this wrapper task dresses
+  // itself, so the breather has to come from this maximize. The keyword forces
+  // "Adventure Underwater" (Evaluator.java:396-404) and lets the maximizer pick
+  // the piece; it is omitted while Driving Waterproofly / Wet Willied covers us.
+  maximize(["combat rate", ...pieces, ...seaKeyword()].join(", "), false);
   recover(800);
   adv1($location`Mer-kin Gymnasium`, -1, gladiatorFilter({ gym: true, warOpen }));
 }
