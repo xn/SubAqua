@@ -8,7 +8,6 @@ import {
   storageAmount,
   turnsPlayed,
   use,
-  useFamiliar,
   visitUrl,
 } from "kolmafia";
 import {
@@ -152,12 +151,16 @@ export function initQuest(): Quest {
         name: "Mayam",
         completed: () => !MayamCalendar.have() || get("_mayamSymbolsUsed") !== "",
         do: (): void => {
-          // Ash ring picks (UTS:1051-1059); chest mimic soaks the yam4 xp.
-          if (have($familiar`Chest Mimic`)) useFamiliar($familiar`Chest Mimic`);
+          // Ash ring picks (UTS:1051-1059).
           cliExecute("mayam rings vessel yam cheese explosion");
           cliExecute("mayam rings fur lightning eyepatch yam");
           cliExecute("mayam rings eye meat yam clock");
         },
+        // The chest mimic soaks the yam4 xp; declared rather than hand-fielded
+        // (audit item 10). The `have()` gate stays in the delay: createOutfit()
+        // maps an unowned familiar to $familiar.none, which would actively put
+        // away whatever familiar is out — the current code leaves it alone.
+        outfit: () => (have($familiar`Chest Mimic`) ? { familiar: $familiar`Chest Mimic` } : {}),
         freeaction: true,
         limit: { tries: 1 },
       },
@@ -193,10 +196,18 @@ export function initQuest(): Quest {
             AprilingBandHelmet.joinSection($item`Apriling band quad tom`);
           } else if (have($familiar`Chest Mimic`)) {
             AprilingBandHelmet.joinSection($item`Apriling band piccolo`);
-            useFamiliar($familiar`Chest Mimic`);
             for (let i = 0; i < 3; i++) AprilingBandHelmet.play($item`Apriling band piccolo`);
           }
         },
+        // Piccolo lane only, and only when the mimic is owned — the same two
+        // gates the do() had (audit item 10). Both stay in the delay:
+        // createOutfit() maps an unowned familiar to $familiar.none, which would
+        // put away whatever familiar is out instead of leaving it alone, and
+        // the quad-tom lane never wanted the mimic fielded at all.
+        outfit: () =>
+          policy.aprilingSecond !== "quad tom" && have($familiar`Chest Mimic`)
+            ? { familiar: $familiar`Chest Mimic` }
+            : {},
         freeaction: true,
         limit: { tries: 1 },
       },

@@ -1,4 +1,4 @@
-import { equip, Location, myPrimestat, Stat, storageAmount, visitUrl } from "kolmafia";
+import { Location, myPrimestat, Stat, storageAmount, visitUrl } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -78,13 +78,11 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         name: "Guild Start",
         ready: () => opts.unlockGuild && have(payphone),
         completed: () => questStepOf(prop()) >= 0,
-        do: (): void => {
-          // Moxie shortcut: tearaway pants skip the test grind (UTS:1186-1190).
-          if (myPrimestat() === $stat`Moxie` && have($item`tearaway pants`)) {
-            equip($item`tearaway pants`);
-          }
-          visitUrl("guild.php?place=challenge");
-        },
+        do: () => void visitUrl("guild.php?place=challenge"),
+        // Moxie shortcut: tearaway pants skip the test grind (UTS:1186-1190).
+        // Declared, not hand-equipped (audit item 10) — createOutfit() drops the
+        // slot on an account that doesn't own them, so no `have()` gate.
+        outfit: () => (myPrimestat() === $stat`Moxie` ? { pants: $item`tearaway pants` } : {}),
         freeaction: true,
         limit: { tries: 1 },
       },

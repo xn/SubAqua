@@ -4,7 +4,6 @@ import {
   closetAmount,
   equip,
   itemAmount,
-  maximize,
   putCloset,
   restoreHp,
   takeCloset,
@@ -95,10 +94,13 @@ export function schoolQuest(): Quest {
         ready: () => have($skill`Deep Dark Visions`),
         completed: () => get("dreadScroll3", 0) !== 0,
         do: (): void => {
-          maximize("50 spooky res, hp", false);
           restoreHp(1000);
           useSkill($skill`Deep Dark Visions`);
         },
+        // The spooky-res/HP shell is the task's outfit, not a hand-rolled
+        // maximize in do() (audit item 8): grimoire dresses a `freeaction` task
+        // too, and dress() runs before do().
+        outfit: { modifier: "50 spooky res, hp" },
         freeaction: true,
         limit: { tries: 12, message: "Deep Dark Visions is not yielding dreadscroll clue 3." },
       },
