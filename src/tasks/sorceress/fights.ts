@@ -271,10 +271,12 @@ export function yogUrtFilter(): CombatFilter {
   // Five heal throws at one prayerbead, three at two, two at three — the CCS
   // ladder (CCS:1095-1108 at a29c9dc), unchanged by upstream 7b57121, which
   // only lowered the PREP requirement (yogurt.ts yogHealingsNeeded) at three
-  // beads from two distinct types to one. The counts may therefore differ by
-  // one at three beads: the second throw of the pair loop below rides along
-  // free, funkslung with a deleveler, so it is thrown when a second type
-  // happens to be on hand and skipped — not aborted on — when it isn't.
+  // beads from two distinct types to one. The counts therefore differ by one
+  // AT THREE BEADS ONLY: the second throw of the pair loop below rides along
+  // free, funkslung with a deleveler, so at three beads it is thrown when a
+  // second type happens to be on hand and skipped — not aborted on — when it
+  // isn't. At one or two beads every throw is still a guaranteed type, so a
+  // missing heal there remains an abort.
   const thrown = new Set<Item>();
   let healsThrown = 0;
   let step = 0;
@@ -310,11 +312,16 @@ export function yogUrtFilter(): CombatFilter {
         thrown.add(heal);
         return Macro.tryItem(heal).toString();
       }
-      // No distinct heal left. At three prayerbeads the prep only guarantees
+      // No distinct heal left. At THREE prayerbeads the prep only guarantees
       // ONE type (upstream 7b57121), so the second pass having nothing to
       // throw is the expected case, not a failure — take the deleveler alone
-      // and fall through. A fight that cannot throw a single heal IS hopeless.
-      if (healsThrown === 0) {
+      // and fall through. Below three beads the prep guaranteed a type for
+      // every throw, so a missing one means the kit was mis-counted (prep
+      // counts availableAmount, the fight throws by itemAmount: a closeted
+      // heal reads as owned) — abort actionably instead of walking into a
+      // boss fight we are short for. A fight that cannot throw a single heal
+      // is hopeless at any bead count.
+      if (healsThrown === 0 || equippedAmount($item`Mer-kin prayerbeads`) < 3) {
         abort(
           "Out of Yog-Urt healing items mid-fight (CCS:510-517) — acquire sea gel / Mer-kin healscroll / waterlogged scroll of healing and rerun.",
         );

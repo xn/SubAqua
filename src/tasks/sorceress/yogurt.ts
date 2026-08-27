@@ -302,21 +302,22 @@ export function yogUrtQuest(): Quest {
           }
           // Heal-type top-up (UTS:2851-2869): crystal first, band-aid second.
           // The ash branches on the bead count (three -> neither, two -> one of
-          // them, fewer -> both); the throw budget says the same thing exactly
-          // and says it once, spends nothing when the kit already covers the
-          // throws, and also covers the ash's blind spot — three beads with
-          // only one healing type on hand pulls nothing there and then aborts
-          // mid-fight on yogHealing().
+          // them, fewer -> both); the type budget says the same thing exactly
+          // and says it once, and spends nothing when the kit already covers
+          // the requirement. At three beads that requirement is a single type
+          // (upstream 7b57121), which is BELOW what the fight ladder throws —
+          // the surplus throw is optional there, handled in fights.ts
+          // yogUrtFilter rather than paid for with a pull here.
           if (!yogHealKitReady()) pullHeal(crystal);
           if (!yogHealKitReady()) pullHeal(bandaid);
           if (!yogHealKitReady()) {
             abort(
               `Yog-Urt's healing kit is short: ${availableAmount(beads)} prayerbeads means ` +
-                `${healsNeeded()} healing throws, and only ${yogHealingsOwned()} of the five ` +
+                `${healsNeeded()} healing item type(s) needed, and only ${yogHealingsOwned()} of the five ` +
                 `healing item types (sea gel, Mer-kin healscroll, waterlogged scroll of healing, ` +
                 `soggy used band-aid, New Age healing crystal) are on hand${
                   yogHealingsShort() ? " with no pulls left to fix it" : ""
-                }. Farm outpost prayerbeads (-combat, healer saber) — every bead cuts the throw ` +
+                }. Farm outpost prayerbeads (-combat, healer saber) — every bead cuts the type ` +
                 `count — or free up pulls for the crystal/band-aid, then rerun (ash G:709-724 at 89982f5).`,
             );
           }
