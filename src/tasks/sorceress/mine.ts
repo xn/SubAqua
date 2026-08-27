@@ -9,7 +9,7 @@ import {
   useSkill,
   visitUrl,
 } from "kolmafia";
-import { $effect, $item, $items, $location, $skill, get, have } from "libram";
+import { $effect, $item, $items, $location, $skill, get, have, withProperty } from "libram";
 
 import { CombatStrategy, killMacro } from "../../engine/combat";
 import { Quest } from "../../engine/task";
@@ -23,14 +23,35 @@ const crappyMask = $item`crappy Mer-kin mask`;
 const crappyTailpiece = $item`crappy Mer-kin tailpiece`;
 const scale = $item`pristine fish scale`;
 const blackGlass = $item`black glass`;
+const fins = $item`teflon swim fins`;
 const masks = $items`Mer-kin gladiator mask, Mer-kin scholar mask, crappy Mer-kin mask`;
-const tailpieces = $items`Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, crappy Mer-kin tailpiece, teflon swim fins`;
+const tailpieces = $items`Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, crappy Mer-kin tailpiece`;
 
 function maskOwned(): boolean {
   return masks.some((it) => availableAmount(it) > 0);
 }
+
+/** Disguise-complete signal for the pants slot: a real Mer-kin tailpiece in
+ * hand. Deliberately excludes teflon swim fins — fins are an intermediate
+ * ore->fins smith product, not a wearable Mer-kin tailpiece, so a
+ * smith-succeeded/ROW125-trade-failed state must not read as "done" here
+ * (review finding #2 / minor #3: teflon swim fins is an accessory,
+ * items.txt:3741, not pants). */
 function tailpieceOwned(): boolean {
   return tailpieces.some((it) => availableAmount(it) > 0);
+}
+
+/** Ore-farming-done signal: the ore is in hand, already smithed into fins,
+ * or the disguise is already complete. Fins count here (unlike
+ * tailpieceOwned() above) because they mean the dug ore has already been
+ * converted — no more digging is needed even if the Grandma trade hasn't
+ * happened yet. Gates Digpick/Mine Teflon, which only care about the ore
+ * supply, not the trade outcome. */
+function haveOreOrFins(): boolean {
+  return itemAmount(ore) > 0 || availableAmount(fins) > 0;
+}
+function oreSecured(): boolean {
+  return haveOreOrFins() || tailpieceOwned();
 }
 
 /** Free-pick budget: 5/day Unaccompanied Miner or an active Loded effect
@@ -56,7 +77,11 @@ function getLucky(): void {
     useSkill($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`);
     if (have($effect`Lucky!`)) return;
   }
-  retrieveItem($item`11-leaf clover`);
+  // The hermit's clover sale is a coinmaster path (InventoryManager.java:
+  // 1568-1570 canUseCoinmasters()); autoSatisfyWithCoinmasters defaults false
+  // (defaults.txt:241) and nothing else in this repo sets it, so a bare
+  // retrieveItem would silently no-op instead of buying the clover.
+  withProperty("autoSatisfyWithCoinmasters", true, () => retrieveItem($item`11-leaf clover`));
   if (itemAmount($item`11-leaf clover`) > 0) use($item`11-leaf clover`);
 }
 
@@ -138,8 +163,8 @@ export function mineQuest(): Quest {
         // Digpick first (ash UTS:2299-2318): pull it when policy allows,
         // else farm Anemone Mine with +item until it drops.
         name: "Digpick",
-        ready: () => !tailpieceOwned() && itemAmount(ore) === 0,
-        completed: () => availableAmount(digpick) > 0 || tailpieceOwned() || itemAmount(ore) > 0,
+        ready: () => !oreSecured(),
+        completed: () => availableAmount(digpick) > 0 || oreSecured(),
         prepare: (): void => {
           recover();
           if (availableAmount(digpick) === 0) discretionaryPull(digpick);
@@ -165,8 +190,8 @@ export function mineQuest(): Quest {
         // Once the free budget is spent, do() falls back to one real-turn
         // square per call, same as before, tracked by the soft limit below.
         name: "Mine Teflon",
-        ready: () => availableAmount(digpick) > 0 && !tailpieceOwned(),
-        completed: () => itemAmount(ore) > 0 || tailpieceOwned(),
+        ready: () => availableAmount(digpick) > 0 && !oreSecured(),
+        completed: oreSecured,
         prepare: (): void => {
           recover();
           if (!freeDigAvailable() && !pulledToday($item`lodestone`)) {
@@ -194,7 +219,27 @@ export function mineQuest(): Quest {
         completed: maskOwned,
         do: (): void => {
           if (availableAmount(scale) >= 3) {
-            retrieveItem(crappyMask);
+            // Grandma's Sea Shop is a coinmaster (coinmasters.txt ROW124:
+            // crappy Mer-kin mask <- aerated diving helmet + 3 pristine fish
+            // scale); autoSatisfyWithCoinmasters defaults false
+            // (defaults.txt:241, InventoryManager.java:1568-1570
+            // canUseCoinmasters()), so scope it on for just this trade.
+            const traded = withProperty("autoSatisfyWithCoinmasters", true, () =>
+              retrieveItem(crappyMask),
+            );
+            if (!traded) {
+              const helmet = $item`aerated diving helmet`;
+              const missing: string[] = [];
+              if (availableAmount(helmet) === 0) missing.push("aerated diving helmet");
+              if (availableAmount(scale) < 3) {
+                missing.push(`pristine fish scale (have ${availableAmount(scale)}, need 3)`);
+              }
+              abort(
+                missing.length > 0
+                  ? `Grandma's ROW124 trade for the crappy Mer-kin mask failed; missing: ${missing.join(", ")}. Get them (retrieveItem the helmet, farm/pull scales), then rerun.`
+                  : "Grandma's ROW124 trade for the crappy Mer-kin mask failed despite having an aerated diving helmet and 3 pristine fish scales; Grandma (Mer-Kin Outpost) may be unreachable. Check access, then rerun.",
+              );
+            }
             return;
           }
           getLucky();
@@ -215,13 +260,33 @@ export function mineQuest(): Quest {
       },
       {
         name: "Crappy Tailpiece",
-        ready: () => !tailpieceOwned() && itemAmount(ore) > 0,
+        ready: () => !tailpieceOwned() && haveOreOrFins(),
         completed: tailpieceOwned,
         do: (): void => {
           if (availableAmount(scale) >= 3) {
-            // Chain: teflon ore -> smith teflon swim fins -> ROW125 trade;
-            // mafia's retrieveItem walks it.
-            retrieveItem(crappyTailpiece);
+            // Chain: teflon ore -> smith teflon swim fins -> ROW125 trade
+            // (coinmasters.txt: crappy Mer-kin tailpiece <- sea chaps +
+            // teflon swim fins + 3 pristine fish scale); mafia's
+            // retrieveItem walks the smith step. Grandma's Sea Shop is a
+            // coinmaster, so scope autoSatisfyWithCoinmasters on for the
+            // trade (defaults.txt:241, InventoryManager.java:1568-1570).
+            const traded = withProperty("autoSatisfyWithCoinmasters", true, () =>
+              retrieveItem(crappyTailpiece),
+            );
+            if (!traded) {
+              const chaps = $item`sea chaps`;
+              const missing: string[] = [];
+              if (availableAmount(chaps) === 0) missing.push("sea chaps");
+              if (!haveOreOrFins()) missing.push("teflon ore/teflon swim fins");
+              if (availableAmount(scale) < 3) {
+                missing.push(`pristine fish scale (have ${availableAmount(scale)}, need 3)`);
+              }
+              abort(
+                missing.length > 0
+                  ? `Grandma's ROW125 trade for the crappy Mer-kin tailpiece failed; missing: ${missing.join(", ")}. Get them (Phase 3 sea chaps, smith/pull fins, farm/pull scales), then rerun.`
+                  : "Grandma's ROW125 trade for the crappy Mer-kin tailpiece failed despite having sea chaps, teflon ore/fins, and 3 pristine fish scales; Grandma (Mer-Kin Outpost) may be unreachable, or the fins need smithing first -- try retrieveItem($item`teflon swim fins`) manually, then rerun.",
+              );
+            }
             return;
           }
           getLucky();
