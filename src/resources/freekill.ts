@@ -135,6 +135,9 @@ export const freeKillSources: FreeKillSource[] = [
     colosseumSafe: false,
     dropSafe: true,
   },
+  // Both thrown free kills are surface items thrown underwater; kept because
+  // the ash throws exactly this pair underwater in production (CCS:47-56). See
+  // engine/combat.ts's sea-legality audit.
   {
     name: "shadow brick",
     available: () => itemAmount($item`shadow brick`) > 0 && get("_shadowBricksUsed") < 13,

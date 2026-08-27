@@ -195,6 +195,10 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
         microUsed = true;
         return Macro.trySkill($skill`Micrometeorite`).toString();
       }
+      // The Time-Spinner is the one surface item in this ladder, and the
+      // Colosseum is underwater — kept because the ash throws it there in
+      // production (CCS:184-187). See engine/combat.ts's sea-legality audit for
+      // why there is no mafia flag to test.
       if (underleveled && !spinnerUsed && itemAmount($item`Time-Spinner`) > 0) {
         spinnerUsed = true;
         return Macro.tryItem($item`Time-Spinner`).toString();

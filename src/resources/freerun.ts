@@ -133,6 +133,10 @@ export const freeRunSources: FreeRunSource[] = [
     do: Macro.trySkill($skill`Snokebomb`),
     banishes: true,
   },
+  // The thrown runs below (glob of Blank-Out through ink bladder) are all
+  // surface items used in an all-underwater route; kept because the ash throws
+  // this same set underwater in production (CCS:95-105). See engine/combat.ts's
+  // sea-legality audit for why mafia offers nothing to test against.
   {
     name: "glob of Blank-Out",
     available: () => itemAmount($item`glob of Blank-Out`) > 0,

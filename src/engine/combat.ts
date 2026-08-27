@@ -161,6 +161,46 @@ export function killMacro(hard?: boolean): Macro {
   return result.attack().repeat();
 }
 
+/**
+ * SEA-LEGALITY OF THROWN ITEMS — one-time audit (the garbo fork combat.ts:487-491,
+ * which narrows its stasis list to `seal tooth` underwater because "an unusable
+ * stasis item makes KoL abort the macro mid-fight before it ever reaches the
+ * kill steps"). Every fight this script runs is underwater, so the hazard is
+ * real; the finding is that we are not exposed to it.
+ *
+ * Mafia does not model the rule. items.txt has no underwater attribute
+ * (ItemDatabase.Attribute, :208-240, is quest/gift/tradeable/combat/usable/…),
+ * and the only `underwater` term in modifiers.txt is the numeric `env(underwater)`
+ * multiplier on gear. So there is nothing to query, and no guard worth writing:
+ * a `seaLegal(item)` predicate would encode this comment, not a data source.
+ *
+ * The authority used instead is upstream UnderTheSeaCCS.ash, which runs this
+ * exact route with every fight underwater. Every item SubAqua throws is thrown
+ * underwater there, in production:
+ *   sea gel, Doc Galaktik's Pungent Unguent          CCS:230, :232, :234
+ *   Doc Galaktik's Homeopathic Elixir                CCS:1109
+ *   Time-Spinner (gladiator delevel opener)          CCS:184-187
+ *   Mer-kin healscroll / killscroll                  CCS:1018-1022, :1062-1066
+ *   Mer-kin mouthsoap, crayon shavings,
+ *     table tennis ball, sea cowbell (Yog delevel)   CCS:362, :1136-1139
+ *   waterlogged scroll of healing, soggy used
+ *     band-aid, New Age healing crystal (Yog heals)  CCS:370-377
+ *   jam band bootleg, rattler rattle, electronics
+ *     kit (Shub delevel; crayon shavings above)      CCS:399, :421-424
+ *   sea lasso, Spooky VHS Tape                       CCS:499, :933
+ *   shadow brick, groveling gravel (free kills)      CCS:47-56
+ *   glob of Blank-Out, peppermint parasol, anchor
+ *     bomb, stuffed yam stinkbomb, handful of split
+ *     pea soup, Mer-kin pinkslip, ink bladder        CCS:95-105
+ * Nothing SubAqua throws is absent from that set, and the garbo fork's own excluded
+ * items (facsimile dictionary, dictionary) appear nowhere in this script.
+ *
+ * The taffy below needs no cite at all: modifiers.txt:11752-11754 annotates
+ * `pulled indigo taffy` "Lets you escape from combat without spending an
+ * Adventure (underwater only)" — it is the one thrown item here that works ONLY
+ * underwater, which is why MyActionDefaults.freeRun swaps it for a kill on the
+ * surface.
+ */
 export function runMacro(): Macro {
   return new Macro().tryItem($item`pulled indigo taffy`);
 }
