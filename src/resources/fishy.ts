@@ -65,6 +65,10 @@ type Fishysource = {
   available: () => boolean;
   turns: number;
   use?: () => void;
+  /** Overrides item.fullness in fishyOpportunityCost() — for a pseudo-item
+   * rung (e.g. nigiri) whose `item` is a priced stand-in with the wrong
+   * fullness stat for the real thing being consumed. */
+  fullness?: number;
 };
 
 const FISHY_SOURCES: Fishysource[] = [
@@ -72,24 +76,29 @@ const FISHY_SOURCES: Fishysource[] = [
   // note above), so `item` here is their real fish-meat ingredient instead
   // — a real, priced stand-in for the opportunity cost of burning it as
   // sushi rather than something else. `use` (not the `item` field) is what
-  // useFishySource() actually consumes.
+  // useFishySource() actually consumes. fullness overrides the fish meat's
+  // own fullness (1) with the nigiri's true fullness.txt value (2), since
+  // that term dominates fishyOpportunityCost().
   {
     item: $item`beefy fish meat`,
     available: () => have($item`beefy fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
     item: $item`glistening fish meat`,
     available: () => have($item`glistening fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
     item: $item`slick fish meat`,
     available: () => have($item`slick fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
     item: $item`concentrated fish broth`,
@@ -225,12 +234,11 @@ const FISHY_SOURCES: Fishysource[] = [
   },
 ];
 
-function fishyOpportunityCost(source: Item): number {
+function fishyOpportunityCost(source: Item, fullnessOverride?: number): number {
   const cost = mallPrice(source);
-  if (source.fullness > 0) {
-    return (
-      get("valueOfAdventure") * (7 - toInt(source.adventures)) * source.fullness + 12_500 + cost
-    );
+  const fullness = fullnessOverride ?? source.fullness;
+  if (fullness > 0) {
+    return get("valueOfAdventure") * (7 - toInt(source.adventures)) * fullness + 12_500 + cost;
   }
 
   if (source.inebriety > 0) {
@@ -250,7 +258,10 @@ function cheapestFishySource(): Fishysource | null {
   if (available.length === 0) return null;
 
   return available.reduce((cheapest, source) =>
-    fishyOpportunityCost(source.item) < fishyOpportunityCost(cheapest.item) ? source : cheapest,
+    fishyOpportunityCost(source.item, source.fullness) <
+    fishyOpportunityCost(cheapest.item, cheapest.fullness)
+      ? source
+      : cheapest,
   );
 }
 
