@@ -135,10 +135,14 @@ export function sneakFamiliar(): Familiar | undefined {
 
 /** Ash use_familiar("exp") (UTS:29-37 at 89982f5): a familiar that never
  * attacks, so a boss soaks its experience instead. Chest Mimic -> Cooler Yeti
- * -> Cookbookbat -> none. Used for the sorceress bosses (Yog-Urt, Shub). */
-export function expFamiliar(): Familiar | undefined {
+ * -> Cookbookbat -> none. Used for the sorceress bosses (Yog-Urt, Shub).
+ * The terminal rung is $familiar.none, NOT undefined: grimoire treats an
+ * undefined `familiar` as "leave whatever is out" (outfit.js:312), which on an
+ * account owning none of the three would send an attacking familiar into
+ * Shub's doubling retaliation — the exact thing this pick exists to prevent. */
+export function expFamiliar(): Familiar {
   if (have($familiar`Chest Mimic`)) return $familiar`Chest Mimic`;
   if (have($familiar`Cooler Yeti`)) return $familiar`Cooler Yeti`;
   if (have($familiar`Cookbookbat`)) return $familiar`Cookbookbat`;
-  return undefined;
+  return $familiar.none;
 }

@@ -1,4 +1,4 @@
-import { adv1, buy, cliExecute, equippedItem, itemAmount } from "kolmafia";
+import { abort, adv1, buy, cliExecute, equippedItem, itemAmount } from "kolmafia";
 import { $coinmaster, $item, $location, EternityCodpiece, get, have, unequip } from "libram";
 
 import { expFamiliar } from "../../engine/outfit";
@@ -9,6 +9,7 @@ import { currentPolicy } from "../../resources/policy";
 import { centerDoorFilter } from "./fights";
 
 const pearl = $item`unblemished pearl`;
+const pearlsNeeded = 5;
 
 function bothGodsDead(): boolean {
   return get("shubJigguwattDefeated", false) && get("yogUrtDefeated", false);
@@ -50,7 +51,23 @@ export function finaleQuest(): Quest {
         name: "Nautical Seaceress",
         ready: () => bothGodsDead() && pearlsPried(),
         completed: () => questStepOf("questL13Final") >= 999,
-        prepare: () => recover(),
+        prepare: (): void => {
+          // init.ts's Pearl Guard only fires at turnsPlayed() === 0, so a
+          // mid-run start can reach the door short. Mafia would just wall the
+          // zone silently (spec §9 wants an abort that says why) — and the pry
+          // above has already run, so this counts what the quest will see.
+          const owned = itemAmount(pearl);
+          if (owned < pearlsNeeded) {
+            abort(
+              `The Nautical Seaceress needs ${pearlsNeeded} unblemished pearls and only ${owned} ` +
+                `are in inventory (${pearlsNeeded - owned} short). Pearls are not obtainable inside ` +
+                "the path — they have to arrive smuggled in the Eternity Codpiece's gem slots — so " +
+                "this run cannot open the door. Load five pearls into the codpiece before ascending " +
+                "(init.ts's Pearl Guard checks this at turn 0; a mid-run start skips it).",
+            );
+          }
+          recover();
+        },
         do: () => void adv1($location`Mer-kin Temple (Center Door)`, -1, centerDoorFilter()),
         outfit: () => ({
           modifier: "spell damage percent, mys",

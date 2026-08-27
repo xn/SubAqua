@@ -36,13 +36,19 @@ export function shubQuest(): Quest {
         ready: () => get("isMerkinGladiatorChampion", false) && !get("shubJigguwattDefeated"),
         completed: () => !shubPrepShort(0),
         do: (): void => {
+          // Two statements, like the ash (UTS ab1105e:2895-2897): pull only
+          // when the pack is empty — collapsing them into one chain both
+          // buys a duplicate over an exploit already on hand and leaves that
+          // exploit unused, aborting at a user who did exactly what the abort
+          // told them to do.
           if (
+            itemAmount($item`null-day exploit`) === 0 &&
             !pulledToday($item`null-day exploit`) &&
-            pullBudgetAllows($item`null-day exploit`) &&
-            pullSequence($item`null-day exploit`)
+            pullBudgetAllows($item`null-day exploit`)
           ) {
-            use($item`null-day exploit`);
+            pullSequence($item`null-day exploit`);
           }
+          if (itemAmount($item`null-day exploit`) > 0) use($item`null-day exploit`);
           if (shubPrepShort(0)) {
             abort(
               "Shub prep is short: need delevelers that floor his attack (two jam band bootlegs, four crayon shavings, or a mix — bootlegs count double, rattler rattle / electronics kit slightly less than a shaving) or Null Afternoon. Paw wishes, golem fights and rollover pulls all work; acquire and rerun (ash UTS:2896-2903).",
