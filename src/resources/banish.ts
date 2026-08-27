@@ -44,6 +44,10 @@ export const banishSources: BanishSource[] = [
     },
   },
   {
+    // The Everything Looks Green gate is load-bearing: the spring shoes' kick
+    // is refused while ELG is up, so an ungated copy of this entry would hand
+    // the macro a banish step that does nothing. There used to be exactly such
+    // a duplicate further down the list; it is gone.
     name: "Spring Kick",
     skill: $skill`Spring Kick`,
     equip: $item`spring shoes`,
@@ -113,12 +117,6 @@ export const banishSources: BanishSource[] = [
     skill: $skill`Monkey Slap`,
     equip: $item`cursed monkey's paw`,
     available: () => have($item`cursed monkey's paw`) && get("_monkeyPawWishesUsed", 0) === 0,
-  },
-  {
-    name: "Spring Kick",
-    skill: $skill`Spring Kick`,
-    equip: $item`spring shoes`,
-    available: () => have($item`spring shoes`),
   },
   {
     // Last on purpose, and it stays last: the bolt is the ONE banish in this

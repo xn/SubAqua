@@ -103,6 +103,17 @@ export function killMacro(hard?: boolean): Macro {
   // ...plus the engine's own round-1 sea lasso on an underwater task
   // (engine.ts customize()), which killMacro cannot see from here.
   leadingActions += 1;
+  // ...plus slack for everything grimoire compiles BETWEEN the starting macro
+  // and this one, which killMacro cannot see from here: the per-monster task
+  // macro and then the general macros, ahead of any ACTION (combat.js
+  // :242-272). Three actions covers every case in this repo — Golem Recall's
+  // Recall Facts + Club 'Em Into Next Week is the longest task macro at two,
+  // and the engine appends one more step of its own, the opportunistic free
+  // kill (engine.ts customize()), which costs a round when it fires without
+  // ending the fight. Erring wide is free: the guard exists only to block a
+  // macro RE-RUN, which lands tens of rounds later, and a too-tight number
+  // silently drops the delevel openers instead.
+  leadingActions += 3;
 
   // Delevel openers, ash CCS develOpeners() (CCS:171-198), which cleanUp()
   // (CCS:238-300) throws before the nuke on every ordinary fight — freeRounds()
@@ -135,8 +146,10 @@ export function killMacro(hard?: boolean): Macro {
   // openers deal damage — enough to trip Shub-Jigguwatt's retaliation.
   //
   // Both are once per combat, so they carry the same openerOnce() round guard
-  // as the task macros — with the threshold raised past the dart chain and the
-  // lasso, which would otherwise push these casts out of the window entirely.
+  // as the task macros — with the threshold raised past the dart chain, the
+  // lasso and the per-monster task macro, all of which submit actions before
+  // this macro is even reached and would otherwise push these casts out of the
+  // window entirely.
   if (!hard) {
     const openers = new Macro();
     let anyOpener = false;

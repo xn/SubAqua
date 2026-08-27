@@ -246,6 +246,12 @@ export function moodMpCost(effects: Effect[]): number {
  * spend freely.
  */
 export function reserveMpFor(effects: Effect[]): void {
+  // No mood, no reservation. The engine calls this for EVERY task through
+  // acquireEffects(), and most tasks carry no effects at all — crafting,
+  // pulls, plain visits. Restoring a nuke's worth of MP on those would be a
+  // behaviour change nobody asked for; parity for an effect-less task is
+  // "do nothing", exactly as before.
+  if (effects.length === 0) return;
   const nuke = have($skill`Saucegeyser`) ? mpCost($skill`Saucegeyser`) : 0;
   const target = Math.min(myMaxmp(), moodMpCost(effects) + nuke);
   if (myMp() < target) restoreMp(target);
