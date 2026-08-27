@@ -1,5 +1,6 @@
 import {
   abort,
+  currentRound,
   equippedAmount,
   itemAmount,
   Item,
@@ -20,6 +21,7 @@ import {
   $items,
   $location,
   $monster,
+  $phylum,
   $skill,
   $stat,
   get,
@@ -85,9 +87,10 @@ function stallAction(): string {
  * free_kill rule CCS:6-45): nuke-first on the special-free wind-up round,
  * delevel openers once on a clear round, reflect-stall with renewal cap,
  * Club 'Em Back in Time as the only colosseum-legal free kill, spell ladder,
- * 3-strikes stuck-round abort. Also serves the Gymnasium (same monsters,
- * CCS:1199-1218) — there it additionally banks skate-war NC forcers and
- * throws dreadscroll hint scrolls (opts.gym).
+ * 3-strikes stuck-round abort. Also serves the Gymnasium (CCS:1197-1217) —
+ * a different roster (combats.txt:203), so opts.gym widens the gate to the
+ * whole mer-kin phylum and adds the dreadscroll hint scrolls and the
+ * skate-war NC forcers before the shared ladder.
  *
  * opts.warOpen: the caller's already-computed skate-war state. The forcer
  * casts are only worth a round while the war is on (CCS:1067-1070); a filter
@@ -102,14 +105,19 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
   let weaksauceUsed = false;
   let mortarFired = false;
   let forcerBanked = false;
-  let healTossed = false;
-  let killTossed = false;
+  let clubbed = false;
   let lastRound = -1;
   let lastHp = -1;
   let stuck = 0;
 
   return (round, monster, text) => {
-    if (round === lastRound) {
+    // `round` is getRoundIndex() = currentRound - 1 - preparatoryRounds
+    // (Macrofier.java:127), which starts at 0 and freezes across free kills and
+    // banked forcers. Round-number decisions read currentRound() instead; the
+    // parameter stays because CombatFilter is a contract.
+    void round;
+    const here = currentRound();
+    if (here === lastRound) {
       stuck += 1;
       if (stuck > 3)
         abort(
@@ -122,9 +130,14 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
         stalled += 1;
       }
     }
-    lastRound = round;
+    lastRound = here;
 
-    if (!gladiators.includes(monster)) return killMacro(false).toString(); // wanderers
+    // Wanderer bail. The Gymnasium roster (Mer-kin juicer/poseur/trainer,
+    // combats.txt:203) is disjoint from the colosseum's six (combats.txt:201),
+    // so gym mode gates on the phylum the ash's own gym case uses
+    // (CCS:1206-1207) and the six-monster gate is colosseum-only.
+    const ours = opts.gym ? monster.phylum === $phylum`mer-kin` : gladiators.includes(monster);
+    if (!ours) return killMacro(false).toString();
 
     // Reflect bookkeeping off this round's page (= previous action's response).
     const renewed = reflectStall(monster, text);
@@ -135,10 +148,20 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
     lastHp = myHp();
     if (stallLeft > 0) return stallAction();
 
-    // Gymnasium extras, clean rounds only (CCS:1199-1213): bank a skate-war
-    // forcer (only while the war is open, CCS:1067-1070), throw dreadscroll
-    // hint scrolls.
+    // Gymnasium extras, clean rounds only, in the ash's order (CCS:1199-1210):
+    // dreadscroll hint scrolls first — thrown every round while the clue pref
+    // is still unknown and stock lasts, as the ash's `while` loops do (the
+    // filter is re-entered each round, so the per-round check is the loop) —
+    // then a skate-war NC forcer, banked only while the war is open
+    // (CCS:1067-1070).
     if (opts.gym) {
+      if (get("dreadScroll2", 0) === 0 && itemAmount($item`Mer-kin healscroll`) > 0) {
+        return Macro.tryItem($item`Mer-kin healscroll`).toString();
+      }
+      if (get("dreadScroll5", 0) === 0 && itemAmount($item`Mer-kin killscroll`) > 0) {
+        // killscroll needs mer-kin phylum (CCS:1206-1207) — guaranteed by the gate above.
+        return Macro.tryItem($item`Mer-kin killscroll`).toString();
+      }
       if (opts.warOpen === true && !forcerBanked && text.includes("Launch spikolodon spikes")) {
         forcerBanked = true;
         return Macro.trySkill($skill`Launch spikolodon spikes`).toString();
@@ -146,22 +169,6 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
       if (opts.warOpen === true && !forcerBanked && text.includes("McHugeLarge Avalanche")) {
         forcerBanked = true;
         return Macro.trySkill($skill`McHugeLarge Avalanche`).toString();
-      }
-      if (
-        !healTossed &&
-        get("dreadScroll2", 0) === 0 &&
-        itemAmount($item`Mer-kin healscroll`) > 0
-      ) {
-        healTossed = true;
-        return Macro.tryItem($item`Mer-kin healscroll`).toString();
-      }
-      if (
-        !killTossed &&
-        get("dreadScroll5", 0) === 0 &&
-        itemAmount($item`Mer-kin killscroll`) > 0
-      ) {
-        killTossed = true; // gladiators are mer-kin phylum (monsters.txt:427-436)
-        return Macro.tryItem($item`Mer-kin killscroll`).toString();
       }
     }
 
@@ -173,7 +180,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
     // Nuke-first: round 1 is special-free — every special needs a wind-up
     // (freeRounds()=1, CCS:143-174; bbee792: "a first-round nuke ended 45 of
     // 47 ordinary fights"). Skip openers while the nuke leads.
-    const leadWithNuke = round <= 1 && (canGeyser || canStorm);
+    const leadWithNuke = here <= 1 && (canGeyser || canStorm);
     if (!leadWithNuke && !openersDone) {
       // develOpeners (CCS:232-265): fire only while under-develeveled; each
       // response is read for the reflect on the NEXT call. Micrometeorite has
@@ -202,13 +209,18 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
     // Club 'Em Back in Time: the one instakill that works on instakill-immune
     // gladiators (30% max HP + frees the fight); colosseum-only, 5/day,
     // mid-tier policy (CCS:24-45). Clean rounds only — clubbing a reflecting
-    // bladeswitcher returns the damage.
+    // bladeswitcher returns the damage. One shot per fight: the ash's
+    // free_kill() visits it exactly once (CCS:1220-1224), and gladiators are
+    // instakill-immune, so the page keeps advertising the skill after a hit —
+    // re-casting would burn the 5/day allowance in a single fight.
     if (
+      !clubbed &&
       myLocation() === $location`Mer-kin Colosseum` &&
       currentPolicy().allowClubEmBackInTime &&
       get("_clubEmTimeUsed") < 5 &&
       text.includes("Club 'Em Back in Time")
     ) {
+      clubbed = true;
       return Macro.trySkill($skill`Club 'Em Back in Time`).toString();
     }
 
@@ -266,11 +278,13 @@ export function yogUrtFilter(): CombatFilter {
     order.find((it) => itemAmount(it) > 0 && !thrown.has(it));
 
   return (round, monster, text) => {
-    if (round === lastRound) {
+    const here = currentRound(); // not `round` — that is getRoundIndex(), Macrofier.java:127
+    if (here === lastRound) {
       stuck += 1;
       if (stuck > 3) abort("Yog-Urt fight is not advancing rounds; aborting rather than looping.");
     } else stuck = 0;
-    lastRound = round;
+    lastRound = here;
+    void round;
     void monster;
     void text;
 
@@ -348,11 +362,13 @@ export function shubFilter(): CombatFilter {
   let stuck = 0;
 
   return (round, monster, text) => {
-    if (round === lastRound) {
+    const here = currentRound(); // not `round` — that is getRoundIndex(), Macrofier.java:127
+    if (here === lastRound) {
       stuck += 1;
       if (stuck > 3) abort("Shub fight is not advancing rounds; aborting rather than looping.");
     } else stuck = 0;
-    lastRound = round;
+    lastRound = here;
+    void round;
     void monster;
     void text;
 
@@ -385,12 +401,14 @@ export function centerDoorFilter(): CombatFilter {
   let stuck = 0;
 
   return (round, monster, text) => {
-    if (round === lastRound) {
+    const here = currentRound(); // not `round` — that is getRoundIndex(), Macrofier.java:127
+    if (here === lastRound) {
       stuck += 1;
       if (stuck > 3)
         abort("Seaceress fight is not advancing rounds; aborting rather than looping.");
     } else stuck = 0;
-    lastRound = round;
+    lastRound = here;
+    void round;
     void monster;
     void text;
 
