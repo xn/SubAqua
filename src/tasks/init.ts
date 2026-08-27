@@ -4,7 +4,6 @@ import {
   buy,
   cliExecute,
   getWorkshed,
-  print,
   retrieveItem,
   storageAmount,
   turnsPlayed,
@@ -90,30 +89,32 @@ export function initQuest(): Quest {
       },
       {
         name: "Toot",
-        completed: () => get("questM05Toot") !== "started",
+        completed: () => get("questM05Toot") !== "started" || get("_subaqua_toot_visited", false),
         do: (): void => {
           visitUrl("council.php");
           visitUrl("tutorial.php?action=toot");
           visitUrl("council.php");
-          // On the Sea path the item drops from the council visit, not the
-          // Toot Oriole page, so TutorialRequest's own flip never fires — it
-          // only sets Quest.TOOT to FINISHED when its response contains
-          // "You acquire an item:" or "You've learned everything I can
-          // teach you" (TutorialRequest.java:24-29). Re-visiting the quest
-          // log forces the other flip site: QuestLogRequest's which=1 parse
-          // sets Quest.TOOT to FINISHED once the log no longer mentions
-          // "Toot!" (QuestLogRequest.java:121-123), which is what actually
-          // happens once council.php has handed over the letter.
+          // On the overworld the item drops from the Toot Oriole page, so
+          // TutorialRequest's own flip fires there — it sets Quest.TOOT to
+          // FINISHED when its response contains "You acquire an item:" or
+          // "You've learned everything I can teach you"
+          // (TutorialRequest.java:24-29). On the Sea path the item comes
+          // from council.php instead, so that flip never fires. Re-visiting
+          // the quest log lets the other flip site catch it on paths where
+          // it can: QuestLogRequest's which=1 parse sets Quest.TOOT to
+          // FINISHED once the log no longer mentions "Toot!"
+          // (QuestLogRequest.java:121-123).
           visitUrl("questlog.php?which=1");
-          if (get("questM05Toot") === "started") {
-            print(
-              "Toot: mafia still shows the quest log open after the questlog refresh; continuing anyway.",
-              "yellow",
-            );
-          }
+          // But on the Sea path the quest log keeps listing "Toot!" even
+          // after the letter has been handed over, so questM05Toot never
+          // flips — the ash likewise just re-visits every day without
+          // checking the pref (UnderTheSea.ash:465-469). Completion is
+          // therefore the daily marker, same pattern as Pearl Guard's
+          // _subaqua_pearls_checked.
+          set("_subaqua_toot_visited", true);
         },
         freeaction: true,
-        limit: { tries: 2 },
+        limit: { tries: 1 },
       },
       {
         name: "Daily Items",
