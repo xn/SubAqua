@@ -25,7 +25,7 @@ import {
 } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
-import { ensureHelperBreathing, sneakFamiliar } from "../../engine/outfit";
+import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
@@ -216,11 +216,17 @@ export function schoolQuest(): Quest {
           // replaces these two lines.
           equip($slot`hat`, $item.none);
           equip($slot`pants`, $item.none);
-          // Breathing after the blanking (audit item 3). This task is NOT
-          // `underwater: true`, so there is no engine breathing pass behind it
-          // at all; the old bare trunks equip ignored Driving Waterproofly and
-          // the lasso-pinned sea chaps.
-          ensureHelperBreathing("Grandma's Sea Shop");
+          // Deliberately NO breathing pass here (audit item 3, as re-ruled).
+          // GrandmaRequest.java gates the shop on the Sea Monkee quest step
+          // alone — no breathing requirement — and the next task's dress()
+          // re-establishes breathing anyway. Re-dressing here would be actively
+          // harmful: ROW129 is paid in `crappy Mer-kin mask`
+          // (coinmasters.txt:689), itself a waterBreathingEquipment member, so
+          // a breathing pick could put the token back on the hat we just
+          // blanked and the buy() below would no-op against availableTokens.
+          // The old unconditional trunks equip is gone for the same reason it
+          // always should have been: it ignored Driving Waterproofly and the
+          // lasso-pinned sea chaps.
           if (availableAmount($item`Mer-kin scholar mask`) === 0) {
             buy($coinmaster`Grandma Sea Monkey`, 1, $item`Mer-kin scholar mask`);
           }

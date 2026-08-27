@@ -8,7 +8,7 @@ import {
   turnsPlayed,
   visitUrl,
 } from "kolmafia";
-import { $item, $location, $slot, get } from "libram";
+import { $item, $location, $slot, get, have } from "libram";
 
 import { killMacro } from "../../engine/combat";
 import {
@@ -98,7 +98,13 @@ export function skateParkTurn(): void {
     // dress() and would strip both. Only the maximizing branch needs this; the
     // forcer branch above maximizes nothing, so the engine's pins survive it.
     // In `terms`, so the no-`sea` retry below keeps them too.
-    if (isTrainingLasso()) terms.push("+equip sea cowboy hat", "+equip sea chaps");
+    // Gated on OWNING each piece, same as gym.ts: isTrainingLasso() only tests
+    // the lasso, and ROW125 consumes the sea chaps — naming an unowned item
+    // makes Evaluator.checkEquipment fail every candidate in both passes.
+    if (isTrainingLasso()) {
+      if (have($item`sea cowboy hat`)) terms.push("+equip sea cowboy hat");
+      if (have($item`sea chaps`)) terms.push("+equip sea chaps");
+    }
     const sea = seaKeyword();
     // A `sea` maximize can FAIL — the keyword masks Underwater Familiar too
     // (Evaluator.java:396-401) and getScore() fails any candidate missing

@@ -71,7 +71,14 @@ export function gymnasiumTurn(): void {
   // strips both and drops lasso training to the un-geared rate. Nothing else in
   // `pieces` claims the hat or pants slot here, and putting the terms in
   // `pieces` carries them through the no-`sea` retry below.
-  if (isTrainingLasso()) pieces.push("+equip sea cowboy hat", "+equip sea chaps");
+  // Each piece is gated on OWNING it: isTrainingLasso() only tests the lasso,
+  // and ROW125 consumes the sea chaps, so a post-trade `+equip sea chaps` would
+  // name an item on no account and Evaluator.checkEquipment would fail every
+  // candidate — in the `sea` pass AND the retry.
+  if (isTrainingLasso()) {
+    if (have($item`sea cowboy hat`)) pieces.push("+equip sea cowboy hat");
+    if (have($item`sea chaps`)) pieces.push("+equip sea chaps");
+  }
   // ...seaKeyword(): the gymnasium is a Sea zone and this wrapper task dresses
   // itself, so the breather has to come from this maximize. The keyword forces
   // "Adventure Underwater" (Evaluator.java:396-404) and lets the maximizer pick
@@ -117,13 +124,16 @@ export function gladiatorGearStep(): void {
   // `avoid` field replaces these two lines.
   equip($slot`hat`, $item.none);
   equip($slot`pants`, $item.none);
-  // Breathing after the blanking, not a bare trunks equip (audit item 2): the
-  // Outpost shop is a Sea page, the old unconditional equip ignored Driving
-  // Waterproofly and stripped the lasso-pinned sea chaps, and this helper is
-  // self-dressing so nothing else covers it. Caveat: on an account whose only
-  // breather IS a scholar mask this can re-wear the piece being sold and the
-  // ROW131 visit no-ops — the same account had no breathing at all before.
-  ensureHelperBreathing("Grandma's Sea Shop");
+  // Deliberately NO breathing pass here (audit item 2, as re-ruled).
+  // GrandmaRequest.java gates the shop on the Sea Monkee quest step alone — it
+  // has no breathing requirement — and the next task's dress() re-establishes
+  // breathing anyway. Re-dressing here would be actively harmful: ROW126 is
+  // paid in `crappy Mer-kin mask` (coinmasters.txt:687), which is itself a
+  // waterBreathingEquipment member, so a breathing pick could put the token
+  // straight back on the hat we just blanked and the buy() below would no-op
+  // against availableTokens. The old unconditional trunks equip is gone for the
+  // same reason it always should have been: it ignored Driving Waterproofly and
+  // stripped the lasso-pinned sea chaps.
   if (itemAmount($item`Mer-kin scholar mask`) > 0) {
     visitUrl("shop.php?whichshop=grandma&action=buyitem&quantity=1&whichrow=131");
   }

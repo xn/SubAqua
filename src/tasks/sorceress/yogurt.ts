@@ -3,6 +3,7 @@ import {
   adv1,
   availableAmount,
   buy,
+  equippedAmount,
   Item,
   itemAmount,
   myAdventures,
@@ -349,7 +350,13 @@ export function yogUrtQuest(): Quest {
           // whose isAvailable() gate is quantity-aware (`have(item, n + 1)`),
           // and _dress() then verifies every copy actually went on — which is
           // what fights.ts's `equippedAmount(prayerbeads)` heal ladder reads.
-          const beadCount = Math.min(3, availableAmount(beads));
+          //
+          // Inventory + already-worn, NOT availableAmount(): that counts the
+          // closet too, and initPropertiesManager() sets autoSatisfyWithCloset
+          // false — so a closeted bead would be promised to a slot mafia will
+          // never fill and _dress() would throw "Failed to fully dress" instead
+          // of quietly wearing one fewer.
+          const beadCount = Math.min(3, itemAmount(beads) + equippedAmount(beads));
           return {
             modifier:
               "moxie, hot damage, cold damage, spooky damage, sleaze damage, stench damage, -hp, -equip tiny yam cannon",
