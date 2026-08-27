@@ -218,6 +218,11 @@ const FISHY_SOURCES: Fishysource[] = [
     turns: 10,
   },
   {
+    // Stocked for free by the init "Sea Jelly" task (the garbo fork dailySea.ts:18-30):
+    // one place.php visit with the Space Jellyfish out, 0 turns, 1/day
+    // (_seaJellyHarvested). Nothing else in the run acquires one, so before
+    // that task this rung never fired; `available()` needs no change — the
+    // harvest is what puts the jelly in inventory.
     item: $item`sea jelly`,
     available: () => have($item`sea jelly`),
     turns: 10,

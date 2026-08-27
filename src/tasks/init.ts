@@ -90,6 +90,38 @@ export function initQuest(): Quest {
         limit: { tries: 1 },
       },
       {
+        // Free sea jelly (the garbo fork tasks/dailySea.ts:18-30). Choice 1219
+        // "Approach the Jellyfish" is reached by a place.php VISIT, not an
+        // adventure — ChoiceControl.java:6386-6393 stamps _seaJellyHarvested on
+        // option 1 and mafia's own breakfast runs it as a login freebie
+        // (BreakfastManager.collectSeaJelly, :868-899). Zero turns, zero meat,
+        // zero pulls, and its gates are exactly the two the route already has:
+        // the Space Jellyfish (familiars.txt:246 — tagged `underwater`, so it
+        // needs no familiar breather) and a started Old Guy quest, which is why
+        // this sits directly after "Old Guy Quest". Breakfast's own version
+        // takes no breathing gear either, so no `underwater: true` here.
+        //
+        // Payoff: +10 Fishy turns from a rung fishy.ts already carries but
+        // never stocked (FISHY_SOURCES `sea jelly`, `available: have(...)`) —
+        // the harvest is what makes that rung fire.
+        name: "Sea Jelly",
+        ready: () => have($familiar`Space Jellyfish`) && get("questS01OldGuy") !== "unstarted",
+        // Jellyfish-less accounts report complete rather than
+        // incomplete-but-unavailable, same shape as Terminal Educate below.
+        completed: () => !have($familiar`Space Jellyfish`) || get("_seaJellyHarvested"),
+        do: (): void => {
+          visitUrl("place.php?whichplace=thesea&action=thesea_left2");
+          // mafia auto-resolves the choice when choiceAdventure1219 happens to
+          // be set (BreakfastManager.java:894-897 sets it for exactly that);
+          // answer it ourselves otherwise.
+          if (handlingChoice()) runChoice(1);
+        },
+        outfit: () =>
+          have($familiar`Space Jellyfish`) ? { familiar: $familiar`Space Jellyfish` } : {},
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
         name: "Toot",
         completed: () => get("questM05Toot") !== "started" || get("_subaqua_toot_visited", false),
         do: (): void => {
