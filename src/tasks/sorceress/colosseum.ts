@@ -120,6 +120,12 @@ export function colosseumRoundTurn(): void {
   // route takes. This wrapper dresses itself, so the engine's acquireEffects()
   // never runs for it; recover() below restores the MP these casts spend.
   applyEffects(combineMoods(colosseumEffects(), survivalEffects()));
+  // Favored by Lyle, the ash's way (mood():158-168 casts it through the same
+  // fail-silent cli_execute): the monorail buff has no "is it reachable"
+  // predicate, only the once-a-day pref (MonorailCommand:15-18), so it cannot
+  // ride in an ensureEffect list without risking a mid-colosseum throw. Free,
+  // and a no-op when it does not land.
+  if (!get("_lyleFavored")) cliExecute("monorail buff");
   // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
   // against mys by the current multiplier.
   const coeff =

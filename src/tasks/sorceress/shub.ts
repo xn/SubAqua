@@ -14,7 +14,12 @@ import { $item, $location, $skill, $stat, get, have, uneffect } from "libram";
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
-import { dealsPassiveDamage, shrugBadEffects, survivalEffects } from "../../lib/moods";
+import {
+  dealsPassiveDamage,
+  moodWouldSpend,
+  shrugBadEffects,
+  survivalEffects,
+} from "../../lib/moods";
 import { shubPrepShort } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
@@ -92,6 +97,17 @@ export function shubQuest(): Quest {
           // the route's own res-mood casts go.
           const stuck = shrugBadEffects().filter((effect) => dealsPassiveDamage(effect));
           for (const effect of stuck) {
+            // An effect can be on this list because a mood trigger would spend
+            // for it (moodWouldSpend) — uneffect() would then run that trigger
+            // verbatim (UneffectRequest.getAction():683-694, run():810-820) and
+            // buy whatever it names. Warn on those instead of touching them.
+            if (moodWouldSpend(effect)) {
+              print(
+                `${effect} deals passive damage and your mood would spend an item to remove it; leaving it. Shub's retaliation will double on it.`,
+                "red",
+              );
+              continue;
+            }
             // The targeted exception: an item cure is spending, so it is
             // allowed only out of what is already in the pack. mafia's own
             // fallback order is the cure-all, then the antidote

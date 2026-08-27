@@ -1,4 +1,4 @@
-import { availableAmount, Monster, retrieveItem } from "kolmafia";
+import { availableAmount, retrieveItem } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -23,7 +23,6 @@ import {
   superItemDropEffects,
   survivalEffects,
 } from "../../lib/moods";
-import { banishActive } from "../../resources/banish";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -86,27 +85,24 @@ function seahorseMacro(): Macro {
 }
 
 /**
- * Peridot of Peril target for the two corral grind tasks (the garbo fork
- * fishyPrep.ts:196-251, esp. :248-251 `getMonstersToBanish()[0]`): force the
- * monster the task is going to banish anyway, so the banish lands on the first
- * corral turn instead of on whatever turn the RNG first offers a rustler
- * (expected ~4). The engine equips the Peridot and writes choice 1557
- * (engine.ts customize()/`do`), once per zone per day.
- *
- * Undefined once the rustler is already banished: a forced monster ignores the
- * banish, so perilling it then would spend the zone's one imperil on a fight we
- * had already bought off.
+ * Peridot of Peril, one imperil per zone per day (`_perilLocations`,
+ * ChoiceControl.java:8855-8867; the engine equips it and writes choice 1557 in
+ * customize()/`do`). the garbo fork points it at the monster it means to BANISH
+ * (fishyPrep.ts:248-251) because it farms the zone all day and wants the trash
+ * gone; in-run that is the wrong target. Our banish sources are turn-FREE
+ * (BanishManager.java:77, :91, :116, :126-129, :137 — isTurnFree true), so the
+ * rustler costs nothing whenever he shows up, and spending the zone's only
+ * imperil on him buys nothing. Pointed at the drop source instead, the same
+ * imperil is a guaranteed useful fight on turn 1: the sea cow for the
+ * leather/cowbell grind (leather 20%, cowbell 10%) and the sea cowboy for the
+ * lasso grind (lasso 30%).
  *
  * NOT on "Corral Opener": that task is a single turn built around a sea cow
- * (McTwist forces its drops and it is where the once-a-day squint is spent,
- * ash UTS:2229-2261, :1650-1651), so forcing a rustler there would throw the
- * squint away. Leaving it unset also keeps the day's imperil available for the
- * grind tasks below, which run immediately after. NOT on "Tame Seahorse"
- * either — the wild seahorse is a BOSS, which the peril choice does not offer.
+ * where the once-a-day squint is spent (ash UTS:2229-2261, :1650-1651), and
+ * leaving it unset keeps the day's imperil for the grind tasks below, which
+ * spend the turns. NOT on "Tame Seahorse" either — the wild seahorse is a
+ * BOSS, which the peril choice does not offer.
  */
-function peridotBanishTarget(): Monster | undefined {
-  return banishActive(rustler) ? undefined : rustler;
-}
 
 export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Quest {
   // Ash doSWord() (G:773-780 at 89982f5): the imprinted sword rides only
@@ -166,7 +162,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         ready: () => get("corralUnlocked"),
         completed: () => leatherDone() || tamed(),
         do: corral,
-        peridot: peridotBanishTarget,
+        peridot: cow,
         saberPurpose: "seaCow" as const,
         combat: new CombatStrategy()
           .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
@@ -211,7 +207,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         ready: () => get("corralUnlocked"),
         completed: () => (lassosDone() && availableAmount(lasso) >= 1) || tamed(),
         do: corral,
-        peridot: peridotBanishTarget,
+        peridot: cowboy,
         combat: new CombatStrategy()
           .macro(
             () =>

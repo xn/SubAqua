@@ -46,7 +46,7 @@ import {
 } from "libram";
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
-import { routeDamageEffects, shrugBadEffects } from "../lib/moods";
+import { reserveMpFor, routeDamageEffects, shrugBadEffects } from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -389,6 +389,16 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     super.prepare(task);
   }
 
+  override acquireEffects(task: Task): void {
+    // MP before the mood (the garbo fork lib.ts:468-474 reserveMp). grimoire acquires a
+    // task's effects BEFORE prepare() runs (engine.js:95 vs :108), so the 250
+    // MP floor in recover() lands too late to pay for them — and ensureEffect
+    // throws on a cast it cannot afford. MP is the one resource this run may
+    // spend freely, so top up for exactly this list plus a nuke.
+    reserveMpFor(undelay(task.effects, this.getContext(task)) ?? []);
+    super.acquireEffects(task);
+  }
+
   override createOutfit(task: Task): Outfit {
     // Strip gear/familiars the account doesn't own so Outfit.dress() can't throw
     // on aspirational equipment (salvaged from the old engine — its best part).
@@ -483,8 +493,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // are: both are deliberate ash parity (UTS:763-764) and neither is
     // shruggable. Everything else the sweep touches costs nothing but a
     // charsheet unbuff; the route's own Scarysauce is excluded so this does not
-    // undo the next task's res mood. Anything left over is reported once here
-    // rather than being cured with an item.
+    // undo the next task's res mood. Anything left over is named here — once
+    // per task, which is as often as this runs — rather than being cured with
+    // an item.
     for (const stuck of shrugBadEffects(...routeDamageEffects)) {
       print(`Bad effect ${stuck} needs an item cure; leaving it (only shrugs are free).`, "red");
     }

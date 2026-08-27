@@ -83,6 +83,9 @@ export class MyActionDefaults implements ActionDefaults<CombatActions> {
 export function killMacro(hard?: boolean): Macro {
   const result = new Macro();
 
+  // Rounds the macro can burn ahead of the delevel openers, for their
+  // openerOnce() guard below. Every submitted action advances a round.
+  let leadingActions = 0;
   if (haveEquipped($item`Everfull Dart Holster`)) {
     if (!hard && myLevel() >= 12 && !have($effect`Everything Looks Red`)) {
       result
@@ -91,10 +94,15 @@ export function killMacro(hard?: boolean): Macro {
         .trySkill($skill`Darts: Aim for the Bullseye`)
         .trySkill($skill`Darts: Aim for the Bullseye`)
         .trySkill($skill`Darts: Aim for the Bullseye`);
+      leadingActions += 5;
     } else {
       result.trySkill($skill`Darts: Throw at %part1`);
+      leadingActions += 1;
     }
   }
+  // ...plus the engine's own round-1 sea lasso on an underwater task
+  // (engine.ts customize()), which killMacro cannot see from here.
+  leadingActions += 1;
 
   // Delevel openers, ash CCS develOpeners() (CCS:171-198), which cleanUp()
   // (CCS:238-300) throws before the nuke on every ordinary fight — freeRounds()
@@ -125,13 +133,24 @@ export function killMacro(hard?: boolean): Macro {
   //
   // Never on `hard`: killMacro(true) is the boss / already-free path, and both
   // openers deal damage — enough to trip Shub-Jigguwatt's retaliation.
+  //
+  // Both are once per combat, so they carry the same openerOnce() round guard
+  // as the task macros — with the threshold raised past the dart chain and the
+  // lasso, which would otherwise push these casts out of the window entirely.
   if (!hard) {
-    if (have($skill`Micrometeorite`)) result.trySkill($skill`Micrometeorite`);
+    const openers = new Macro();
+    let anyOpener = false;
+    if (have($skill`Micrometeorite`)) {
+      openers.trySkill($skill`Micrometeorite`);
+      anyOpener = true;
+    }
     if (have($skill`Curse of Weaksauce`)) {
       // !mpbelow cost is exactly my_mp() >= cost.
       const cost = mpCost($skill`Curse of Weaksauce`);
-      result.ifNot(`mpbelow ${cost}`, Macro.trySkill($skill`Curse of Weaksauce`));
+      openers.ifNot(`mpbelow ${cost}`, Macro.trySkill($skill`Curse of Weaksauce`));
+      anyOpener = true;
     }
+    if (anyOpener) result.step(openerOnce(openers, leadingActions + 1));
   }
 
   if (!haveEquipped($item`June cleaver`) && have($skill`Saucegeyser`)) {
@@ -154,20 +173,29 @@ export function runMacro(): Macro {
  * corral fight (cow HP 900 behind Def 675, exactly the fights that outlive a
  * macro) a lost combat and a hard post() abort.
  *
- * libram's trySkill() does NOT cover this: it emits `if hasskill X`, which asks
- * whether the skill is on the fight page, not whether its once-per-combat use
- * is already spent.
+ * How certain the hazard is depends on the step. For ITEMS it is the garbo fork's
+ * measured finding: `hascombatitem` only asks whether the item is in inventory,
+ * and a once-per-fight item stays there after use, so a re-run re-throws it and
+ * aborts. For SKILLS it is a precaution: libram's trySkill() emits
+ * `if hasskill X`, which asks whether the skill is on the fight page rather
+ * than whether its once-per-combat use is spent, and KoL does not reliably drop
+ * a spent skill from that page. The guard costs nothing either way.
  *
- * Round 2, not round 1, and that matters: `pastround N` is true once the round
- * counter is past N (macrohelper.6.js:101-116 lists pastround among the numeric
- * predicates), and each submitted action advances a round — so on any
- * underwater task the engine's own round-1 lasso injection (engine.ts
- * customize(), `Macro.ifNot("pastround 1", tryItem(sea lasso))`) pushes these
- * openers to round 2. `!pastround 1` would therefore skip the opener forever
- * while lasso training. `!pastround 2` allows rounds 1-2 — with or without the
- * lasso — and still blocks the re-run, which lands many rounds later. Same
- * threshold the garbo fork uses.
+ * `round` is the last round the opener may still fire on, and 2 rather than 1
+ * is deliberate: `pastround N` is true once the round counter is past N
+ * (macrohelper.6.js:101-116 lists pastround among the numeric predicates) and
+ * every submitted action advances a round, so on an underwater task the
+ * engine's own round-1 lasso injection (engine.ts customize(),
+ * `Macro.ifNot("pastround 1", tryItem(sea lasso))`) already pushes a task
+ * macro's opener to round 2. `!pastround 1` would skip it for the whole
+ * lasso-training phase. Callers with more actions ahead of the opener —
+ * killMacro's dart chain — pass a bigger number.
+ *
+ * The guard is one-directional: it blocks a re-run that lands past `round`,
+ * which is the realistic case (a fight long enough to outlive the macro), but a
+ * re-entry that happened to land ON round 2 could still double-fire. Same
+ * threshold, and the same residual, as the garbo fork.
  */
-export function openerOnce(macro: Macro): Macro {
-  return Macro.ifNot("pastround 2", macro);
+export function openerOnce(macro: Macro, round = 2): Macro {
+  return Macro.ifNot(`pastround ${round}`, macro);
 }

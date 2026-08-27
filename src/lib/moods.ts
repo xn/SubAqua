@@ -4,8 +4,13 @@ import {
   getClanLounge,
   itemAmount,
   moodList,
+  mpCost,
   myEffects,
+  myMaxmp,
+  myMp,
   numericModifier,
+  print,
+  restoreMp,
   toEffect,
   toSkill,
 } from "kolmafia";
@@ -200,7 +205,50 @@ export function squintEffects(): Effect[] {
  * which is why every list above is gated to what the account can actually get.
  */
 export function applyEffects(effects: Effect[]): void {
-  for (const effect of effects) ensureEffect(effect);
+  reserveMpFor(effects);
+  for (const effect of effects) {
+    const skill = toSkill(effect);
+    if (!have(effect) && skill !== $skill.none && myMp() < mpCost(skill)) {
+      // Skip rather than cast: ensureEffect would throw, and worse, several
+      // defaults name an ITEM as their second branch — Elron's Explosive Etude
+      // is "cast 1 Elron's Explosive Etude|use 1 recording of Elron's Explosive
+      // Etude" (statuseffects.txt:535), and EffectDatabase.getDefaultAction
+      // (:178-197) picks the branch that works, so an unaffordable cast turns
+      // into a spent item. A missing buff is cheaper than either.
+      print(`Skipping ${effect}: needs ${mpCost(skill)} MP, have ${myMp()}.`, "red");
+      continue;
+    }
+    ensureEffect(effect);
+  }
+}
+
+/** MP the casts in this list still need: skill-granted entries we do not
+ * already have, at their current cost. Non-skill entries (cli defaults, item
+ * defaults) contribute nothing to price. */
+export function moodMpCost(effects: Effect[]): number {
+  return effects.reduce((sum, effect) => {
+    if (have(effect)) return sum;
+    const skill = toSkill(effect);
+    return sum + (skill === $skill.none ? 0 : mpCost(skill));
+  }, 0);
+}
+
+/**
+ * Top the pool up BEFORE a mood is cast (the garbo fork's reserveMp, lib.ts:468-474 +
+ * mood.ts:61, in the shape our engine needs).
+ *
+ * recover()'s 250 floor runs AFTER the casts, so it guarantees the fight starts
+ * at 250 — not that the casts were affordable. ensureEffect THROWS on a cast
+ * that fails (libram lib.js:563-572), and a task's effects are acquired before
+ * prepare() ever runs (grimoire engine.js:95 vs :108), so a pool drained by the
+ * previous fight would abort the run on the next mood. Ask for the mood's own
+ * cost plus one nuke, capped at max MP; MP is the one resource this run may
+ * spend freely.
+ */
+export function reserveMpFor(effects: Effect[]): void {
+  const nuke = have($skill`Saucegeyser`) ? mpCost($skill`Saucegeyser`) : 0;
+  const target = Math.min(myMaxmp(), moodMpCost(effects) + nuke);
+  if (myMp() < target) restoreMp(target);
 }
 
 /** "combat" mood (ash mood():116-134). */
@@ -287,6 +335,9 @@ export function dealsPassiveDamage(effect: Effect): boolean {
  *    (SkillDatabase.getHPCost, :1291 — mpcost 0 in classskills.txt:4042) with
  *    a THREE turn duration, so it would recast on nearly every adventure and
  *    pay in HP, which our restore then buys back. The MP-only rule excludes it.
+ *    Note it is excluded for that reason alone: mafia models it as
+ *    "Avoid Attack: 1" (modifiers.txt:5852), NOT as Thorns or a Damage Aura,
+ *    so dealsPassiveDamage() would not have caught it on the Shub task.
  *  - Shield of the Pastalord. One cast, two possible effects — Flimsy Shield
  *    of the Pastalord (10% physical DR) and Shield of the Pastalord (30%),
  *    statuseffects.txt:1443-1444, both with default "cast 1 Shield of the
@@ -335,6 +386,12 @@ export function survivalEffects(opts: { damageFree?: boolean } = {}): Effect[] {
  *    clan fortune teller (FortuneCommand:30-52), which needs that specific
  *    lounge furnishing; the ash also gates it to lowShiny accounts only. Not
  *    predictable enough for ensureEffect.
+ *  - Favored by Lyle. Its default is the "monorail buff" CLI command
+ *    (MonorailCommand:15-18), and there is no predicate for "the monorail is
+ *    reachable on this path" — `_lyleFavored` only says we have not had it
+ *    TODAY. A cast that silently does nothing is an ensureEffect throw, so the
+ *    buff is taken the ash's way instead: a bare, fail-silent cli_execute in
+ *    colosseumRoundTurn().
  */
 export function colosseumEffects(): Effect[] {
   const effects: Effect[] = [];
@@ -353,10 +410,6 @@ export function colosseumEffects(): Effect[] {
   if (have($skill`Elron's Explosive Etude`) && get("_elronsCasts", 0) < 10)
     effects.push($effect`Elron's Explosive Etude`);
   if (have($skill`Get Big`)) effects.push($effect`Big`);
-  // to_skill() is none, so the ash's have_skill gate never fires: the real
-  // limit is the once-a-day monorail visit (MonorailCommand:15-18 refuses a
-  // second, which would make ensureEffect throw).
-  if (!get("_lyleFavored")) effects.push($effect`Favored by Lyle`);
   if (have($skill`The Magical Mojomuscular Melody`))
     effects.push($effect`The Magical Mojomuscular Melody`);
   return trimSongs(effects);
@@ -390,6 +443,23 @@ function activeBadEffects(): Effect[] {
 }
 
 /**
+ * mafia's hardcoded shruggable list (UneffectRequest.isShruggable:146-172),
+ * by effect id (EffectPool.java:189-198, 214, 279, 281, 311-318, 369-371):
+ * Timer 1-10, Just the Best Anapests, Reassured, Hare-Brained, Record Hunger,
+ * Drunk and Avuncular, Shrieking Weasel, Power Man, Lucky Struck, Ministrations
+ * in the Dark, Superdrifting, Eldritch Attunement, Cartographically
+ * Charged/Aware/Rooted. None of them maps to a buff skill, so the derivation
+ * below would call them un-shruggable and red-line them after every task.
+ * The one that actually matters here is Just the Best Anapests (id 1003), which
+ * carries "Alters Page Text" (modifiers.txt:7067) — i.e. it is in the sweep's
+ * own bad list and our CombatFilters read page text.
+ */
+const alwaysShruggable = [
+  873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 1003, 1492, 1515, 2128, 2129, 2131, 2132, 2133,
+  2134, 2135, 2147, 2600, 2601, 2602,
+];
+
+/**
  * Is this effect one mafia will SHRUG (charsheet.php action=unbuff, free)
  * rather than cure with an item? Mirrors UneffectRequest.isShruggable
  * (:145-200): songs always, otherwise the effect must map to a skill that is a
@@ -407,6 +477,7 @@ function activeBadEffects(): Effect[] {
  */
 function shruggable(effect: Effect): boolean {
   if (effect.attributes.includes("noremove")) return false;
+  if (alwaysShruggable.includes(effect.id)) return true;
   if (isSong(effect)) return true;
   const skill = toSkill(effect);
   if (skill === $skill.none || !skill.buff) return false;
@@ -429,7 +500,7 @@ function myMoodList(): string[] {
  * hot dog. mood_list() is that same trigger list (RuntimeLibrary:5413-5423,
  * "type | name | action"), so we can see it coming and decline.
  */
-function moodWouldSpend(effect: Effect): boolean {
+export function moodWouldSpend(effect: Effect): boolean {
   const prefix = `gain_effect | ${effect.name} | `;
   return myMoodList().some((line) => {
     if (!line.startsWith(prefix)) return false;
