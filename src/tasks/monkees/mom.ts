@@ -1,4 +1,5 @@
 import {
+  abort,
   availableAmount,
   buy,
   canAdventure,
@@ -79,13 +80,44 @@ export function momQuest(opts: { cyber: boolean }): Quest {
     name: "Mom",
     tasks: [
       {
+        // questslog.txt:72 (0-indexed after "started"): step9 "Check back in
+        // with Little Brother", step10 "Go check on Big Brother", step11
+        // "Buy the black glass from Big Brother" — the sale only opens at
+        // step11. QuestManager.java:1441-1532: visiting who=1 at step9
+        // ("he's been actin' awful weird lately") advances to step10;
+        // visiting who=2 at step10 ("I found this thing") advances to
+        // step11. Live 2026-08-27 at step9: buying logged "trading 13 sand
+        // dollars for 1 black glass" with no "You acquire an item" — KoL
+        // silently refused the sale — twice, then the task aborted.
+        // monkeesStep() >= 9 already implies bigBrotherRescued (set at
+        // step2, QuestManager.java:1532), so that flag is redundant here.
         name: "Black Glass",
-        ready: () => get("bigBrotherRescued") && itemAmount($item`sand dollar`) >= 13,
+        ready: () => monkeesStep() >= 9 && itemAmount($item`sand dollar`) >= 13,
         completed: () => have(glass) || monkeesStep() >= 12,
-        do: () => void buy($coinmaster`Big Brother`, 1, glass),
+        do: (): void => {
+          let step = monkeesStep();
+          while (step < 11) {
+            if (step === 9) visitUrl("monkeycastle.php?who=1");
+            else if (step === 10) visitUrl("monkeycastle.php?who=2");
+            else break;
+            const next = monkeesStep();
+            if (next <= step) {
+              abort(
+                `Black Glass: visiting the castle at step${step} did not advance questS02Monkees (still step${next}). Check bigBrotherRescued and sand dollar count, then rerun.`,
+              );
+            }
+            step = next;
+          }
+          buy($coinmaster`Big Brother`, 1, glass);
+          if (!have(glass)) {
+            abort(
+              "Black Glass: bought from Big Brother at step11 but black glass never arrived. Check sand dollar count (needs 13) and Big Brother's coinmaster availability, then rerun.",
+            );
+          }
+        },
         underwater: true,
         freeaction: true,
-        limit: { tries: 2 },
+        limit: { tries: 3 },
       },
       ...(opts.cyber
         ? ([
