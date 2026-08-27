@@ -54,12 +54,17 @@ export function seaKeyword(): string[] {
  * helpers (gym, colosseum, skate park), which call `maximize()` by hand and so
  * never see the engine `dress()` last-chance pass.
  *
- * Needed because `sea` masks Underwater Familiar as well as Adventure
- * Underwater (Evaluator.java:396-401) and getScore() fails any candidate that
- * misses either (Evaluator.java:980-984) — with no familiar out,
- * lookupFamiliarModifiers returns early (Modifiers.java:1228-1231), so the
- * whole maximize can fail and then applies NOTHING. The helpers re-run their
- * terms without `sea` in that case, which leaves breathing to this.
+ * Needed because a `sea` maximize can fail for any reason (no candidate scores,
+ * nothing on hand fits a free slot): `sea` masks Underwater Familiar as well as
+ * Adventure Underwater (Evaluator.java:396-401) and getScore() fails any
+ * candidate that misses either (Evaluator.java:980-984). Note that fielding no
+ * familiar is NOT one of those reasons — modifiers.txt:4832 gives `(none)` the
+ * Underwater Familiar bit and lookupFamiliarModifiers adds it (Modifiers.java
+ * :1218) before its raceData == null early return (:1228-1231). A failed
+ * maximize is also not a no-op: Maximizer still emits every slot of its best
+ * (failing) candidate (Maximizer.java:211-225), so the helpers' retry without
+ * `sea` re-maximizes from whatever that pass left, and this is the last check
+ * that the result actually breathes.
  *
  * Same rule as the engine's enforcement, not a second one: nothing to do when
  * an effect or the zone's forced outfit already breathes; otherwise the same

@@ -61,11 +61,14 @@ export function gymnasiumTurn(): void {
   // the piece; it is omitted while Driving Waterproofly / Wet Willied covers us.
   const terms = ["combat rate", ...pieces];
   const sea = seaKeyword();
-  // A `sea` maximize can FAIL outright — the keyword masks Underwater Familiar
-  // too (Evaluator.java:396-401) and getScore() fails any candidate missing
-  // either boolean (Evaluator.java:980-984), which no familiar out cannot
-  // satisfy (Modifiers.java:1228-1231). A failed maximize applies NOTHING, so
-  // the objectives above would be silently dropped: re-run them without the
+  // A `sea` maximize can FAIL — the keyword masks Underwater Familiar too
+  // (Evaluator.java:396-401) and getScore() fails any candidate missing either
+  // boolean (Evaluator.java:980-984). Fielding no familiar is not what breaks
+  // it (modifiers.txt:4832 gives `(none)` the Underwater Familiar bit and
+  // Modifiers.java:1218 adds it before the raceData == null return at
+  // :1228-1231); it fails when nothing on hand can satisfy the mask in a free
+  // slot. A failing pass still emits its best candidate's slots (Maximizer
+  // .java:211-225) rather than the objectives above, so re-run them without the
   // keyword and let ensureHelperBreathing() below breathe (or stop loudly).
   if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
     maximize(terms.join(", "), false);

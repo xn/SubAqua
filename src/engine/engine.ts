@@ -247,11 +247,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // "sea" masks BOTH Adventure Underwater and Underwater Familiar
         // (Evaluator.java:396-401) and getScore() fails any candidate whose
         // modifier set doesn't satisfy the whole mask (Evaluator.java:980-984).
-        // With no familiar fielded, lookupFamiliarModifiers returns early
-        // (Modifiers.java:1228-1231) and Underwater Familiar can never be
-        // satisfied — the maximize would fail outright. So the keyword goes in
-        // only when a real familiar is coming out; otherwise keep the old
-        // hard-equip path.
+        // Fielding NO familiar still satisfies the familiar half — modifiers.txt
+        // :4832 is `Familiar\t(none)\tUnderwater Familiar`, and
+        // lookupFamiliarModifiers adds the FAMILIAR-type modifiers
+        // (Modifiers.java:1218) BEFORE its raceData == null early return
+        // (:1228-1231) — so the gate below is NOT about an unsatisfiable mask.
+        // It is about the switch: with `sea` in the objective the maximizer is
+        // free to have emitSlot issue a `familiar X` command (Maximizer.java:
+        // 1725-1742), and swapping the familiar out from under a DELIBERATE
+        // $familiar.none trips grimoire's post-dress `myFamiliar() !==
+        // this.familiar` verification. So the keyword goes in only when a real
+        // familiar is coming out; otherwise keep the old hard-equip path.
         const fieldedFamiliar = outfit.familiar ?? myFamiliar();
         if (fieldedFamiliar !== $familiar.none) {
           // A lone `sea` objective scores every candidate 0, and the default
