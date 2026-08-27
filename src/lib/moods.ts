@@ -142,8 +142,19 @@ export function combineMoods(...groups: Effect[][]): Effect[] {
   return trimSongs([...new Set(groups.flat())]);
 }
 
-/** "-combat" mood (ash mood():99-114). */
-export function sneakEffects(): Effect[] {
+/**
+ * "-combat" mood (ash mood():99-114), untrimmed. Split out from
+ * sneakEffects() so a caller that only wants to ask "does this list contain
+ * a sneak effect" (engine.ts's usesSneakEffects()) can do that membership
+ * check WITHOUT going through trimSongs()/the mood-building path at all —
+ * that caller runs from customize(), which fires after acquireEffects()
+ * already cast (and, via shrugForSongs(), possibly shrugged) the task's real
+ * mood for the turn (engine.js:95 vs customize() before dress() at :98-108).
+ * A membership check has no business re-deriving a trimmed list at that
+ * point; rawSneakEffects() keeps the check pure by construction rather than
+ * relying on trimSongs() itself staying side-effect-free.
+ */
+export function rawSneakEffects(): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`The Sonata of Sneakiness`)) effects.push($effect`The Sonata of Sneakiness`);
   if (itemAmount($item`ultra-soft ferns`) > 0) effects.push($effect`Ultra-Soft Steps`);
@@ -161,7 +172,12 @@ export function sneakEffects(): Effect[] {
   }
   if (have($skill`Feel Lonely`) && get("_feelLonelyUsed") < 3)
     effects.push($effect`Feeling Lonely`);
-  return trimSongs(effects);
+  return effects;
+}
+
+/** "-combat" mood (ash mood():99-114). */
+export function sneakEffects(): Effect[] {
+  return trimSongs(rawSneakEffects());
 }
 
 /**

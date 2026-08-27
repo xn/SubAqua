@@ -307,8 +307,13 @@ export function selectFreeRun(
     // The boots cannot breathe: underwater they need a familiar breather
     // (else engine.customize()'s familiar check would throw on a familiar
     // the task never asked for). Same gate the engine consults before it
-    // fields them — see bootsRunAvailable() above.
-    if (source.name === "Release the Boots") return bootsRunAvailable(location);
+    // fields them — see bootsRunAvailable() above. Routed through
+    // source.available() (the entry's own banked-runaways gate, line ~142)
+    // rather than past it, so that gate stays live code instead of an
+    // unreachable duplicate of bootsRunAvailable()'s own runaway check.
+    if (source.name === "Release the Boots") {
+      return source.available() && bootsRunAvailable(location);
+    }
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;
       // Skip when snokebomb's existing banish already covers this zone

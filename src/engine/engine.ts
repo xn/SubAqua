@@ -56,12 +56,12 @@ import { dreadSeedCheck } from "../lib/dreadscroll";
 import {
   effectFailureContext,
   isEnsureError,
+  rawSneakEffects,
   reserveMpFor,
   resolveWantedEffects,
   routeDamageEffects,
   shrugBadEffects,
   shrugForSongs,
-  sneakEffects,
 } from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
@@ -350,12 +350,19 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         outfit.familiar === undefined || (sneak !== undefined && outfit.familiar === sneak);
       const bootsFieldable = have(stompingBoots) && familiarSlotFree && bootsRunAvailable(location);
       // Ordered cheapest-first, and `||` short-circuits: the effects probe
-      // resolves the task's delayed effect list and rebuilds sneakEffects(),
-      // so it only runs when the modifier and the familiar haven't answered.
+      // resolves the task's delayed effect list and checks it against
+      // rawSneakEffects(), so it only runs when the modifier and the
+      // familiar haven't answered. Deliberately rawSneakEffects(), not
+      // sneakEffects(): this runs from customize(), which fires after
+      // acquireEffects() already cast (and possibly shrugForSongs()-shrugged)
+      // the task's real mood for the turn, so a membership check here has no
+      // business re-deriving a trimmed list through trimSongs() — it stays a
+      // pure yes/no read of "does the task want a sneak effect at all",
+      // untangled from the mood-building/shrug path on principle.
       const usesSneakEffects = (): boolean => {
         const wanted = undelay(task.effects, this.getContext(task)) ?? [];
         if (wanted.length === 0) return false;
-        const sneaky = sneakEffects();
+        const sneaky = rawSneakEffects();
         return wanted.some((effect) => sneaky.includes(effect));
       };
       const wantsSneak =
