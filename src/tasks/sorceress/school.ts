@@ -26,7 +26,7 @@ import {
 } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
-import { sneakFamiliar } from "../../engine/outfit";
+import { ensureHelperBreathing, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
@@ -208,9 +208,17 @@ export function schoolQuest(): Quest {
           availableAmount($item`Mer-kin scholar mask`) > 0 &&
           availableAmount($item`Mer-kin scholar tailpiece`) > 0,
         do: (): void => {
+          // Coinmaster-token requirement, not an outfit preference:
+          // CoinmasterData.availableTokens counts INVENTORY only, so the pieces
+          // being traded have to come off first — which is why no `avoid` field
+          // replaces these two lines.
           equip($slot`hat`, $item.none);
           equip($slot`pants`, $item.none);
-          equip($item`really, really nice swimming trunks`);
+          // Breathing after the blanking (audit item 3). This task is NOT
+          // `underwater: true`, so there is no engine breathing pass behind it
+          // at all; the old bare trunks equip ignored Driving Waterproofly and
+          // the lasso-pinned sea chaps.
+          ensureHelperBreathing("Grandma's Sea Shop");
           if (availableAmount($item`Mer-kin scholar mask`) === 0) {
             buy($coinmaster`Grandma Sea Monkey`, 1, $item`Mer-kin scholar mask`);
           }

@@ -94,9 +94,19 @@ export function gladiatorGearStep(): void {
   gymnasiumTurn();
   if (itemAmount(thighguard) === 0 || itemAmount(headguard) === 0) return;
   if (!get("yogUrtDefeated")) return;
+  // Coinmaster-token requirement, not an outfit preference: CoinmasterData
+  // .availableTokens counts INVENTORY only, so the scholar pieces being sold
+  // (and the guards being spent) have to come off first — which is why no
+  // `avoid` field replaces these two lines.
   equip($slot`hat`, $item.none);
   equip($slot`pants`, $item.none);
-  equip($item`really, really nice swimming trunks`);
+  // Breathing after the blanking, not a bare trunks equip (audit item 2): the
+  // Outpost shop is a Sea page, the old unconditional equip ignored Driving
+  // Waterproofly and stripped the lasso-pinned sea chaps, and this helper is
+  // self-dressing so nothing else covers it. Caveat: on an account whose only
+  // breather IS a scholar mask this can re-wear the piece being sold and the
+  // ROW131 visit no-ops — the same account had no breathing at all before.
+  ensureHelperBreathing("Grandma's Sea Shop");
   if (itemAmount($item`Mer-kin scholar mask`) > 0) {
     visitUrl("shop.php?whichshop=grandma&action=buyitem&quantity=1&whichrow=131");
   }
