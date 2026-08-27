@@ -348,7 +348,10 @@ export function colosseumEffects(): Effect[] {
     effects.push($effect`Ultraheart`);
   }
   if (have($skill`Carol of the Hells`)) effects.push($effect`Carol of the Hells`);
-  if (have($skill`Elron's Explosive Etude`)) effects.push($effect`Elron's Explosive Etude`);
+  // dailylimits.txt:94 caps Elron's at 10 casts a day; past that the cast fails
+  // and ensureEffect throws, and fifteen colosseum rounds can get there.
+  if (have($skill`Elron's Explosive Etude`) && get("_elronsCasts", 0) < 10)
+    effects.push($effect`Elron's Explosive Etude`);
   if (have($skill`Get Big`)) effects.push($effect`Big`);
   // to_skill() is none, so the ash's have_skill gate never fires: the real
   // limit is the once-a-day monorail visit (MonorailCommand:15-18 refuses a
