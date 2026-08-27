@@ -19,6 +19,11 @@ const myActions = [
 ] as const;
 export type CombatActions = (typeof myActions)[number];
 
+/** The action list itself, for engine code that has to ask "does this task
+ * handle any monster with something other than X?" (grimoire's CombatStrategy
+ * exposes where(action) but not the whole monster -> action map). */
+export const combatActions = myActions;
+
 export class CombatStrategy extends BaseCombatStrategy.withActions(myActions) {}
 
 /**

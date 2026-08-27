@@ -1,5 +1,16 @@
 import { getProperty, itemAmount, Location, Monster, myBasestat, Stat } from "kolmafia";
-import { $effect, $item, $items, $location, $locations, $skill, get, have, Macro } from "libram";
+import {
+  $effect,
+  $item,
+  $items,
+  $location,
+  $locations,
+  $monster,
+  $skill,
+  get,
+  have,
+  Macro,
+} from "libram";
 
 import { currentPolicy } from "./policy";
 import { CombatResource } from "./resource";
@@ -176,6 +187,79 @@ export function selectFreeKill(
     if (dropsMatter && !source.dropSafe) return false;
     return source.available();
   });
+}
+
+/**
+ * Where the ash spends a free kill on an ORDINARY fight, and whether that
+ * spend has to be drop-safe (the `drop` argument of CCS free_kill(), which
+ * skips the sources that forfeit the fight's drops).
+ *
+ * Transcribed from the free_kill() call sites in UnderTheSeaCCS.ash main() at
+ * HEAD. Boss handling (the temple doors, Dad Sea Monkee) never reaches
+ * free_kill() and is absent by construction.
+ */
+const freeKillZones = new Map<Location, boolean>([
+  [$location`Madness Bakery`, false], // CCS:528
+  [$location`An Octopus's Garden`, true], // CCS:571 (the Neptune flytrap branch)
+  [$location`The Wreck of the Edgar Fitzsimmons`, true], // CCS:611
+  [$location`The Marinara Trench`, true], // CCS:655
+  [$location`The Dive Bar`, true], // CCS:655
+  [$location`Anemone Mine`, true], // CCS:655
+  [$location`The Mer-Kin Outpost`, false], // CCS:718, 724
+  [$location`The Coral Corral`, true], // CCS:766, 789
+  [$location`The Caliginous Abyss`, false], // CCS:943
+  [$location`Mer-kin Elementary School`, true], // CCS:1004
+  [$location`Mer-kin Library`, true], // CCS:1037, 1051
+  [$location`Mer-kin Gymnasium`, false], // CCS:1076
+  [$location`Mer-kin Colosseum`, false], // CCS:1086
+]);
+
+/**
+ * Per-monster entries. Two kinds: the ash's own monster-keyed cases (which run
+ * after its location switch), and the drop hunts whose SubAqua task has a
+ * function `do` — grimoire hands customize() no location for those, so the
+ * monster is the only key available.
+ */
+const freeKillMonsters = new Map<Monster, boolean>([
+  [$monster`unholy diver`, true], // CCS:1188
+  [$monster`sea cowboy`, true], // CCS:1193
+  [$monster`Mer-kin healer`, true], // CCS:704, 724 (prayerbeads still short)
+  [$monster`Neptune flytrap`, true], // CCS:571
+  // Grandpa's rescue hunt walks Trench / Dive Bar / Anemone Mine behind a
+  // `do: () => grandpaZone()`, so these carry CCS:655's drop flag themselves.
+  [$monster`giant squid`, true],
+  [$monster`Mer-kin miner`, true],
+  [$monster`Mer-kin tippler`, true],
+]);
+
+/**
+ * Fights inside a free-kill zone that must never take the opportunistic step,
+ * even under a task's general `kill`. The wild seahorse is a BOSS behind
+ * resistances that cap every hit at 1 (monsters.txt Phys+Elem 100): an
+ * instakill only glances, and a glanced dart still spends Everything Looks Red
+ * for the day. The ash never reaches free_kill() with one in front of it — its
+ * corral case tames or runs first (CCS:746-760, 838-851).
+ */
+export const freeKillNever: Monster[] = [$monster`wild seahorse`];
+
+/**
+ * Whether the ash free-kills this fight, and with what drop discipline.
+ * Returns undefined when the fight is not one of its free-kill sites.
+ * A `true` on either the monster or the zone wins: the ash's monster switch
+ * runs AFTER its location switch, so a monster the ash treated as drop-mattering
+ * keeps that discipline inside a zone whose generic call was drop-free. Never
+ * the other way round — no drop-forfeiting source on a fight some site wanted
+ * drop-safe.
+ */
+export function freeKillTargetDropsMatter(
+  location?: Location,
+  monster?: Monster,
+): boolean | undefined {
+  if (monster && freeKillNever.includes(monster)) return undefined;
+  const byMonster = monster ? freeKillMonsters.get(monster) : undefined;
+  const byZone = location ? freeKillZones.get(location) : undefined;
+  if (byMonster === undefined && byZone === undefined) return undefined;
+  return (byMonster ?? false) || (byZone ?? false);
 }
 
 /** The parka dilophosaur ray, when Everything Looks Yellow is down. */

@@ -19,6 +19,7 @@ import {
   Item,
   itemAmount,
   Location,
+  Monster,
   myFamiliar,
   myMeat,
   print,
@@ -47,12 +48,17 @@ import {
 import { dreadSeedCheck } from "../lib/dreadscroll";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
-import { selectFreeKill, selectYellowRay } from "../resources/freekill";
+import {
+  freeKillNever,
+  freeKillTargetDropsMatter,
+  selectFreeKill,
+  selectYellowRay,
+} from "../resources/freekill";
 import { selectFreeRun } from "../resources/freerun";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
 
-import { CombatActions, killMacro, MyActionDefaults } from "./combat";
+import { CombatActions, combatActions, killMacro, MyActionDefaults } from "./combat";
 import {
   familiarWaterBreathingEquipment,
   hasBreathingEffect,
@@ -213,6 +219,59 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         if (!provideSaber()) provideRay();
       } else {
         if (!provideRay()) provideSaber();
+      }
+    }
+
+    // Opportunistic free kills: upgrade a plain `kill` on a fight the ash would
+    // have spent a free kill on. Modelled on loopstar's own upgrade
+    // (loopstar engine.ts:512-522 + paths/sea/engine.ts:87-90, which provides
+    // killFree and then replaceActions("kill" -> "killFree")); here the trigger
+    // is the ash's own free_kill() call sites rather than "free kills are no
+    // longer needed", and the free-kill step is PREPENDED instead of replacing
+    // the action, so the kill ladder stays as the fallback when the source
+    // fails to end the fight. The site table and its CCS cites live in
+    // freeKillTargetDropsMatter() (resources/freekill.ts).
+    //
+    // Out of scope by construction: killHard, and the Phase 4 adv1-filter
+    // fights (Yog-Urt, Shub, the Center Door, the colosseum and gym rounds),
+    // whose tasks declare no CombatStrategy at all — neither branch below can
+    // see a monster or a default action for them. dropSafe and freeKillMode
+    // are enforced inside selectFreeKill().
+    //
+    // conserveFreeFights (true only at high shiny) switches the whole upgrade
+    // off. That is stricter than the ash, whose free_kill() still throws a dart
+    // at high shiny (CCS:7-14) — but high shiny is exactly the tier that banks
+    // its free-fight resources for aftercore, and the explicitly requested
+    // killFree/forceItems ladders above are untouched by this gate.
+    if (!currentPolicy().conserveFreeFights) {
+      // Monsters this task handles with something OTHER than a plain kill. A
+      // general macro runs ahead of every monster-specific ACTION (grimoire
+      // combat.js compile order), so an unguarded prepend would burn the free
+      // kill on the monster we meant to banish, Force or run from.
+      const reserved = [
+        ...combatActions
+          .filter((action) => action !== "kill")
+          .flatMap((action) => combat.where(action)),
+        ...freeKillNever,
+      ];
+      const upgradeKill = (monster?: Monster): void => {
+        const dropsMatter = freeKillTargetDropsMatter(location, monster);
+        if (dropsMatter === undefined) return;
+        const source = selectFreeKill({ location, target: monster, dropsMatter });
+        // Equip-gated exactly like the killFree/freeRun provides above: gear
+        // that didn't land means no free-kill step.
+        if (!source) return;
+        if (source.equip !== undefined && !equipResource(outfit, source.equip)) return;
+        const step =
+          monster === undefined && reserved.length > 0
+            ? Macro.ifNot(reserved, source.do)
+            : source.do;
+        combat.macro(step, monster, true);
+      };
+      if (combat.getDefaultAction() === "kill") {
+        upgradeKill();
+      } else {
+        for (const monster of combat.where("kill")) upgradeKill(monster);
       }
     }
 
