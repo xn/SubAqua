@@ -90,6 +90,12 @@ function freeDigAvailable(): boolean {
   );
 }
 
+/** User feedback 2026-08-27 (net-turn rule: no paid digs): Mine Teflon
+ * aborts on this once the free pick period ends without ore, rather than
+ * spending a real turn per square. */
+const NO_FREE_DIG_MESSAGE =
+  "Free mining (5 Unaccompanied Miner picks + lodestone Loded) ended without teflon ore. Options: pull a minin' dynamite for one more free blast (ash hint UTS:2348-2350), or mine manually (ores show in adjacent veins of 5), then rerun.";
+
 /** Lucky! ladder (ash getLucky, G:259-275; the heartstone %luck rung is
  * skipped — %fn-family naming, add only if a live account needs it). The
  * 3/day hermit clover cap is the caller's abort condition. */
@@ -205,16 +211,18 @@ export function mineQuest(): Quest {
         },
       },
       {
-        // Free picks (5/day Unaccompanied Miner) -> lodestone Loded picks ->
-        // real-turn digs. Amendment (upstream 6b7cd80, UTS:640-641 at
-        // 89982f5): the ash's liftBeatenUp() clears Beaten Up only once
-        // teflon ore is in hand, leaving cave-in Beaten Up standing across
-        // the Unaccompanied Miner trips. This engine's post() unconditionally
-        // clears Beaten Up after every do() returns, so do() mines the whole
-        // currently-available free/Loded allotment in one call — the
-        // cleanup then fires once, after the dig batch, not per cave-in.
-        // Once the free budget is spent, do() falls back to one real-turn
-        // square per call, same as before, tracked by the soft limit below.
+        // Free picks (5/day Unaccompanied Miner) -> lodestone Loded picks.
+        // Amendment (upstream 6b7cd80, UTS:640-641 at 89982f5): the ash's
+        // liftBeatenUp() clears Beaten Up only once teflon ore is in hand,
+        // leaving cave-in Beaten Up standing across the Unaccompanied Miner
+        // trips. This engine's post() unconditionally clears Beaten Up after
+        // every do() returns, so do() mines the whole currently-available
+        // free/Loded allotment in one call — the cleanup then fires once,
+        // after the dig batch, not per cave-in.
+        // User feedback 2026-08-27 (net-turn rule: no paid digs): once the
+        // free budget is spent without ore, do() aborts with instructions
+        // instead of falling back to real-turn squares -- Anemone Mine is
+        // only worth digging on free picks/Loded, never on paid turns.
         name: "Mine Teflon",
         ready: () => availableAmount(digpick) > 0 && !oreSecured(),
         completed: oreSecured,
@@ -225,16 +233,17 @@ export function mineQuest(): Quest {
           }
         },
         do: (): void => {
+          if (!freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
           do {
             mineSquare();
           } while (itemAmount(ore) === 0 && freeDigAvailable());
+          if (itemAmount(ore) === 0 && !freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
         },
         freeaction: freeDigAvailable,
         underwater: true,
         limit: {
-          soft: 20,
-          message:
-            "Teflon ore is not appearing. A minin' dynamite pull gives one more free blast (ash hint UTS:2348-2350), or mine manually — ores show in adjacent veins of 5.",
+          tries: 3,
+          message: NO_FREE_DIG_MESSAGE,
         },
       },
       {

@@ -1613,6 +1613,8 @@ git commit -m "feat: skate-park war, burn-turn ladder, lutz fishy rung"
 
 **Upstream 2026-08-26 amendment** (`6b7cd80`, UTS:640-641 at 89982f5): `liftBeatenUp()` runs only once a teflon ore is in hand — cave-in Beaten Up is left standing while the Unaccompanied Miner trips continue (they are unaffected), so the Walrus/rest cost is paid once, after the dig succeeds. Mirror that in the dig task's post-dig cleanup: clear Beaten Up only when `itemAmount($item\`teflon ore\`) > 0`.
 
+**User feedback 2026-08-27:** no paid digs — `Mine Teflon` aborts with instructions when the free period (Unaccompanied Miner picks + Loded) ends without ore.
+
 **Files:**
 
 - Create: `src/tasks/sorceress/mine.ts`
