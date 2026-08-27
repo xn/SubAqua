@@ -264,6 +264,33 @@ function setCandidatesPref(value: string): void {
 }
 
 /**
+ * subaqua_seedScanFloor, ascension-scoped ("${ascension}:${count}") like
+ * subaqua_seedCandidatesAsc — a bare count would leak across ascensions:
+ * criteria reset each ascension, but nothing else would ever lower or clear
+ * a persistent scalar, so a floor recorded in one ascension could suppress
+ * every full scan in a later one forever. A stale (or missing) ascension
+ * reads back as floor 0.
+ *
+ * This floor has exactly one owner: the overflow branch below ("too many
+ * survivors — retry once constraints get stronger"). The zero-survivors
+ * case is handled entirely by the SCANNED_EMPTY sentinel on
+ * subaqua_seedCandidates, which already guarantees no rescan for the
+ * current ascension; it must NOT also write this floor, or a high
+ * zero-result count (up to 24) would suppress a genuine, lower-count
+ * overflow retry.
+ */
+function scanFloor(): number {
+  const raw = get("subaqua_seedScanFloor", "");
+  const [ascStr, countStr] = raw.split(":");
+  if (parseInt(ascStr, 10) !== myAscensions()) return 0;
+  return parseInt(countStr, 10) || 0;
+}
+
+function setScanFloor(count: number): void {
+  set("subaqua_seedScanFloor", `${myAscensions()}:${count}`);
+}
+
+/**
  * Candidate seeds under the current evidence, or undefined when unknown
  * (scan disabled, criteria too weak, or survivors over the cache cap).
  * The first successful scan is O(9M) through the phpSeed bridge — a
@@ -272,11 +299,10 @@ function setCandidatesPref(value: string): void {
  *
  * A scan (full or re-filter) that finds zero survivors is cached as the
  * SCANNED_EMPTY sentinel rather than "" (indistinguishable from "never
- * scanned"), and subaqua_seedScanFloor is raised to the current constraint
- * count so the floor guard below also short-circuits any later full-scan
- * attempt at the same-or-fewer constraints: zero candidates is monotone
- * under added clues (a superset of constraints can only shrink survivors),
- * so it's still zero.
+ * scanned"), so within this ascension the cache-hit branch above returns []
+ * without ever reaching the full scan again. subaqua_seedScanFloor is left
+ * untouched by the zero-survivors case (see scanFloor()/setScanFloor()) —
+ * it belongs solely to the overflow case.
  */
 function computeCandidateSeeds(): number[] | undefined {
   const c = playerCriteria();
@@ -287,11 +313,11 @@ function computeCandidateSeeds(): number[] | undefined {
     if (cached !== "") {
       const seeds = cached
         .split(",")
-        .map((s) => parseInt(s))
+        .map((s) => parseInt(s, 10))
+        .filter((seed) => Number.isFinite(seed) && seed >= SEED_MIN && seed <= SEED_MAX)
         .filter((seed) => matches(c, seed));
       if (seeds.length === 0) {
         setCandidatesPref(SCANNED_EMPTY);
-        set("subaqua_seedScanFloor", constraintCount(c));
       } else {
         setCandidatesPref(seeds.join(","));
       }
@@ -301,8 +327,8 @@ function computeCandidateSeeds(): number[] | undefined {
 
   // Full-scan triggers: seahorse name (always set in this phase) + >= 2 clues.
   if (c.seahorse === "" || c.clues.filter((v) => v > 0).length < 2) return undefined;
-  // A prior scan overflowed (or emptied out) at this constraint strength: wait for new evidence.
-  if (constraintCount(c) <= get("subaqua_seedScanFloor", 0)) return undefined;
+  // A prior scan overflowed at this constraint strength (this ascension): wait for new evidence.
+  if (constraintCount(c) <= scanFloor()) return undefined;
 
   const start = Date.now();
   const seeds: number[] = [];
@@ -313,7 +339,7 @@ function computeCandidateSeeds(): number[] | undefined {
     }
   }
   if (seeds.length > CACHE_MAX) {
-    set("subaqua_seedScanFloor", constraintCount(c));
+    setScanFloor(constraintCount(c));
     print(
       `Dreadscroll seed scan overflowed ${CACHE_MAX} candidates; retrying after more clues.`,
       "olive",
@@ -326,7 +352,6 @@ function computeCandidateSeeds(): number[] | undefined {
   );
   if (seeds.length === 0) {
     set("subaqua_seedCandidates", SCANNED_EMPTY);
-    set("subaqua_seedScanFloor", constraintCount(c));
   } else {
     set("subaqua_seedCandidates", seeds.join(","));
   }
