@@ -23,6 +23,7 @@ import {
   superItemDropEffects,
   survivalEffects,
 } from "../../lib/moods";
+import { assertBanishHeld } from "../../resources/banish";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -177,6 +178,12 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         }),
         effects: () => combineMoods(itemDropEffects(), survivalEffects()),
         prepare: (): void => {
+          // The whole point of the corral grind is that the rustler is gone and
+          // the two droppers spawn instead; a banish that quietly failed is 15
+          // turns of nothing (the garbo fork farmTurn.ts:124-130). NOT on "Corral
+          // Opener" above: it is a single forced turn with no prior corral
+          // fight to check.
+          assertBanishHeld([rustler], corral, "Corral Leather");
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },
@@ -224,7 +231,10 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           .macro(seahorseMacro, seahorse),
         outfit: () => ({ modifier: "item", familiar: swordOut() ? sword : undefined }),
         effects: () => combineMoods(itemDropEffects(), survivalEffects()),
-        prepare: () => recover(),
+        prepare: (): void => {
+          assertBanishHeld([rustler], corral, "Corral Lassos");
+          recover();
+        },
         limit: { soft: 15, message: "Sea lassos are not accumulating." },
       },
       {
@@ -256,6 +266,10 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // post() abort. Damage absorption is the only lever the task has.
         effects: () => survivalEffects(),
         prepare: (): void => {
+          // "The wild seahorse is not spawning; check banishes" is exactly the
+          // failure this makes immediate: the seahorse only shows once the
+          // other three draws are out of the way.
+          assertBanishHeld([rustler, cowboy, cow], corral, "Tame Seahorse");
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },

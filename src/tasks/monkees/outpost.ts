@@ -6,6 +6,7 @@ import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { assertBanishHeld } from "../../resources/banish";
 import { pawWish } from "../../resources/paw";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
@@ -21,6 +22,12 @@ function stashboxDone(): boolean {
  * banishes burglar/raider as non-droppers, CCS:702-707). */
 const farmCombat = () =>
   new CombatStrategy().banish($monsters`Mer-kin burglar, Mer-kin raider`).kill();
+
+/** The banished half of the roster the two farm lanes above share. Both lanes
+ * pay for the banish in turn economy — burglar and raider drop nothing these
+ * grinds want — so a banish that quietly stops holding is a 25-30 turn bleed
+ * (the garbo fork farmTurn.ts:124-130; see assertBanishHeld for the bounds). */
+const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
 
 export function outpostQuest(): Quest {
   return {
@@ -56,7 +63,10 @@ export function outpostQuest(): Quest {
         combat: farmCombat(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,
-        prepare: () => recover(),
+        prepare: (): void => {
+          assertBanishHeld(farmBanished, outpost, "Outpost Grandma");
+          recover();
+        },
         limit: { soft: 30, message: "Grandma's rescue is stalling; check the outpost drops." },
       },
       {
@@ -72,7 +82,10 @@ export function outpostQuest(): Quest {
         combat: farmCombat(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,
-        prepare: () => recover(),
+        prepare: (): void => {
+          assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");
+          recover();
+        },
         limit: { soft: 25, message: "No lockkey after a long grind; verify drops and rerun." },
       },
       {

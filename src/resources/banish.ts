@@ -1,4 +1,5 @@
 import {
+  abort,
   appearanceRates,
   Item,
   Location,
@@ -187,4 +188,62 @@ export function pickBanishSource(location?: Location): BanishSource | undefined 
     if (!current) return true;
     return (appearanceRates(location)[current.name] ?? 0) === 0;
   });
+}
+
+/**
+ * Loud unbanished-monster invariant (the garbo fork tasks/farm/farmTurn.ts:124-130,
+ * "You encountered a banishable monster and didn't banish it, sort your life
+ * out!"). A task whose turn economy assumes a banish holds — the corral needs
+ * the rustler gone so cows/cowboys spawn, the outpost grind needs the
+ * non-dropping burglar/raider gone — otherwise bleeds turns silently until its
+ * `limit.soft` fires 12-30 turns later.
+ *
+ * The check is per-ENCOUNTER, not per-monster-list, because one banish source
+ * serves every `banish` monster in a task (engine customize() provides exactly
+ * one) and re-pointing it releases whatever it held: "all of `targets` are
+ * banished" is not an invariant this route ever maintains. "The one just met is
+ * banished now" is.
+ *
+ * Bounded four ways, so a normal turn can never trip it:
+ *  - a turn must have been spent since this script invocation started. Both
+ *    `lastEncounter` and `banishedMonsters` outlive the script, but only the
+ *    latter is cleared at rollover — so a run resumed the day after its last
+ *    corral fight would otherwise read a stale rustler encounter against an
+ *    emptied banish list and abort on turn zero. Once one turn has passed,
+ *    `lastEncounter` is this session's.
+ *  - `lastEncounter` must BE one of the task's banish targets. Before the first
+ *    such fight it is not, so the first-turn absence the garbo fork warns about is a
+ *    no-op here.
+ *  - the banish must not currently hold (banishActive).
+ *  - a source must still be pickable at `location`. Charges only decrease
+ *    within a day, so a source available NOW was available on the turn just
+ *    fought; if none is, the `banish` action legitimately degraded to `kill`
+ *    (MyActionDefaults, spec §2's explicit degradations) and nothing is broken.
+ *    That case stays with the task's soft limit rather than aborting a run that
+ *    has merely spent its banishes.
+ *
+ * What is left is the real breakage: the banish fired and did not stick, or the
+ * engine never emitted one (e.g. its gear failed to land in the outfit, which
+ * customize() deliberately fails through instead of announcing).
+ */
+let firstCheckedTurn = -1;
+
+export function assertBanishHeld(targets: Monster[], location: Location, taskName: string): void {
+  // Lazily stamped rather than read at module load: this file is imported
+  // before the first turn of the invocation, and a module-level myTurncount()
+  // is the same defect lib/index.ts grandpaZone() calls out.
+  if (firstCheckedTurn < 0) firstCheckedTurn = myTurncount();
+  if (myTurncount() <= firstCheckedTurn) return;
+  const last = toMonster(get("lastEncounter"));
+  if (!targets.includes(last)) return;
+  if (banishActive(last)) return;
+  const source = pickBanishSource(location);
+  if (!source) return;
+  abort(
+    `${taskName}: fought a ${last.name} in ${location.toString()} and it is not banished, ` +
+      `even though ${source.name} was available — the banish did not land (its gear may have ` +
+      "failed to equip, or the source misfired). Banish it by hand, or clear the stale " +
+      "banishedMonsters entry, then rerun; leaving it unbanished bleeds turns until this " +
+      "task's soft limit.",
+  );
 }
