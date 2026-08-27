@@ -12,6 +12,7 @@ import {
 import { $effect, $item, $items, get, have } from "libram";
 
 import { buyLimit } from "../lib";
+import { shubPrepShort } from "../lib/shub";
 
 import { currentPolicy } from "./policy";
 
@@ -56,8 +57,9 @@ const escapeGear = $items`peppermint parasol, navel ring of navel gazing, Greate
  * Ash reservedPulls() (UnderTheSea.ash:181-235). Each item can be pulled once
  * per day in-run, so every entry reserves at most one slot. The Shub null-day
  * exploit entry is deliberately absent: it needs shubPrepShort()'s delevel
- * math, which lands with Phase 4's sorceress module — Phase 4 adds that entry
- * here. The first two entries skip the pulled-today check on purpose,
+ * math, which lands with Phase 4's sorceress module — The null-day entry
+ * below is that Phase 4 addition. The first two entries skip the
+ * pulled-today check on purpose,
  * mirroring the ash (any of the three escape items serves; shavings are
  * farmable).
  */
@@ -71,6 +73,16 @@ const pullReservations: PullReservation[] = [
     name: "crayon shavings",
     item: $item`crayon shavings`,
     needed: () => availableAmount($item`crayon shavings`) < 9,
+  },
+  {
+    // Shub null-day exploit (ash reservedPulls() globals.ash:235-239): hold a
+    // slot for Null Afternoon while Shub is undefeated and the delevel stock
+    // projects short. Yog-Urt's fight may throw up to two crayon shavings
+    // first, so they are spoken for (shubPrepShort(2)).
+    name: "null-day exploit",
+    item: $item`null-day exploit`,
+    needed: () =>
+      !get("shubJigguwattDefeated") && shubPrepShort(2) && !pulledToday($item`null-day exploit`),
   },
   {
     name: "Mer-kin pinkslip",

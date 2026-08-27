@@ -35,6 +35,17 @@ export type ResourcePolicy = {
    * ash gate is highShiny() || (lowShiny() && not pulled today) — mid falls
    * through to the fish-sauce chew. */
   fishyPullMeal: boolean;
+  /** High shiny banks free-fight riders (bat wings / retro cape) for
+   * aftercore instead of spending them on colosseum/finale outfits
+   * (ash !highShiny() gates at UTS:2179-2196, 2963-2969). */
+  conserveFreeFights: boolean;
+  /** Platinum Yendorian Express Card use in-run (ash gates on !highShiny(),
+   * UTS:2325-2330). */
+  usePyec: boolean;
+  /** Pull gremlin juice + hand chalk before Shub when the account is likely
+   * to miss (ash lowShiny() branch, UTS:2932-2944); all tiers still pull
+   * them when buffed muscle < 1250 — that half is game-state, not tier. */
+  shubInsurancePulls: boolean;
 };
 
 /** Leprecondo priorities, ash UTS:1062-1067 (ids are KoL furniture ids;
@@ -52,6 +63,9 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "skateboard+vhs2",
     whistleOutpostDrops: true,
     fishyPullMeal: true,
+    conserveFreeFights: false,
+    usePyec: true,
+    shubInsurancePulls: true,
   },
   mid: {
     freeKillMode: "full",
@@ -62,6 +76,9 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "skateboard+vhs2",
     whistleOutpostDrops: false,
     fishyPullMeal: false,
+    conserveFreeFights: false,
+    usePyec: true,
+    shubInsurancePulls: false,
   },
   high: {
     freeKillMode: "dartsOnly",
@@ -72,6 +89,9 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "vhs3",
     whistleOutpostDrops: false,
     fishyPullMeal: true,
+    conserveFreeFights: true,
+    usePyec: false,
+    shubInsurancePulls: false,
   },
 };
 
