@@ -1,10 +1,20 @@
-import { appearanceRates, Item, Location, Monster, Skill, toMonster } from "kolmafia";
-import { $item, $skill, get, have } from "libram";
+import {
+  appearanceRates,
+  Item,
+  Location,
+  Monster,
+  myClass,
+  myFury,
+  myTurncount,
+  Skill,
+  toMonster,
+} from "kolmafia";
+import { $class, $effect, $item, $skill, get, have } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
   name: string;
-  skill: Skill;
+  skill: Skill | Item;
   /** Gear that must be worn to cast it (snokebomb needs none). */
   equip?: Item;
   available: () => boolean;
@@ -15,6 +25,95 @@ export type BanishSource = {
  * is the ash's gear-picker order; snokebomb last. */
 export const banishSources: BanishSource[] = [
   {
+    name: "Bowl Curveball",
+    skill: $skill`Bowl a Curveball`,
+    available: () =>
+      have($item`cosmic bowling ball`) || get("cosmicBowlingBallReturnCombats") === 0,
+  },
+  {
+    name: "Asdon Martin",
+    skill: $skill`Asdon Martin: Spring-Loaded Front Bumper`,
+    available: (): boolean => {
+      const banishes = get("banishedMonsters").split(":");
+      const bumperIndex = banishes
+        .map((string) => string.toLowerCase())
+        .indexOf("spring-loaded front bumper");
+      if (bumperIndex === -1) return true;
+      return myTurncount() - parseInt(banishes[bumperIndex + 1]) > 30;
+    },
+  },
+  {
+    name: "Spring Kick",
+    skill: $skill`Spring Kick`,
+    equip: $item`spring shoes`,
+    available: () => have($item`spring shoes`) && !have($effect`Everything Looks Green`),
+  },
+  {
+    name: "System Sweep",
+    skill: $skill`System Sweep`,
+    available: () => have($skill`System Sweep`),
+  },
+  {
+    name: "Feel Hatred",
+    skill: $skill`Feel Hatred`,
+    available: () => get("_feelHatredUsed") < 3 && have($skill`Emotionally Chipped`),
+  },
+  {
+    name: "Latte",
+    skill: $skill`Throw Latte on Opponent`,
+    equip: $item`latte lovers member's mug`,
+    available: () =>
+      (!get("_latteBanishUsed") || (get("_latteRefillsUsed") < 2 && myTurncount() < 1000)) &&
+      have($item`latte lovers member's mug`),
+  },
+  {
+    name: "Reflex Hammer",
+    skill: $skill`Reflex Hammer`,
+    equip: $item`Lil' Doctor™ bag`,
+    available: () => get("_reflexHammerUsed") < 3 && have($item`Lil' Doctor™ bag`),
+  },
+  {
+    name: "Snokebomb",
+    skill: $skill`Snokebomb`,
+    available: () => get("_snokebombUsed") < 3 && have($skill`Snokebomb`),
+  },
+  {
+    name: "KGB dart",
+    skill: $skill`KGB tranquilizer dart`,
+    equip: $item`Kremlin's Greatest Briefcase`,
+    available: () =>
+      get("_kgbTranquilizerDartUses") < 3 && have($item`Kremlin's Greatest Briefcase`),
+  },
+  {
+    name: "Yam Stinkbomb",
+    skill: $item`stuffed yam stinkbomb`,
+    available: () => have($item`stuffed yam stinkbomb`),
+  },
+  {
+    name: "Middle Finger",
+    skill: $skill`Show them your ring`,
+    equip: $item`mafia middle finger ring`,
+    available: () => !get("_mafiaMiddleFingerRingUsed") && have($item`mafia middle finger ring`),
+  },
+  {
+    name: "Banishing Shout",
+    skill: $skill`Banishing Shout`,
+    available: () => have($skill`Banishing Shout`),
+  },
+  {
+    name: "Batter Up",
+    skill: $skill`Batter Up!`,
+    equip: $item`seal-clubbing club`,
+    available: () =>
+      have($skill`Batter Up!`) && myClass() === $class`Seal Clubber` && myFury() >= 5,
+  },
+  {
+    name: "Monkey Paw",
+    skill: $skill`Monkey Slap`,
+    equip: $item`cursed monkey's paw`,
+    available: () => have($item`cursed monkey's paw`) && get("_monkeyPawWishesUsed", 0) === 0,
+  },
+  {
     name: "Spring Kick",
     skill: $skill`Spring Kick`,
     equip: $item`spring shoes`,
@@ -24,18 +123,7 @@ export const banishSources: BanishSource[] = [
     name: "Sea *dent",
     skill: $skill`Sea *dent: Throw a Lightning Bolt`,
     equip: $item`Monodent of the Sea`,
-    available: () => have($item`Monodent of the Sea`),
-  },
-  {
-    name: "Heartstone",
-    skill: $skill`Heartstone: %banish`,
-    equip: $item`Heartstone`,
-    available: () => have($item`Heartstone`) && get("heartstoneBanishUnlocked"),
-  },
-  {
-    name: "snokebomb",
-    skill: $skill`Snokebomb`,
-    available: () => have($skill`Snokebomb`) && get("_snokebombUsed") < 3,
+    available: () => have($item`Monodent of the Sea`) && get("_seadentLightningUsed", 0) < 11,
   },
 ];
 
