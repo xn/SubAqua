@@ -1,7 +1,6 @@
 import {
   adv1,
   availableAmount,
-  booleanModifier,
   cliExecute,
   equip,
   itemAmount,
@@ -12,12 +11,7 @@ import {
 import { $item, $location, $slot, get } from "libram";
 
 import { killMacro } from "../../engine/combat";
-import {
-  ensureHelperBreathing,
-  hasBreathingEffect,
-  requiredFamiliarBreather,
-  seaKeyword,
-} from "../../engine/outfit";
+import { ensureHelperBreathing, requiredFamiliarBreather, seaKeyword } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
@@ -60,7 +54,11 @@ export function skateWarOpen(): boolean {
  * before every state2buff1 visit, UTS:2350-2353 at 89982f5). */
 export function claimIceBuff(): void {
   if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
-    if (!booleanModifier("Adventure Underwater")) equip($item`really, really nice swimming trunks`);
+    // Self-dressing: no task outfit stands behind this visit, and the buff page
+    // is a Sea page. One breathing rule for the whole file — the same
+    // preferredBreathingGear() pick dress() would make, lasso- and
+    // Waterproofly-aware, instead of the ash's bare trunks (audit item 9).
+    ensureHelperBreathing("the Skate Park ice buff");
     visitUrl("sea_skatepark.php?action=state2buff1");
   }
 }
@@ -75,12 +73,15 @@ export function skateParkTurn(): void {
   if (availableAmount(blade) === 0 && pullBudgetAllows(blade)) pullSequence(blade);
   forceNextNoncombat();
   if (get("noncombatForcerActive")) {
-    equip($item`really, really nice swimming trunks`);
+    // No breathing gear here: this branch runs no maximize, and the single
+    // ensureHelperBreathing() below covers both branches (audit item 1). The
+    // old unconditional trunks equip ignored Driving Waterproofly and stripped
+    // the sea chaps the engine pins for lasso training.
     cliExecute("unequip Peridot of Peril");
     if (itemAmount(blade) > 0) equip($slot`weapon`, blade);
   } else {
     // ...seaKeyword() makes the breather the maximizer's job (Evaluator.java:
-    // 396-404) instead of the explicit trunks below, which stay as the fallback.
+    // 396-404); ensureHelperBreathing() below is the one fallback behind it.
     const terms = ["-combat", "-equip Peridot of Peril"];
     const sea = seaKeyword();
     // A `sea` maximize can FAIL — the keyword masks Underwater Familiar too
@@ -96,19 +97,15 @@ export function skateParkTurn(): void {
     if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
       maximize(terms.join(", "), false);
     }
-    // The Skate Park is NOT an outfit zone, so mafia supplies no breathing here
-    // (KoLAdventure.java:2867-2884): the sea keyword above is the primary, and
-    // this is the fallback for when it was skipped or found nothing. Same rule
-    // as the engine's enforcement, not a second one; the item name's commas
-    // keep it out of the maximizer string.
-    if (!hasBreathingEffect() && !booleanModifier("Adventure Underwater")) {
-      equip($item`really, really nice swimming trunks`);
-    }
     if (availableAmount(blade) > 0) equip($slot`weapon`, blade);
   }
-  // Both branches: the forcer branch's trunks equip is just as capable of
-  // leaving us unable to breathe (trunkless account, lasso-pinned pants), and
-  // this zone has no engine dress() pass behind it.
+  // The ONE breathing fallback for both branches (audit items 1 + 9). The Skate
+  // Park is not an outfit zone, so mafia supplies no breathing (KoLAdventure
+  // .java:2867-2884): the `sea` keyword above is the primary and this is the
+  // fallback for when it was skipped, found nothing, or never ran (the forcer
+  // branch maximizes nothing). Same rule as the engine's enforcement, not a
+  // second one, and a superset of the ash's bare trunks equip — it honors
+  // Driving Waterproofly, keeps the lasso-pinned pants, and aborts loudly.
   ensureHelperBreathing("The Skate Park");
   // Familiar breathing, BOTH branches (and after the maximize, which may fill
   // the familiar slot itself): no `outfit` on the wrapper task means the
