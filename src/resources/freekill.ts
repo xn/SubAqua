@@ -25,14 +25,20 @@ export type FreeKillSource = CombatResource & {
   /** Groveling gravel forfeits the fight's drops; skip when drops matter. */
   dropSafe: boolean;
   /**
-   * One charge for the WHOLE day, and spending it locks out a whole ladder:
-   * Everything Looks Red blocks every dart bullseye (killMacro's opener as well
-   * as this list's first rung), Everything Looks Yellow blocks every yellow ray
-   * (the forced-drop ladder, selectYellowRay() below). Distinct from the merely
-   * limited sources — Chest X-Ray and Shattering Punch are 3/day, shadow bricks
-   * 13 — which a caller can spend without closing anything off. Callers that
-   * are only substituting a free kill for something else, rather than choosing
-   * to spend one here, pass `onceDaily: false` to skip these.
+   * Spending it closes off a whole ladder for effectively the rest of the day:
+   * Everything Looks Yellow blocks every yellow ray (the forced-drop ladder,
+   * selectYellowRay() below), so the parka's acid spit is the one entry that
+   * carries the flag today.
+   *
+   * The dart bullseye is deliberately NOT flagged (user correction
+   * 2026-08-27): Everything Looks Red is a ~30-turn COOLDOWN, not a daily
+   * charge, so the bullseye replenishes several times over a run and a
+   * substituted spend costs the route a handful of turns of dart access, not
+   * the day's. Same for the merely limited sources — Chest X-Ray and
+   * Shattering Punch at 3/day, shadow bricks at 13.
+   *
+   * Callers that are only substituting a free kill for something else, rather
+   * than choosing to spend one here, pass `onceDaily: false` to skip these.
    */
   onceDaily?: boolean;
 };
@@ -86,7 +92,9 @@ export const freeKillSources: FreeKillSource[] = [
     do: Macro.trySkill($skill`Darts: Aim for the Bullseye`),
     colosseumSafe: false,
     dropSafe: true,
-    onceDaily: true, // Everything Looks Red
+    // NOT onceDaily: Everything Looks Red is a ~30-turn cooldown that
+    // replenishes (user correction 2026-08-27), so a run that ends in a
+    // bullseye instead is a fair trade — see the flag's doc above.
   },
   {
     // Parka yellow-ray double duty: with darts, the only free kill high shiny spends.
@@ -193,9 +201,11 @@ const dartsOnlyNames = ["Darts: Bullseye", "Spit jurassic acid"];
  * First free kill the policy, zone, and fight context allow. A pending
  * curveball already banks the target's free win (CCS free_kill():14-15).
  *
- * `onceDaily: false` drops the sources whose single daily charge closes off a
- * whole ladder (see the flag). Only selectFreeRun's fallthrough passes it: a
- * free kill standing in for a run was never a decision to spend the day's ELR.
+ * `onceDaily: false` drops the sources whose spend closes off a whole ladder
+ * for the rest of the day (see the flag — today that is the parka's yellow
+ * ray alone; the dart bullseye is on a ~30-turn cooldown and is NOT dropped).
+ * Only selectFreeRun's fallthrough passes it: a free kill standing in for a
+ * run was never a decision to spend the forced-drop ladder.
  */
 export function selectFreeKill(
   options: {

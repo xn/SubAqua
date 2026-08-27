@@ -57,6 +57,7 @@ import {
   routeDamageEffects,
   shrugBadEffects,
   shrugForSongs,
+  sneakEffects,
 } from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
@@ -66,7 +67,12 @@ import {
   selectFreeKill,
   selectYellowRay,
 } from "../resources/freekill";
-import { selectFreeRun } from "../resources/freerun";
+import {
+  bootsRunAvailable,
+  freeRunSources,
+  isFreeRunSource,
+  selectFreeRun,
+} from "../resources/freerun";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
 
@@ -77,9 +83,21 @@ import {
   preferredBreathingGear,
   isTrainingLasso,
   seaKeyword,
+  sneakFamiliar,
   waterBreathingEquipment,
 } from "./outfit";
 import { Task } from "./task";
+
+const stompingBoots = $familiar`Pair of Stomping Boots`;
+
+/** Run sources that spend the familiar slot, by name — the exclusion list the
+ * free-run familiar rule in customize() hands selectFreeRun in a -combat
+ * context, where the sneak familiar outranks them. Derived from the ladder
+ * itself so a future familiar-slot run source is covered without a second
+ * edit. */
+const familiarRunSources = new Set(
+  freeRunSources.filter((source) => source.equip instanceof Familiar).map((source) => source.name),
+);
 
 function isUnderwaterTask(task: Task): boolean {
   return (
@@ -112,20 +130,19 @@ function equipResource(
  * The kill ladder appended behind every provided resource macro, per the
  * zero-action invariant in customize() below.
  *
- * `bullseye: false`: this ladder runs only when the banish / run / free kill
- * that was actually provided failed to fire, and the character has exactly one
- * Everything Looks Red charge for the day. The free-kill ladder
- * (resources/freekill.ts, and the opportunistic upgrade at the end of
- * customize()) spends that charge deliberately, on the fights the ash spends it
- * on; a monster we failed to run from or banish must not beat it to it.
- * killMacro(true) is NOT the alternative — it also drops the delevel openers,
- * which a fallback fight still wants.
+ * The PLAIN ladder, bullseye chain included. It briefly passed
+ * `{ bullseye: false }`, to keep a banish/run/free kill that failed to fire
+ * from claiming Everything Looks Red ahead of the free-kill ladder's own
+ * deliberate spends. ELR is a ~30-turn COOLDOWN, not a charge for the day
+ * (user correction 2026-08-27), so there is nothing to reserve — ending a
+ * fight we could not run from with a replenishing free kill beats fighting it,
+ * and the bullseye is back within the hour.
  *
  * Called from inside each provide's delayed `do`, so it sees the dressed
- * outfit.
+ * outfit — that part is load-bearing and unchanged.
  */
 function fallbackMacro(): Macro {
-  return killMacro(false, { bullseye: false });
+  return killMacro(false);
 }
 
 /**
@@ -288,7 +305,104 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       }
     }
     if (combat.can("freeRun")) {
-      const source = firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+      // THE FREE-RUN FAMILIAR RULE (user decision 2026-08-27). The sneak
+      // familiar (outfit.ts sneakFamiliar(): Peace Turkey, else Disgeist) and
+      // the Pair of Stomping Boots (24 free runaways/day off _banderRunaways,
+      // resources/freerun.ts) both want the familiar slot, and every free-run
+      // task in this route fielded the turkey — so the boots always failed the
+      // provide's equip gate and runs fell through to the GAP/navel ring or a
+      // free kill. The decision matrix:
+      //
+      //   context                       | familiar slot
+      //   ------------------------------+-----------------------------------
+      //   +combat / non-sneak           | boots, up front, whenever the
+      //   (no -combat modifier, no      | ladder would take them — the slot
+      //   sneakEffects, familiar unset  | was empty anyway, so nothing is
+      //   or already the sneak pick)    | lost
+      //   ------------------------------+-----------------------------------
+      //   -combat (NC hunts)            | sneak familiar first; boots ONLY as
+      //                                 | last resort — the walk runs over the
+      //                                 | non-familiar RUN sources alone, and
+      //                                 | only when it comes back empty do the
+      //                                 | boots take the slot, ahead of the
+      //                                 | free-kill fallthrough. A free run is
+      //                                 | itself a -combat for that turn, so
+      //                                 | the trade is worth it exactly when
+      //                                 | the alternative is fighting.
+      //   ------------------------------+-----------------------------------
+      //   task names its own non-sneak  | untouched — an explicit familiar
+      //   familiar (guild.ts's Artistic | means the task needs THAT familiar
+      //   Goth Kid, an imprint task's   | (crayon wanderers, sword imprints);
+      //   sword)                        | neither rule may evict it
+      //
+      // Behind all of it, unchanged: selectFreeRun's fallthrough cap
+      // (onceDaily: false), which keeps a run that found nothing from taking
+      // down a whole ladder for the day — today the parka's yellow ray alone.
+      const sneak = sneakFamiliar();
+      // "The slot is ours to spend": nothing asked for, or the sneak pick that
+      // this rule is explicitly allowed to trade away. $familiar.none is
+      // deliberate (a task that wants NO familiar out) and so is anything else.
+      const familiarSlotFree =
+        outfit.familiar === undefined || (sneak !== undefined && outfit.familiar === sneak);
+      const bootsFieldable = have(stompingBoots) && familiarSlotFree && bootsRunAvailable(location);
+      // Ordered cheapest-first, and `||` short-circuits: the effects probe
+      // resolves the task's delayed effect list and rebuilds sneakEffects(),
+      // so it only runs when the modifier and the familiar haven't answered.
+      const usesSneakEffects = (): boolean => {
+        const wanted = undelay(task.effects, this.getContext(task)) ?? [];
+        if (wanted.length === 0) return false;
+        const sneaky = sneakEffects();
+        return wanted.some((effect) => sneaky.includes(effect));
+      };
+      const wantsSneak =
+        outfit.modifier.some((mod) => mod.includes("-combat")) ||
+        (sneak !== undefined && outfit.familiar === sneak) ||
+        usesSneakEffects();
+      // equipFamiliar() refuses to overwrite an already-set familiar
+      // (grimoire outfit.js:279-283), so a swap has to clear the slot first;
+      // going back through equip() rather than assigning keeps its have() /
+      // rider / famequip-canEquip checks, and the prior familiar is restored
+      // if any of them says no.
+      const fieldBoots = (reason: string): boolean => {
+        const priorFamiliar = outfit.familiar;
+        outfit.familiar = undefined;
+        if (!outfit.equip(stompingBoots)) {
+          outfit.familiar = priorFamiliar;
+          return false;
+        }
+        print(`free run: fielding Stomping Boots (${reason})`, "blue");
+        return true;
+      };
+
+      if (!wantsSneak && bootsFieldable) fieldBoots("+combat context");
+      // -combat: a restricted first pass over the non-familiar RUN sources
+      // only — every familiar-slot source excluded by name, and the free-kill
+      // fallthrough (a selectFreeRun result that is not a FreeRunSource) read
+      // as "the run ladder is exhausted" and dropped rather than taken. That
+      // exhaustion point is precisely where the boots earn the slot, so the
+      // fallthrough must not be spent in front of them.
+      let source = wantsSneak
+        ? firstEquippable(outfit, (exclude) => {
+            const candidate = selectFreeRun({
+              location,
+              exclude: new Set([...exclude, ...familiarRunSources]),
+            });
+            return candidate && isFreeRunSource(candidate) ? candidate : undefined;
+          })
+        : firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+      if (!source && wantsSneak) {
+        // Last resort: hand the slot to the boots (when it is ours to hand
+        // over and the ladder would take them), then walk unrestricted. The
+        // boots now pass their own equip gate; if they were not fieldable
+        // this pass is exactly the old behavior — the familiar sources fail
+        // the gate as before and the walk ends on the free-kill fallthrough,
+        // still capped to onceDaily: false inside selectFreeRun.
+        // The familiar-breathing block at the end of customize() runs after
+        // this and gives the (non-aquatic) boots their breather — and
+        // bootsRunAvailable() already refused the swap if no breather exists.
+        if (bootsFieldable) fieldBoots("no other run source");
+        source = firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+      }
       if (source) {
         resources.provide("freeRun", {
           prepare: source.prepare,

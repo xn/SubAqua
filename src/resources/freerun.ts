@@ -37,6 +37,29 @@ function bootsRunawaysLeft(): number {
   return Math.max(0, Math.floor(totalFamiliarWeight(boots) / 5) - get("_banderRunaways"));
 }
 
+/** The boots entry's full gate — banked runaways AND the underwater breathing
+ * check below — in one call, so the engine's free-run familiar rule
+ * (engine/engine.ts customize(), user decision 2026-08-27) can ask "would the
+ * ladder take the boots here?" BEFORE it puts them in the familiar slot.
+ * Fielding them on a gate the selector would then fail would strand a
+ * non-breathing familiar underwater, which customize()'s familiar-breathing
+ * block throws on. selectFreeRun() applies exactly this function, so the two
+ * cannot drift. */
+export function bootsRunAvailable(location?: Location): boolean {
+  if (bootsRunawaysLeft() <= 0) return false;
+  // The boots cannot breathe: underwater they need a familiar breather (an
+  // unknown zone is treated as underwater — every caller that omits the
+  // location is a sea task).
+  if (
+    (!location || location.environment === "underwater") &&
+    !hasBreathingEffect() &&
+    !familiarWaterBreathingEquipment.some((it) => have(it))
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /** Ordered per ash freeRun() (UnderTheSea.ash:255-265) with the CCS spenders
  * folded in. Spring shoes appear twice on purpose: banish mode upgrades
  * Spring Away to Spring Kick (CCS:98); both share the Everything Looks Green
@@ -110,8 +133,11 @@ export const freeRunSources: FreeRunSource[] = [
     // One free runaway per five full pounds, on the Bandersnatch counter
     // (FightRequest.java:11861-11865: modifiedWeight / 5 > _banderRunaways).
     // Ash freeRun() G:487-494 + CCS free_run() ladder at 89982f5. Takes the
-    // familiar slot, so it only lands on tasks that set no familiar of
-    // their own (equip-gated provide in engine.customize()).
+    // familiar slot: engine.customize()'s free-run familiar rule (user
+    // decision 2026-08-27) decides whether this task's familiar slot is the
+    // boots' to have — up front in a +combat context, last-resort in a
+    // -combat one — and the provide stays equip-gated either way, so on a
+    // task whose familiar is spoken for the ladder simply walks past this.
     name: "Release the Boots",
     available: () => bootsRunawaysLeft() > 0,
     remaining: bootsRunawaysLeft,
@@ -190,6 +216,16 @@ export const freeRunSources: FreeRunSource[] = [
   },
 ];
 
+/** Tells an actual run apart from the free-kill fallthrough in a
+ * selectFreeRun() result. engine.customize()'s -combat pass uses it to stop at
+ * the end of the RUN ladder: that is the point where the Stomping Boots earn
+ * the familiar slot — 24 banked runaways are cheaper than any charge the
+ * free-kill ladder would spend here — so the fallthrough must not be taken
+ * ahead of them. */
+export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source is FreeRunSource {
+  return "banishes" in source;
+}
+
 /**
  * First run source the mode, zone, and fight context allow. `banish: true`
  * additionally admits the banishing sources (and prefers Spring Kick over
@@ -203,33 +239,36 @@ export const freeRunSources: FreeRunSource[] = [
  * are runs and banishes only. It never throws a dart. The ash only ever spends
  * Everything Looks Red from free_kill(), at its own call sites.
  *
- * That distinction matters here because the fallthrough fires far more often
- * than it looks: all five freeRun tasks in this route field a familiar of their
- * own (sneakFamiliar(), engine/outfit.ts — or the goth kid in guild.ts), so
- * Release the Boots — 20+ banked
- * runaways on a grown Pair of Stomping Boots — always fails the equip gate in
- * firstEquippable() and the ladder walks past it. Without a limit the dart
- * bullseye becomes the route's DEFAULT run source and the day's single ELR is
- * gone on the first monster we merely wanted to leave. So the fallthrough is
- * capped to free kills that are NOT once-a-day-exclusive (`onceDaily: false`):
- * Chest X-Ray, Shattering Punch, Assert your Authority, shadow bricks and the
- * rest still substitute — spending one of three or one of thirteen charges to
- * skip a fight is a fair trade — while the darts and the parka ray, whose one
- * charge closes off a whole ladder for the day, do not.
+ * That distinction matters here because the fallthrough fires often: all five
+ * freeRun tasks in this route field a familiar of their own (sneakFamiliar(),
+ * engine/outfit.ts — or the goth kid in guild.ts), so Release the Boots — 20+
+ * banked runaways on a grown Pair of Stomping Boots — used to fail the equip
+ * gate in firstEquippable() every time and the ladder walked past it. The
+ * engine's free-run familiar rule (below) fixes that case; what is left is
+ * capped to free kills that do not close off a whole ladder for the rest of
+ * the day (`onceDaily: false`). Today that excludes exactly one source, the
+ * parka's Everything Looks Yellow acid spit, which would take the forced-drop
+ * ladder down with it. The dart bullseye is NOT excluded (user correction
+ * 2026-08-27): Everything Looks Red is a ~30-turn cooldown that replenishes,
+ * so ending a fight we could not run from with a bullseye — or with a Chest
+ * X-Ray, a Shattering Punch, a shadow brick — is a fair trade, and the darts
+ * are back a handful of turns later.
  *
  * Drops are deliberately not a filter (dropsMatter stays false): the caller
  * asked to LEAVE this monster, so it was never expecting its drops, and a
  * drop-forfeiting kill costs it nothing.
  *
- * OPEN DESIGN CALL — Peace Turkey vs. the Boots. The equip conflict above is
- * treated as fixed here: familiar selection is not touched, and the run ladder
- * simply walks past the Boots. Whether that is right is a separate question.
- * sneakFamiliar() (Peace Turkey, ash UTS:349-355) buys -combat, which thins the
- * whole zone; the Boots buy ~20 free runs outright, which is what a freeRun
- * task actually asked for, and the two cannot both hold the familiar slot. A
- * per-task choice (Boots on tasks whose combat strategy is freeRun-dominated,
- * turkey on the -combat delay zones) is plausible and untested. Left alone
- * until someone measures it in net turns.
+ * DESIGN CALL, SETTLED — Peace Turkey vs. the Boots (user decision
+ * 2026-08-27). sneakFamiliar() (Peace Turkey, ash UTS:349-355) buys -combat,
+ * which thins the whole zone; the Boots buy ~24 free runs outright, which is
+ * what a freeRun task actually asked for, and the two cannot both hold the
+ * familiar slot. The resolution lives in engine.customize()'s freeRun branch,
+ * not here: in a +combat/non-sneak context the boots take the slot up front
+ * (nothing is lost); in a -combat context the sneak familiar keeps it and the
+ * boots are the LAST resort, fielded only when no non-familiar run source can
+ * equip for that task. This selector is unchanged by that rule — it still
+ * returns the first source the mode, zone and fight context allow, and the
+ * engine still equip-gates whatever comes back.
  *
  * `exclude` names sources the caller has already rejected, so it can ask for
  * the NEXT candidate. The engine needs this because availability is only half
@@ -267,15 +306,9 @@ export function selectFreeRun(
     }
     // The boots cannot breathe: underwater they need a familiar breather
     // (else engine.customize()'s familiar check would throw on a familiar
-    // the task never asked for).
-    if (
-      source.name === "Release the Boots" &&
-      (!location || location.environment === "underwater") &&
-      !hasBreathingEffect() &&
-      !familiarWaterBreathingEquipment.some((it) => have(it))
-    ) {
-      return false;
-    }
+    // the task never asked for). Same gate the engine consults before it
+    // fields them — see bootsRunAvailable() above.
+    if (source.name === "Release the Boots") return bootsRunAvailable(location);
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;
       // Skip when snokebomb's existing banish already covers this zone
