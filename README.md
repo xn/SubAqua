@@ -10,6 +10,8 @@ resource waste, then stops — no aftercore, no farming.
 - KoLmafia r29108 or later.
 - A Sauceror (or at least a Saucegeyser/Saucestorm caster) is the tested
   route; other classes fall back to plain attacks in boss fights.
+- A clan photobooth with the Sheriff kit (e.g. BAFH). Not a `sim` row — the
+  run checks it at its first free action and aborts with instructions.
 - **Five unblemished pearls loaded into the Eternity Codpiece before you
   ascend** — the finale needs them and they cannot be acquired in-path.
   `subaqua sim` checks this and everything below.
@@ -18,7 +20,6 @@ resource waste, then stops — no aftercore, no farming.
 - Sushi-rolling mat installed; permanent sea zone unlocks (Dive Bar,
   Marinara Trench, Anemone Mine, Skate Park, Madness Reef) done; underwater
   maps purchased.
-- A clan photobooth with the Sheriff kit (e.g. BAFH).
 
 ## Usage
 
