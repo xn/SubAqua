@@ -185,6 +185,16 @@ function libraryFarmTask(force: boolean): Task {
 export function libraryQuest(): Quest {
   return {
     name: "Library",
+    // The ash wraps school + library + scroll in `if (isMerkinHighPriest ==
+    // false)` (UTS ab1105e:2497), and schoolQuest carries the same guard.
+    // Without it the farm lanes re-open the instant the High Priest lands:
+    // ChoiceControl.java:1332 consumes the dreadscroll on success
+    // (processItem(DREADSCROLL, -1)), so farmCompleted()'s
+    // `availableAmount(dreadscroll) > 0` flips back to false while the scholar
+    // gear still makes a lane `ready` — and the engine would farm +item to the
+    // soft:30 abort. grimoire ORs quest completion into every task
+    // (route.js:31-35).
+    completed: () => get("isMerkinHighPriest", false),
     tasks: [
       libraryFarmTask(true),
       libraryFarmTask(false),
