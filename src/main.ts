@@ -11,7 +11,7 @@ import { buildRunplan } from "./tasks/runplans";
 const seaPath = $path`11,037 Leagues Under the Sea`;
 
 export function main(command = ""): void {
-  sinceKolmafiaRevision(29057);
+  sinceKolmafiaRevision(29108);
 
   Args.fill(args, command);
   if (args.help) {
