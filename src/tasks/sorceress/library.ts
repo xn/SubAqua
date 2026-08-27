@@ -1,6 +1,8 @@
+import { OutfitSpec } from "grimoire-kolmafia";
 import {
   abort,
   availableAmount,
+  Effect,
   fullnessLimit,
   itemAmount,
   myFullness,
@@ -11,7 +13,7 @@ import { $effect, $item, $location, $monster, get, have, Macro } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
-import { Quest } from "../../engine/task";
+import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import { godRunGuardCheck } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
@@ -38,6 +40,28 @@ function catalogCluesKnown(): boolean {
 }
 
 /**
+ * The Mer-kin Library is outfit-gated ("Mer-kin Scholar's Vestments",
+ * outfits.txt:65 / adventures.txt:304): without the two scholar pieces mafia
+ * refuses the zone and the adventure costs nothing, so a farm task that ran
+ * anyway would no-op its way to the soft limit and abort with a misleading
+ * message. Upstream buys the gear immediately before the loop (UTS:2711);
+ * here Task 10's school regime supplies it and this gate waits for it.
+ */
+function scholarGearReady(): boolean {
+  return scholarPieces.every((piece) => have(piece));
+}
+
+/**
+ * Upstream researcherForce (G:1019-1024 @89982f5) declines the Force once BOTH
+ * combat scrolls are in hand — one charge lands the pair, and Library Farm
+ * keeps running afterwards for the dreadscroll and the catalog NC. Selects
+ * between the two farm lanes below.
+ */
+function researcherForceWanted(): boolean {
+  return itemAmount(killscroll) === 0 || itemAmount(healscroll) === 0;
+}
+
+/**
  * Upstream 2026-08-26 (UTS:778-781 @89982f5): the zirconia's gaze only earns
  * the accessory slot while scroll drops are still WANTED — a second healscroll,
  * the worktea/knucklebone that carry clue 7, or the killscroll that carries
@@ -55,73 +79,115 @@ function bczWanted(): boolean {
   );
 }
 
+/**
+ * Combat clue throws (CCS:1155-1163; every library monster is mer-kin phylum,
+ * so no phylum guard needed here).
+ *
+ * The researcher is cut out of the throws while its Force is wanted. grimoire
+ * compiles starting macro -> monster macros -> DEFAULT MACRO -> monster
+ * actions (combat.js compile(), :242-266), so an unguarded throw fires ahead
+ * of the `forceItems` action and the killscroll ("Deals tremendous Physical
+ * Damage to Mer-kin", modifiers.txt:14101) would end the fight before `Use the
+ * Force` ever ran. Upstream dispatches researcherForce at CCS:464, some 700
+ * lines ahead of the throws.
+ */
+function clueThrows(): Macro {
+  const needHeal = get("dreadScroll2", 0) === 0;
+  const needKill = get("dreadScroll5", 0) === 0;
+  const throws = new Macro();
+  if (needHeal) throws.tryItem(healscroll);
+  if (needKill) throws.tryItem(killscroll);
+  // Never emit a bodyless `if ... endif` once both clues are known.
+  if (!needHeal && !needKill) return throws;
+  return researcherForceWanted() ? Macro.ifNot(researcher, throws) : throws;
+}
+
+function farmCompleted(): boolean {
+  return availableAmount(dreadscroll) > 0 && catalogCluesKnown();
+}
+
+function farmPrepare(): void {
+  sourceEnhanceItems();
+  recover();
+}
+
+/**
+ * Outfit flips like the ash (merkinLib G:726-760): +item while the scroll is
+ * missing (researcher scrolls, worktea, knucklebone are the 10% slots),
+ * -combat once it drops (the remaining need is the catalog NC). The researcher
+ * saber Force lands both combat scrolls in one charge — the monodent stays OUT
+ * of the weapon slot while a spare charge exists (G:733-748); Phase 3's engine
+ * handles the equip.
+ */
+function farmOutfit(): OutfitSpec {
+  const scrollsMissing =
+    itemAmount(killscroll) === 0 ||
+    itemAmount(healscroll) === 0 ||
+    itemAmount(worktea) === 0 ||
+    itemAmount(knucklebone) === 0;
+  const saberForResearcher =
+    scrollsMissing && saberForcesFree() > 0 && have($item`Fourth of May Cosplay Saber`);
+  const weapon = !saberForResearcher && scrollsMissing && have(monodent) ? [monodent] : [];
+  // Unowned entries in `equip`/`avoid` are filtered by the engine before
+  // Outfit.from (engine.ts:302-303), so no have() gate is needed here; `avoid`
+  // is what hands the accessory slot back to the maximizer once the drops are
+  // in (upstream simply stops emitting its if_equip in the same branch).
+  const accessory = bczWanted() ? [zirconia] : [];
+  const avoid = bczWanted() ? [] : [zirconia];
+  if (availableAmount(dreadscroll) === 0) {
+    return { modifier: "item", equip: [...scholarPieces, ...weapon, ...accessory], avoid };
+  }
+  return {
+    modifier: "-combat",
+    equip: [...scholarPieces, ...accessory],
+    avoid,
+    familiar: sneakFamiliar(),
+  };
+}
+
+function farmEffects(): Effect[] {
+  return availableAmount(dreadscroll) === 0 ? itemDropEffects() : sneakEffects();
+}
+
+/**
+ * Farm the dreadscroll + catalog clues 1/6/8 (choice 704, handled in the
+ * bundle; mafia tracks merkinCatalogChoices).
+ *
+ * Two lanes rather than one, because grimoire freezes a task's combat strategy:
+ * getTasks() shallow-copies every task at build time (route.js:25) and the run
+ * plan is built once (runplans.ts buildRunplan / main.ts:63), so `combat` and
+ * `saberPurpose` cannot be recomputed per turn. `ready` picks the lane instead:
+ * the Force lane while a combat scroll is missing, the plain-kill lane once
+ * both are in hand (upstream researcherForce, G:1019-1024).
+ */
+function libraryFarmTask(force: boolean): Task {
+  return {
+    name: force ? "Library Force" : "Library Farm",
+    ready: () => scholarGearReady() && researcherForceWanted() === force,
+    completed: farmCompleted,
+    prepare: farmPrepare,
+    do: library,
+    ...(force ? { saberPurpose: "researcher" as const } : {}),
+    combat: force
+      ? new CombatStrategy().macro(clueThrows).forceItems(researcher).kill()
+      : new CombatStrategy().macro(clueThrows).kill(),
+    outfit: farmOutfit,
+    effects: farmEffects,
+    limit: {
+      soft: 30,
+      message: `Library is yielding neither the dreadscroll nor catalog clues (${
+        force ? "scroll-Force" : "plain"
+      } lane).`,
+    },
+  };
+}
+
 export function libraryQuest(): Quest {
   return {
     name: "Library",
     tasks: [
-      {
-        // Farm the dreadscroll + catalog clues 1/6/8 (choice 704, handled in
-        // the bundle; mafia tracks merkinCatalogChoices). Outfit flips like
-        // the ash (merkinLib G:726-760): +item while the scroll is missing
-        // (researcher scrolls, worktea, knucklebone are the 10% slots),
-        // -combat once it drops (the remaining need is the catalog NC). The
-        // researcher saber Force lands both combat scrolls in one charge —
-        // the monodent stays OUT of the weapon slot while a spare charge
-        // exists (G:733-748); Phase 3's engine handles the equip.
-        name: "Library Farm",
-        completed: () => availableAmount(dreadscroll) > 0 && catalogCluesKnown(),
-        prepare: (): void => {
-          sourceEnhanceItems();
-          recover();
-        },
-        do: library,
-        saberPurpose: "researcher",
-        combat: new CombatStrategy()
-          .macro(() => {
-            // Combat clue throws (CCS:1155-1163; every library monster is
-            // mer-kin phylum, so no phylum guard needed here).
-            const m = new Macro();
-            if (get("dreadScroll2", 0) === 0) m.tryItem(healscroll);
-            if (get("dreadScroll5", 0) === 0) m.tryItem(killscroll);
-            return m;
-          })
-          .forceItems(researcher)
-          .kill(),
-        outfit: () => {
-          const scrollsMissing =
-            itemAmount(killscroll) === 0 ||
-            itemAmount(healscroll) === 0 ||
-            itemAmount(worktea) === 0 ||
-            itemAmount(knucklebone) === 0;
-          const saberForResearcher =
-            scrollsMissing && saberForcesFree() > 0 && have($item`Fourth of May Cosplay Saber`);
-          const weapon = !saberForResearcher && scrollsMissing && have(monodent) ? [monodent] : [];
-          // grimoire throws when asked to equip something unowned
-          // (outfit.js:305-309), so the accessory is have()-gated; `avoid`
-          // hands the slot back to the maximizer once the drops are in.
-          const wantZirconia = bczWanted();
-          const accessory = wantZirconia && have(zirconia) ? [zirconia] : [];
-          const avoid = wantZirconia ? [] : [zirconia];
-          if (availableAmount(dreadscroll) === 0) {
-            return {
-              modifier: "item",
-              equip: [...scholarPieces, ...weapon, ...accessory],
-              avoid,
-            };
-          }
-          return {
-            modifier: "-combat",
-            equip: [...scholarPieces, ...accessory],
-            avoid,
-            familiar: sneakFamiliar(),
-          };
-        },
-        effects: () => (availableAmount(dreadscroll) === 0 ? itemDropEffects() : sneakEffects()),
-        limit: {
-          soft: 30,
-          message: "Library is yielding neither the dreadscroll nor catalog clues.",
-        },
-      },
+      libraryFarmTask(true),
+      libraryFarmTask(false),
       {
         // Clue 4 (ash UTS:2629-2634): knucklebone bounce.
         name: "Knucklebone",
