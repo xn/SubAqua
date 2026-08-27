@@ -175,7 +175,12 @@ function pickSquare(state: string): [number, number] {
  * engine post(). */
 function mineSquare(): void {
   equip(digpick);
-  equip($item`really, really nice swimming trunks`);
+  // No breathing gear here: `Mine Teflon` is `underwater: true`, so the
+  // engine already owns player breathing (engine.ts customize()'s `sea`
+  // keyword + dress()'s last-chance verification) and nothing between dress
+  // and this loop changes gear. The ash's teflon() equips trunks via
+  // equipSwimTrunks(), which SKIPS under Driving Waterproofly; the
+  // unconditional equip here did not, and it overrode the maximizer's pick.
   visitUrl("mining.php?mine=3"); // refresh mineState3
   const state = get("mineState3", "");
   if (state.length !== 36) {
