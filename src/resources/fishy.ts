@@ -45,7 +45,7 @@ const nigiris: [string, Item][] = [
 /** Ash eatSushi() (UTS:650-662): first nigiri whose fish meat is on hand.
  * Sushi is made-and-eaten in one step off the rolling mat; mafia's `eat`
  * command knows sushi names. Returns true if a sushi was eaten. */
-function eatSushi(): boolean {
+export function eatSushi(): boolean {
   if (!get("hasSushiMat")) return false;
   if (!have($item`white rice`)) {
     retrieveItem($item`white rice`, 1);
@@ -302,7 +302,15 @@ export function maintainFishy(): void {
     if (have(fishy)) return;
   }
 
-  // Rung 1.5: Do some automatic fishy optimization.
+  // Rung 1.5: Lutz the Ice Skate — free 30-turn Fishy once the skate war
+  // resolved for ice (statuseffects.txt:552; SkateParkRequest state2buff1).
+  // Ahead of the optimizer below: a free buff always beats consuming a source.
+  if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
+    cliExecute("skate lutz");
+    if (have(fishy)) return;
+  }
+
+  // Rung 1.6: Do some automatic fishy optimization.
   const source = cheapestFishySource();
   if (source) {
     useFishySource(source);
