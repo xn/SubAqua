@@ -9,9 +9,21 @@ import {
   useSkill,
   visitUrl,
 } from "kolmafia";
-import { $effect, $item, $items, $location, $skill, get, have, withProperty } from "libram";
+import {
+  $effect,
+  $item,
+  $items,
+  $location,
+  $skill,
+  $slot,
+  get,
+  have,
+  unequip,
+  withProperty,
+} from "libram";
 
 import { CombatStrategy, killMacro } from "../../engine/combat";
+import { requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
@@ -52,6 +64,20 @@ function haveOreOrFins(): boolean {
 }
 function oreSecured(): boolean {
   return haveOreOrFins() || tailpieceOwned();
+}
+
+/**
+ * Familiar breathing for the two Caliginous Abyss trips below. Those tasks
+ * dress themselves (function-`do`, no `outfit`), so the engine's enforcement
+ * (engine.ts:240-246, which reads outfit.familiar) never runs — and the
+ * Digpick task's `item` outfit declares no familiar either, so
+ * the maximizer is free to swap a das boot out for item-drop famequip; mafia
+ * then refuses the zone outright (KoLAdventure.java:2880) and the soft:8 abort
+ * blames scale drops instead. Same shape as skatepark.ts:82-83.
+ */
+function equipFamiliarBreather(): void {
+  const famBreather = requiredFamiliarBreather();
+  if (famBreather !== $item.none) equip($slot`familiar`, famBreather);
 }
 
 /** Free-pick budget: 5/day Unaccompanied Miner or an active Loded effect
@@ -219,6 +245,13 @@ export function mineQuest(): Quest {
         completed: maskOwned,
         do: (): void => {
           if (availableAmount(scale) >= 3) {
+            // Both barter rows spend a WEARABLE (helmet on ROW124, chaps on
+            // ROW125) and CoinmasterData.availableTokens counts inventory only,
+            // so an equipped cost item fails the trade and lands in the
+            // "Grandma may be unreachable" branch below. Upstream unequips both
+            // before either barter (UTS ab1105e:2455).
+            unequip($item`aerated diving helmet`);
+            unequip($item`sea chaps`);
             // Grandma's Sea Shop is a coinmaster (coinmasters.txt ROW124:
             // crappy Mer-kin mask <- aerated diving helmet + 3 pristine fish
             // scale); autoSatisfyWithCoinmasters defaults false
@@ -249,6 +282,7 @@ export function mineQuest(): Quest {
             );
           }
           equip(blackGlass); // accessory; required for the Abyss (KoLAdventure CALIGINOUS_ABYSS gate)
+          equipFamiliarBreather();
           recover();
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
@@ -264,6 +298,10 @@ export function mineQuest(): Quest {
         completed: tailpieceOwned,
         do: (): void => {
           if (availableAmount(scale) >= 3) {
+            // Same pre-barter unequips as the mask row above (UTS
+            // ab1105e:2455): the sea chaps are ROW125's own cost item.
+            unequip($item`aerated diving helmet`);
+            unequip($item`sea chaps`);
             // Chain: teflon ore -> smith teflon swim fins -> ROW125 trade
             // (coinmasters.txt: crappy Mer-kin tailpiece <- sea chaps +
             // teflon swim fins + 3 pristine fish scale); mafia's
@@ -296,6 +334,7 @@ export function mineQuest(): Quest {
             );
           }
           equip(blackGlass);
+          equipFamiliarBreather();
           recover();
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
