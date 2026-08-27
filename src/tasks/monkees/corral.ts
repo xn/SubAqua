@@ -1,4 +1,4 @@
-import { availableAmount, retrieveItem } from "kolmafia";
+import { availableAmount, Monster, retrieveItem } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -23,6 +23,7 @@ import {
   superItemDropEffects,
   survivalEffects,
 } from "../../lib/moods";
+import { banishActive } from "../../resources/banish";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -84,6 +85,29 @@ function seahorseMacro(): Macro {
   return ready ? tamingMacro() : Macro.runaway().repeat();
 }
 
+/**
+ * Peridot of Peril target for the two corral grind tasks (the garbo fork
+ * fishyPrep.ts:196-251, esp. :248-251 `getMonstersToBanish()[0]`): force the
+ * monster the task is going to banish anyway, so the banish lands on the first
+ * corral turn instead of on whatever turn the RNG first offers a rustler
+ * (expected ~4). The engine equips the Peridot and writes choice 1557
+ * (engine.ts customize()/`do`), once per zone per day.
+ *
+ * Undefined once the rustler is already banished: a forced monster ignores the
+ * banish, so perilling it then would spend the zone's one imperil on a fight we
+ * had already bought off.
+ *
+ * NOT on "Corral Opener": that task is a single turn built around a sea cow
+ * (McTwist forces its drops and it is where the once-a-day squint is spent,
+ * ash UTS:2229-2261, :1650-1651), so forcing a rustler there would throw the
+ * squint away. Leaving it unset also keeps the day's imperil available for the
+ * grind tasks below, which run immediately after. NOT on "Tame Seahorse"
+ * either — the wild seahorse is a BOSS, which the peril choice does not offer.
+ */
+function peridotBanishTarget(): Monster | undefined {
+  return banishActive(rustler) ? undefined : rustler;
+}
+
 export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Quest {
   // Ash doSWord() (G:773-780 at 89982f5): the imprinted sword rides only
   // while lassos are still short — seven banked (upstream bumped 6 → 7 to
@@ -142,6 +166,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         ready: () => get("corralUnlocked"),
         completed: () => leatherDone() || tamed(),
         do: corral,
+        peridot: peridotBanishTarget,
         saberPurpose: "seaCow" as const,
         combat: new CombatStrategy()
           .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
@@ -186,6 +211,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         ready: () => get("corralUnlocked"),
         completed: () => (lassosDone() && availableAmount(lasso) >= 1) || tamed(),
         do: corral,
+        peridot: peridotBanishTarget,
         combat: new CombatStrategy()
           .macro(
             () =>

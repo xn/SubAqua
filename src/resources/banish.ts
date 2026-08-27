@@ -9,7 +9,7 @@ import {
   Skill,
   toMonster,
 } from "kolmafia";
-import { $class, $effect, $item, $skill, get, have } from "libram";
+import { $class, $effect, $item, $locations, $skill, get, have } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
@@ -162,6 +162,26 @@ export function banishActive(target: Monster): boolean {
 }
 
 /**
+ * Zones that get the 11/day Monodent banish ahead of the gear-picker order
+ * (the garbo fork resources/banish.ts:68-74 + seaDent.ts:19-22, `canLightningBanish`).
+ *
+ * The corral is the only place in the route that wants ONE banish held for
+ * 20-40 turns (the Mer-kin rustler, off a three-monster roster) while the
+ * guild, the outpost and the gymnasium all still want banishes of their own —
+ * and every other source in the list is 1-3 a day. Taking the first available
+ * source here burns Bowl Curveball / Asdon / Spring Kick / Feel Hatred on the
+ * rustler and leaves the later zones with nothing, while `_seadentLightning`
+ * still has ten uses left.
+ *
+ * Deliberate deviation from the ash, which at the corral calls free_run(banish)
+ * FIRST and only reaches for the Lightning Bolt as the second banish in the
+ * same fight (CCS:795-828, where the bolt is the cowboy/cow branch and the
+ * rustler gets the Heartstone banish). The ash is spending from a full
+ * aftercore-ish kit; in-run the scarce sources are worth more later.
+ */
+const monodentZones = $locations`The Coral Corral`;
+
+/**
  * Ash banishGear() (iotm.ash:1115-1132) minus its `<slot>Override` pref
  * side-effect (spec §4: replaced by returning the equip requirement for the
  * task outfit). Picks the first available source whose existing banish is
@@ -169,11 +189,16 @@ export function banishActive(target: Monster): boolean {
  * there, so re-pointing the source wastes nothing.
  */
 export function pickBanishSource(location?: Location): BanishSource | undefined {
-  return banishSources.find((source) => {
+  const usable = (source: BanishSource): boolean => {
     if (!source.available()) return false;
     if (!location) return true;
     const current = banishedBy(source);
     if (!current) return true;
     return (appearanceRates(location)[current.name] ?? 0) === 0;
-  });
+  };
+  if (location && monodentZones.includes(location)) {
+    const monodent = banishSources.find((source) => source.name === "Sea *dent");
+    if (monodent && usable(monodent)) return monodent;
+  }
+  return banishSources.find((source) => usable(source));
 }
