@@ -292,20 +292,6 @@ export function resolveWantedEffects(effects: Effect[]): {
 }
 
 /**
- * Acquire a mood list by hand, for the two places the engine's own
- * acquireEffects() cannot serve: a task's prepare() (which is the only hook
- * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
- *
- * Buffs are optional (user rule 2026-08-27): a cast that still fails after
- * resolveWantedEffects() has already dropped the unaffordable/over-cap
- * entries — a song bumped back over cap by the character's own mood, a
- * daily limit raced by something outside this file's gates, etc. — is
- * fail-soft, same as the engine's acquireEffects() override.
- *
- * @param context optional label for the transparency line below (e.g. a task
- * or call-site name); omitted callers just get "Effects: …".
- */
-/**
  * Is this thrown value libram's ensureEffect() giving up on a buff?
  *
  * The fail-soft catches around ensureEffect() (applyEffects below, and the
@@ -324,11 +310,25 @@ export function resolveWantedEffects(effects: Effect[]): {
  * of a missed `instanceof` is the exact regression this guard is meant to
  * prevent in reverse — a hard abort on an optional buff.
  */
-export function isEnsureError(e: unknown): boolean {
+export function isEnsureError(e: unknown): e is Error {
   if (e instanceof EnsureError) return true;
   return typeof e === "object" && e !== null && (e as { name?: unknown }).name === "Ensure Error";
 }
 
+/**
+ * Acquire a mood list by hand, for the two places the engine's own
+ * acquireEffects() cannot serve: a task's prepare() (which is the only hook
+ * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
+ *
+ * Buffs are optional (user rule 2026-08-27): a cast that still fails after
+ * resolveWantedEffects() has already dropped the unaffordable/over-cap
+ * entries — a song bumped back over cap by the character's own mood, a
+ * daily limit raced by something outside this file's gates, etc. — is
+ * fail-soft, same as the engine's acquireEffects() override.
+ *
+ * @param context optional label for the transparency line below (e.g. a task
+ * or call-site name); omitted callers just get "Effects: …".
+ */
 export function applyEffects(effects: Effect[], context?: string): void {
   reserveMpFor(effects);
   const { wanted, skipLines } = resolveWantedEffects(effects);

@@ -24,6 +24,17 @@ export type FreeKillSource = CombatResource & {
   colosseumOnly?: boolean;
   /** Groveling gravel forfeits the fight's drops; skip when drops matter. */
   dropSafe: boolean;
+  /**
+   * One charge for the WHOLE day, and spending it locks out a whole ladder:
+   * Everything Looks Red blocks every dart bullseye (killMacro's opener as well
+   * as this list's first rung), Everything Looks Yellow blocks every yellow ray
+   * (the forced-drop ladder, selectYellowRay() below). Distinct from the merely
+   * limited sources — Chest X-Ray and Shattering Punch are 3/day, shadow bricks
+   * 13 — which a caller can spend without closing anything off. Callers that
+   * are only substituting a free kill for something else, rather than choosing
+   * to spend one here, pass `onceDaily: false` to skip these.
+   */
+  onceDaily?: boolean;
 };
 
 /** Ash BCZcost (iotm.ash:1182-1198): substat price of the NEXT cast of a BCZ
@@ -75,6 +86,7 @@ export const freeKillSources: FreeKillSource[] = [
     do: Macro.trySkill($skill`Darts: Aim for the Bullseye`),
     colosseumSafe: false,
     dropSafe: true,
+    onceDaily: true, // Everything Looks Red
   },
   {
     // Parka yellow-ray double duty: with darts, the only free kill high shiny spends.
@@ -89,6 +101,7 @@ export const freeKillSources: FreeKillSource[] = [
     do: Macro.trySkill($skill`Spit jurassic acid`),
     colosseumSafe: false,
     dropSafe: true,
+    onceDaily: true, // Everything Looks Yellow
   },
   {
     name: "Assert your Authority",
@@ -176,12 +189,23 @@ export const freeKillSources: FreeKillSource[] = [
 
 const dartsOnlyNames = ["Darts: Bullseye", "Spit jurassic acid"];
 
-/** First free kill the policy, zone, and fight context allow. A pending
- * curveball already banks the target's free win (CCS free_kill():14-15). */
+/**
+ * First free kill the policy, zone, and fight context allow. A pending
+ * curveball already banks the target's free win (CCS free_kill():14-15).
+ *
+ * `onceDaily: false` drops the sources whose single daily charge closes off a
+ * whole ladder (see the flag). Only selectFreeRun's fallthrough passes it: a
+ * free kill standing in for a run was never a decision to spend the day's ELR.
+ */
 export function selectFreeKill(
-  options: { location?: Location; target?: Monster; dropsMatter?: boolean } = {},
+  options: {
+    location?: Location;
+    target?: Monster;
+    dropsMatter?: boolean;
+    onceDaily?: boolean;
+  } = {},
 ): FreeKillSource | undefined {
-  const { location, target, dropsMatter = false } = options;
+  const { location, target, dropsMatter = false, onceDaily = true } = options;
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
@@ -198,6 +222,7 @@ export function selectFreeKill(
       return false;
     }
     if (dropsMatter && !source.dropSafe) return false;
+    if (!onceDaily && source.onceDaily) return false;
     return source.available();
   });
 }

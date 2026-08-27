@@ -193,9 +193,43 @@ export const freeRunSources: FreeRunSource[] = [
 /**
  * First run source the mode, zone, and fight context allow. `banish: true`
  * additionally admits the banishing sources (and prefers Spring Kick over
- * Spring Away by list order). Falls through to the free-kill ladder like the
- * ash's freeRun() (UnderTheSea.ash:264): a free kill substitutes when no run
- * source is left. Curveball guard as in free-kill.
+ * Spring Away by list order). Curveball guard as in free-kill.
+ *
+ * THE FREE-KILL FALLTHROUGH, and its one-day limit. The ash's freeRun()
+ * (UnderTheSeaGlobals.ash:478-495) ends `return freeKill();` — when no run gear
+ * is left it dresses the free-kill gear instead — so substituting a free kill
+ * for a run is ash behaviour and stays. But that is a GEAR helper: the spend
+ * itself is the CCS's free_run() (UnderTheSeaCCS.ash:74-107), whose two loops
+ * are runs and banishes only. It never throws a dart. The ash only ever spends
+ * Everything Looks Red from free_kill(), at its own call sites.
+ *
+ * That distinction matters here because the fallthrough fires far more often
+ * than it looks: all five freeRun tasks in this route field a familiar of their
+ * own (sneakFamiliar(), engine/outfit.ts — or the goth kid in guild.ts), so
+ * Release the Boots — 20+ banked
+ * runaways on a grown Pair of Stomping Boots — always fails the equip gate in
+ * firstEquippable() and the ladder walks past it. Without a limit the dart
+ * bullseye becomes the route's DEFAULT run source and the day's single ELR is
+ * gone on the first monster we merely wanted to leave. So the fallthrough is
+ * capped to free kills that are NOT once-a-day-exclusive (`onceDaily: false`):
+ * Chest X-Ray, Shattering Punch, Assert your Authority, shadow bricks and the
+ * rest still substitute — spending one of three or one of thirteen charges to
+ * skip a fight is a fair trade — while the darts and the parka ray, whose one
+ * charge closes off a whole ladder for the day, do not.
+ *
+ * Drops are deliberately not a filter (dropsMatter stays false): the caller
+ * asked to LEAVE this monster, so it was never expecting its drops, and a
+ * drop-forfeiting kill costs it nothing.
+ *
+ * OPEN DESIGN CALL — Peace Turkey vs. the Boots. The equip conflict above is
+ * treated as fixed here: familiar selection is not touched, and the run ladder
+ * simply walks past the Boots. Whether that is right is a separate question.
+ * sneakFamiliar() (Peace Turkey, ash UTS:349-355) buys -combat, which thins the
+ * whole zone; the Boots buy ~20 free runs outright, which is what a freeRun
+ * task actually asked for, and the two cannot both hold the familiar slot. A
+ * per-task choice (Boots on tasks whose combat strategy is freeRun-dominated,
+ * turkey on the -combat delay zones) is plausible and untested. Left alone
+ * until someone measures it in net turns.
  *
  * `exclude` names sources the caller has already rejected, so it can ask for
  * the NEXT candidate. The engine needs this because availability is only half
@@ -256,8 +290,8 @@ export function selectFreeRun(
   });
   // selectFreeKill takes no exclusion list of its own, so the fallback is
   // filtered here: an already-rejected free kill ends the walk rather than
-  // being handed back forever.
-  const selected = run ?? selectFreeKill({ location, target });
+  // being handed back forever. onceDaily: false is the cap documented above.
+  const selected = run ?? selectFreeKill({ location, target, onceDaily: false });
   if (selected && exclude?.has(selected.name)) return undefined;
   return selected;
 }
