@@ -2,6 +2,7 @@ import {
   abort,
   availableAmount,
   Item,
+  itemAmount,
   mallPrice,
   pullsRemaining,
   storageAmount,
@@ -117,13 +118,48 @@ const pullReservations: PullReservation[] = [
   {
     // Skate-war Fishy: hold the blade while the war is live and Holey Rollers
     // hasn't been queued (ash also gated on path 55 — always true here).
+    // The map gate is skateWarOpen()'s (skatepark.ts): skateParkStatus keeps
+    // its defaults.txt "war" value forever on a map-less account, which would
+    // otherwise hold this slot for the whole run. Inlined rather than imported
+    // so `needed()` stays a pure pref read — skateWarOpen() page-loads.
     name: "skate blade",
     item: $item`skate blade`,
     needed: () =>
+      get("mapToTheSkateParkPurchased") &&
       get("skateParkStatus") === "war" &&
       !get("noncombatQueue").includes("Holey Rollers") &&
       availableAmount($item`skate blade`) === 0 &&
       !pulledToday($item`skate blade`),
+  },
+  {
+    // Dreadscroll clue 4 (library.ts "Knucklebone"). The ash pulls this
+    // unconditionally (UTS ab1105e:2629-2637) — on the short route these two
+    // library pulls ARE the route, so they get reservation slots instead of
+    // competing with them: pullBudgetAllows is strict `>` for a discretionary
+    // pull, and reservedPulls() can hold 4-6 slots late in a day, which would
+    // abort the task with pulls still on the books. Listed here, the call
+    // site's pullBudgetAllows takes the `>=` self-reservation branch.
+    name: "Mer-kin knucklebone",
+    item: $item`Mer-kin knucklebone`,
+    needed: () =>
+      availableAmount($item`Mer-kin dreadscroll`) > 0 &&
+      get("dreadScroll4", 0) === 0 &&
+      itemAmount($item`Mer-kin knucklebone`) === 0 &&
+      !pulledToday($item`Mer-kin knucklebone`),
+  },
+  {
+    // Dreadscroll clue 7 (library.ts "Worktea Sushi"), same reasoning. The
+    // vocabulary clause mirrors that task's own `ready`: at >= 90 the 703
+    // handler brute-forces the single unknown and no tea is ever pulled, so
+    // the slot releases instead of riding to the end of the run.
+    name: "Mer-kin worktea",
+    item: $item`Mer-kin worktea`,
+    needed: () =>
+      availableAmount($item`Mer-kin dreadscroll`) > 0 &&
+      get("dreadScroll7", 0) === 0 &&
+      get("merkinVocabularyMastery", 0) < 90 &&
+      itemAmount($item`Mer-kin worktea`) === 0 &&
+      !pulledToday($item`Mer-kin worktea`),
   },
 ];
 

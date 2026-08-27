@@ -32,6 +32,15 @@ let lastRefreshedTurn = -1;
  * refresh is memoized per `turnsPlayed()`: the war state can only change on a
  * spent turn, and one page load per turn is the ash's own cadence. */
 export function skateWarOpen(): boolean {
+  // No map, no zone, no war. KoLAdventure.java:2317-2318 refuses The Skate
+  // Park without mapToTheSkateParkPurchased, while skateParkStatus sits at its
+  // defaults.txt:1598 value of "war" forever on a map-less account:
+  // ensureUpdatedSkatePark() resets the pref each ascension and parseResponse
+  // only writes it when the page carries a state image, which a map-less page
+  // has none of. Without this gate War Resolution burns its whole soft:8 on
+  // turnless passes, skateParkTurn arms a forcer and pulls a skate blade for
+  // nothing, and burn.ts's first rung reports a turn it never spent.
+  if (!get("mapToTheSkateParkPurchased")) return false;
   const now = turnsPlayed();
   if (lastRefreshedTurn !== now) {
     lastRefreshedTurn = now;
@@ -95,6 +104,8 @@ export function skateParkQuest(): Quest {
         // burns during Deep-Tainted waits usually finish it earlier for free.
         name: "War Resolution",
         ready: skateWarOpen,
+        // Map-less accounts report complete rather than stuck-incomplete:
+        // skateWarOpen()'s mapToTheSkateParkPurchased gate makes this true.
         completed: () => !skateWarOpen(),
         do: skateParkTurn,
         underwater: true,
