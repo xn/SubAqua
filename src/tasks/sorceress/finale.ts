@@ -11,8 +11,30 @@ import { centerDoorFilter } from "./fights";
 const pearl = $item`unblemished pearl`;
 const pearlsNeeded = 5;
 
+const penny = $item`sand penny`;
+/** The ash's own dump floor (UTS:2985-2995): 10 pennies left is "done". */
+const pennyFloor = 10;
+
 function bothGodsDead(): boolean {
   return get("shubJigguwattDefeated", false) && get("yogUrtDefeated", false);
+}
+
+/** Mafia sets questL13Final to "finished" the moment she falls
+ * (FightRequest.java:4382-4383, the "Nautical Seaceress" case). */
+function seaceressDefeated(): boolean {
+  return questStepOf("questL13Final") >= 999;
+}
+
+/**
+ * The route's terminal condition: the Seaceress is down and the pennies are
+ * dumped. main.ts fires `postloopCommand` on THIS, not on "every task reports
+ * complete" — several tasks are legitimately never-complete-but-not-applicable
+ * on a given account (no PYEC, no Source Terminal, no Skate Park map, a prep
+ * whose stock the boss fight consumed), so an all-complete trigger can never
+ * fire.
+ */
+export function routeComplete(): boolean {
+  return seaceressDefeated() && itemAmount(penny) <= pennyFloor;
 }
 
 /** No pearl is still riding in a codpiece slot — the check the Center Door
@@ -50,7 +72,7 @@ export function finaleQuest(): Quest {
         // (monsters.txt:1457: Atk 2000 Def 2500 HP 4000).
         name: "Nautical Seaceress",
         ready: () => bothGodsDead() && pearlsPried(),
-        completed: () => questStepOf("questL13Final") >= 999,
+        completed: seaceressDefeated,
         prepare: (): void => {
           // init.ts's Pearl Guard only fires at turnsPlayed() === 0, so a
           // mid-run start can reach the door short. Mafia would just wall the
@@ -94,18 +116,19 @@ export function finaleQuest(): Quest {
         limit: { tries: 5, message: "The Seaceress is not falling; check spell damage and MP." },
       },
       {
-        // Post-quest penny dump + council (ash UTS:2985-2995). main.ts's
-        // postloopCommand hook fires once every task completes. Only the two
-        // cheap shelves the ash buys (pill 30, healing scroll 10) — never the
-        // 1000-penny stat scrolls.
+        // Post-quest penny dump + council (ash UTS:2985-2995). This task is
+        // the second half of routeComplete(), which is what main.ts's
+        // postloopCommand hook fires on. Only the two cheap shelves the ash
+        // buys (pill 30, healing scroll 10) — never the 1000-penny stat
+        // scrolls.
         name: "Penny Dump",
-        ready: () => questStepOf("questL13Final") >= 999,
-        completed: () => itemAmount($item`sand penny`) <= 10,
+        ready: seaceressDefeated,
+        completed: () => itemAmount(penny) <= pennyFloor,
         do: (): void => {
-          while (itemAmount($item`sand penny`) > 30) {
+          while (itemAmount(penny) > 30) {
             if (!buy($coinmaster`Wet Crap For Sale`, 1, $item`water-logged pill`)) break;
           }
-          while (itemAmount($item`sand penny`) > 10) {
+          while (itemAmount(penny) > pennyFloor) {
             if (!buy($coinmaster`Wet Crap For Sale`, 1, $item`waterlogged scroll of healing`))
               break;
           }

@@ -215,7 +215,11 @@ export function yogUrtQuest(): Quest {
           get("isMerkinHighPriest", false) &&
           !get("yogUrtDefeated") &&
           myAdventures() > 0,
-        completed: gummiheartWaitOver,
+        // `|| yogUrtDefeated`: the wait is moot once she is dead, and the
+        // effect can outlive the fight — without the OR this task reports
+        // incomplete-but-unavailable forever (`subaqua list` shows a stale
+        // circle).
+        completed: () => gummiheartWaitOver() || get("yogUrtDefeated", false),
         do: (): void => {
           const before = myAdventures();
           if (!burnTurnElsewhere()) {
@@ -236,7 +240,10 @@ export function yogUrtQuest(): Quest {
         // (UTS:2830-2836).
         name: "Yog Prep",
         ready: () => get("isMerkinHighPriest", false) && !get("yogUrtDefeated"),
-        completed: yogPrepComplete,
+        // `|| yogUrtDefeated`: the fight consumes the kit, so yogPrepComplete()
+        // is false again the moment the prep has served its purpose — the OR is
+        // what keeps this from reading as permanently unfinished afterwards.
+        completed: () => get("yogUrtDefeated", false) || yogPrepComplete(),
         do: (): void => {
           if (
             have($effect`Gummiheart`) &&

@@ -34,7 +34,11 @@ export function shubQuest(): Quest {
         // globals.ash:226 vs UTS:2973).
         name: "Shub Prep",
         ready: () => get("isMerkinGladiatorChampion", false) && !get("shubJigguwattDefeated"),
-        completed: () => !shubPrepShort(0),
+        // `|| shubJigguwattDefeated`: the fight spends the delevel stock (and
+        // Null Afternoon lapses), so shubPrepShort(0) goes true again right
+        // after the prep has done its job — without the OR this task reports
+        // incomplete-but-unavailable for the rest of the run.
+        completed: () => get("shubJigguwattDefeated", false) || !shubPrepShort(0),
         do: (): void => {
           // Two statements, like the ash (UTS ab1105e:2895-2897): pull only
           // when the pack is empty — collapsing them into one chain both
