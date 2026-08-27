@@ -107,6 +107,35 @@ function equipResource(
   return outfit.equip(equipment);
 }
 
+/**
+ * Walk a resource ladder until one candidate's gear actually lands in the
+ * outfit, and return it (or undefined when the ladder is exhausted).
+ *
+ * The equip gate itself is deliberate — a silently stripped equip would sell a
+ * gearless macro as a banish/run — but taking the FIRST available source and
+ * dropping the whole provide when its slot is occupied throws away every source
+ * behind it. That is the live 2026-08-27 abort: Grandpa/Find Grandpa fields
+ * sneakFamiliar() (Peace Turkey), selectFreeRun picked Release the Boots (24
+ * runaways left on a 123 lb Pair of Stomping Boots), Outfit.equipFamiliar
+ * returned false because the familiar slot was already claimed
+ * (grimoire outfit.js:279-283), and the task fell through to its combat default
+ * with nine untried run sources still on the ladder.
+ *
+ * `select` is handed the names rejected so far; a ladder that ignores them
+ * still terminates, because a repeat of an already-tried name ends the walk.
+ */
+function firstEquippable<
+  T extends { name: string; equip?: Item | Familiar | OutfitSpec | OutfitSpec[] },
+>(outfit: Outfit, select: (exclude: ReadonlySet<string>) => T | undefined): T | undefined {
+  const tried = new Set<string>();
+  for (;;) {
+    const source = select(tried);
+    if (!source || tried.has(source.name)) return undefined;
+    if (source.equip === undefined || equipResource(outfit, source.equip)) return source;
+    tried.add(source.name);
+  }
+}
+
 // libram exports withProperty/withChoice scoped setters but no withMacro —
 // this mirrors grimoire's own combat-resolution mechanism (engine.js
 // setCombat(): write a "[default]" macro entry to a CCS file, point
@@ -180,21 +209,31 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // Resolve abstract combat actions against the resource ladders (spec §2).
     // Anything unresolved falls through to MyActionDefaults' explicit
     // degradations — killFree still aborts by design when no source exists.
+    //
+    // THE ZERO-ACTION INVARIANT (combat.ts MyActionDefaults). A resource's `do`
+    // REPLACES the action's default macro outright — grimoire compiles the
+    // action as `resources.getMacro(action) ?? defaults[action](...)`
+    // (combat.js:263-271), never both — and every `do` on these ladders is a
+    // CONDITIONAL step (`if hasskill X`, `if hascombatitem Y`). A skill that is
+    // not castable or an item that is not held therefore compiles to a macro
+    // that takes no action at all, which is what KoL kills the fight over
+    // ("N instructions executed without any actions being taken"). So each
+    // provided macro carries its own fallback: the kill ladder for
+    // banish/freeRun/forceItems/yellowRay (matching the degradations those
+    // actions already have in MyActionDefaults), and an explicit abort for
+    // killFree, whose default is likewise an abort.
     const location = task.do instanceof Location ? task.do : undefined;
     if (combat.can("banish")) {
-      const banisher = pickBanishSource(location);
+      // Equip-gated ladder walk: provide only over gear that actually landed in
+      // the outfit — a silently stripped equip would sell a gearless macro as a
+      // banish — but keep walking rather than dropping the action entirely.
+      const banisher = firstEquippable(outfit, (exclude) => pickBanishSource(location, exclude));
       if (banisher) {
-        // Provide only if the gear actually landed in the outfit — a silently
-        // stripped equip would sell a gearless macro as a banish; failing
-        // through to MyActionDefaults degrades loudly instead.
-        const equipped = banisher.equip ? outfit.equip(banisher.equip) : true;
-        if (equipped) {
-          if (banisher.skill instanceof Skill) {
-            resources.provide("banish", { do: Macro.trySkill(banisher.skill) });
-          } else {
-            resources.provide("banish", { do: Macro.tryItem(banisher.skill) });
-          }
-        }
+        const banish =
+          banisher.skill instanceof Skill
+            ? Macro.trySkill(banisher.skill)
+            : Macro.tryItem(banisher.skill);
+        resources.provide("banish", { do: banish.step(killMacro(false)) });
       }
     }
     if (combat.can("killFree")) {
@@ -203,15 +242,24 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // stripped equip would sell a gearless macro as a free kill; failing
       // through to MyActionDefaults degrades loudly instead (killFree aborts).
       if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
-        resources.provide("killFree", { prepare: source.prepare, do: source.do });
+        // Macro.step() copies rather than mutating, so the shared ladder entry
+        // is never appended to in place. The trailing abort keeps killFree's
+        // "a task that requires a free kill must be given one" semantics while
+        // making an uncastable source abort LOUDLY instead of handing KoL an
+        // action-free macro.
+        resources.provide("killFree", {
+          prepare: source.prepare,
+          do: Macro.step(source.do).abort(),
+        });
       }
     }
     if (combat.can("freeRun")) {
-      const source = selectFreeRun({ location });
-      // Same gating as killFree: don't provide a run macro over gear that
-      // didn't equip.
-      if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
-        resources.provide("freeRun", { prepare: source.prepare, do: source.do });
+      const source = firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+      if (source) {
+        resources.provide("freeRun", {
+          prepare: source.prepare,
+          do: Macro.step(source.do).step(killMacro(false)),
+        });
       }
     }
     if (combat.can("yellowRay") || combat.can("forceItems")) {
@@ -227,14 +275,23 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // Only provide if the saber actually equipped (equip-gated provides).
         if (!outfit.equip($item`Fourth of May Cosplay Saber`)) return false;
         this.propertyManager.setChoice(1387, 3);
-        resources.provide("forceItems", { do: Macro.trySkill($skill`Use the Force`) });
+        // Kill ladder behind the Force, per the zero-action invariant above:
+        // an unequipped/spent saber would otherwise compile to `if hasskill Use
+        // the Force; …; endif` and nothing else. forceItems already degrades to
+        // killItem -> kill in MyActionDefaults, so the fallback is the same
+        // fight either way.
+        resources.provide("forceItems", {
+          do: Macro.trySkill($skill`Use the Force`).step(killMacro(false)),
+        });
         return true;
       };
       const provideRay = (): boolean => {
         const ray = selectYellowRay();
         if (!ray) return false;
         if (ray.equip !== undefined && !equipResource(outfit, ray.equip)) return false;
-        resources.provide(action, { do: ray.do });
+        // Same fallback, same reason; Macro.step() copies the shared ladder
+        // entry instead of appending to it in place.
+        resources.provide(action, { do: Macro.step(ray.do).step(killMacro(false)) });
         return true;
       };
       if (saberFirst) {

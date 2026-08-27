@@ -196,16 +196,30 @@ export const freeRunSources: FreeRunSource[] = [
  * Spring Away by list order). Falls through to the free-kill ladder like the
  * ash's freeRun() (UnderTheSea.ash:264): a free kill substitutes when no run
  * source is left. Curveball guard as in free-kill.
+ *
+ * `exclude` names sources the caller has already rejected, so it can ask for
+ * the NEXT candidate. The engine needs this because availability is only half
+ * the test: the winning source's gear also has to land in the task's outfit,
+ * and a source whose slot is already taken (Release the Boots against a task
+ * that fields its own familiar — the live 2026-08-27 case) used to sink the
+ * whole provide and drop the task onto its combat default. Passing the
+ * rejected names back lets the ladder walk on instead.
  */
 export function selectFreeRun(
-  options: { banish?: boolean; location?: Location; target?: Monster } = {},
+  options: {
+    banish?: boolean;
+    location?: Location;
+    target?: Monster;
+    exclude?: ReadonlySet<string>;
+  } = {},
 ): FreeRunSource | FreeKillSource | undefined {
-  const { banish = false, location, target } = options;
+  const { banish = false, location, target, exclude } = options;
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
   const snokebomb = banishSources.find((source) => source.name === "snokebomb");
   const run = freeRunSources.find((source) => {
+    if (exclude?.has(source.name)) return false;
     if (source.banishes && !banish) return false;
     // The navel runaways need Driving Waterproofly underwater (ash
     // freeRun():257); an unknown zone is treated as underwater — every
@@ -240,5 +254,10 @@ export function selectFreeRun(
     }
     return source.available();
   });
-  return run ?? selectFreeKill({ location, target });
+  // selectFreeKill takes no exclusion list of its own, so the fallback is
+  // filtered here: an already-rejected free kill ends the walk rather than
+  // being handed back forever.
+  const selected = run ?? selectFreeKill({ location, target });
+  if (selected && exclude?.has(selected.name)) return undefined;
+  return selected;
 }

@@ -29,18 +29,36 @@ export class CombatStrategy extends BaseCombatStrategy.withActions(myActions) {}
 /**
  * Defaults when the resources layer provides nothing for an action.
  * Degradations are deliberate and explicit per spec §2: banish, the ignore family,
- * killItem, yellowRay and forceItems all degrade to kill; freeRun is taffy-or-nothing
+ * killItem, yellowRay and forceItems all degrade to kill; freeRun is taffy-THEN-kill
  * underwater and a plain kill on the surface (the indigo taffy only works underwater,
- * modifiers.txt:11752-11754, so "nothing" there would stall the fight);
- * killFree ABORTS (a task that requires a free kill must be given one).
+ * modifiers.txt:11752-11754); killFree ABORTS (a task that requires a free kill must
+ * be given one).
+ *
+ * THE ZERO-ACTION INVARIANT. Every macro this class returns must contain at
+ * least one step that ACTS unconditionally, because KoL kills the fight — and
+ * with it the script — when a submitted macro runs out of instructions without
+ * ever taking an action ("Macro Aborted: N instructions executed without any
+ * actions being taken", then "You're on your own, partner"). This used to be
+ * violated exactly once: freeRun underwater returned runMacro() alone, whose
+ * only step is `if hascombatitem pulled indigo taffy; use …; endif` — zero
+ * actions on a character holding no taffy. Live abort 2026-08-27, task
+ * Grandpa/Find Grandpa vs. the diving belle in The Marinara Trench. The kill
+ * ladder is now appended: if the taffy runs, the fight ends there and the
+ * ladder never executes; with no taffy the ladder acts and the turn is at
+ * worst spent rather than lost. The same invariant is enforced on the RESOURCE
+ * side in engine.ts customize(), where every provided conditional macro is
+ * likewise followed by killMacro(false).
  */
 export class MyActionDefaults implements ActionDefaults<CombatActions> {
   freeRun(target?: Monster | Location) {
-    // grimoire hands the default action its task location (combat.js:269).
+    // grimoire hands the default action its task location (combat.js:269) —
+    // but only when `task.do` IS a Location (engine.js:248 passes undefined
+    // for a function `do`), so "unknown" has to mean underwater: every
+    // function-`do` task in this route is a sea task.
     if (target instanceof Location && target.environment !== "underwater") {
       return killMacro(false);
     }
-    return runMacro();
+    return runMacro().step(killMacro(false));
   }
   ignore(target?: Monster | Location) {
     return this.kill(target);
@@ -216,6 +234,11 @@ export function killMacro(hard?: boolean): Macro {
  * Adventure (underwater only)" — it is the one thrown item here that works ONLY
  * underwater, which is why MyActionDefaults.freeRun swaps it for a kill on the
  * surface.
+ *
+ * This macro is CONDITIONAL on the taffy being in inventory, so it never stands
+ * alone: MyActionDefaults.freeRun appends the kill ladder behind it (see the
+ * zero-action invariant there). Callers that compose it themselves must do the
+ * same.
  */
 export function runMacro(): Macro {
   return new Macro().tryItem($item`pulled indigo taffy`);

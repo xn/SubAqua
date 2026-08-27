@@ -177,9 +177,17 @@ export function banishActive(target: Monster): boolean {
  * task outfit). Picks the first available source whose existing banish is
  * irrelevant at `location` — its currently-banished monster does not appear
  * there, so re-pointing the source wastes nothing.
+ *
+ * `exclude` names sources the caller already rejected (see selectFreeRun's own
+ * note): the engine's provide is equip-gated, and a source whose gear cannot
+ * land in the task outfit must not sink the whole banish.
  */
-export function pickBanishSource(location?: Location): BanishSource | undefined {
+export function pickBanishSource(
+  location?: Location,
+  exclude?: ReadonlySet<string>,
+): BanishSource | undefined {
   return banishSources.find((source) => {
+    if (exclude?.has(source.name)) return false;
     if (!source.available()) return false;
     if (!location) return true;
     const current = banishedBy(source);
