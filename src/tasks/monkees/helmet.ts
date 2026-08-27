@@ -82,6 +82,10 @@ function gainSandDollars(): void {
     } else if (have($item`11-leaf clover`) || pullSequence($item`11-leaf clover`)) {
       use($item`11-leaf clover`);
     }
+    // The empty filter is deliberate, unlike every other adv1 in this repo:
+    // "" makes mafia fall through to grimoire's compiled CCS, i.e. this task's
+    // own `combat: new CombatStrategy().kill()` below. A dynamic filter here
+    // would silently discard customize()'s combat work.
     if (have($effect`Lucky!`)) adv1(outpost, -1, "");
   }
 }

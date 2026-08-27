@@ -268,7 +268,11 @@ export function mineQuest(): Quest {
             // ROW125) and CoinmasterData.availableTokens counts inventory only,
             // so an equipped cost item fails the trade and lands in the
             // "Grandma may be unreachable" branch below. Upstream unequips both
-            // before either barter (UTS ab1105e:2455).
+            // before either barter (UTS ab1105e:2455). Note the aerated diving
+            // helmet is itself a waterBreathingEquipment member, so on an
+            // account that wore it as the breather this unequip voids dress()'s
+            // breathing guarantee mid-task — harmless only because this branch
+            // returns without adventuring.
             unequip($item`aerated diving helmet`);
             unequip($item`sea chaps`);
             // Grandma's Sea Shop is a coinmaster (coinmasters.txt ROW124:

@@ -67,7 +67,11 @@ export function colosseumRoundPrep(): void {
   }
 }
 
-/** One colosseum round (UTS:2165-2224 + CCS:1220-1228: full-HP recovery,
+/** Self-dressing helper: burn.ts's ladder calls this from inside other tasks'
+ * `do()`s, outside task machinery, so `outfit.familiar` and a declared outfit
+ * cannot reach it — hence the useFamiliar/maximize pair below.
+ *
+ * One colosseum round (UTS:2165-2224 + CCS:1220-1228: full-HP recovery,
  * eagle-recharge familiar, spell-damage coefficient outfit, free-fight
  * riders per tier policy; never the saber, never free runs). */
 export function colosseumRoundTurn(): void {

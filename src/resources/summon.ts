@@ -55,6 +55,8 @@ function farmPocketWish(): void {
   const snake = $monster`sewer snake with a sewer snake in it`;
   for (let tries = 0; tries < 5 && itemAmount($item`pocket wish`) === 0; tries++) {
     if (PeridotOfPeril.have() && !PeridotOfPeril.periledToday(lot)) {
+      // Self-dressing detour: the `peridot` task field only covers `task.do`,
+      // and this farms The Overgrown Lot — a zone no calling task names.
       equip($item`Peridot of Peril`);
       PeridotOfPeril.setChoice(snake);
     }

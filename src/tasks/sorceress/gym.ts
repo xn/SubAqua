@@ -29,6 +29,11 @@ const gladMask = $item`Mer-kin gladiator mask`;
 const gladTail = $item`Mer-kin gladiator tailpiece`;
 
 /**
+ * Self-dressing helper: burn.ts's ladder calls this from inside other tasks'
+ * `do()`s (library.ts `High Priest`, yogurt.ts `Gummiheart Burn`), i.e. outside
+ * task machinery, so the outfit has to be built here rather than declared on
+ * `Guard Grind`.
+ *
  * One gymnasium turn (ash gymnasium(), UTS:617-641): +combat (the "Ators
  * Gonna Ate" NC guard is combat-rate pressure plus the forcer abort below),
  * skate-war NC-forcer gear banked when the war still needs one, 800 HP floor
@@ -63,9 +68,9 @@ export function gymnasiumTurn(): void {
   // Re-pin the lasso gear (audit item 4). `Guard Grind` is `underwater: true`
   // and non-`freeaction`, so engine customize() pins sea cowboy hat + sea chaps
   // and dress() wears them — and then this maximize, which runs afterwards,
-  // strips both and drops lasso training to the un-geared rate. Neither slot is
-  // wanted by anything else here (the war gear is shirt/off-hand), and putting
-  // the terms in `pieces` carries them through the no-`sea` retry below.
+  // strips both and drops lasso training to the un-geared rate. Nothing else in
+  // `pieces` claims the hat or pants slot here, and putting the terms in
+  // `pieces` carries them through the no-`sea` retry below.
   if (isTrainingLasso()) pieces.push("+equip sea cowboy hat", "+equip sea chaps");
   // ...seaKeyword(): the gymnasium is a Sea zone and this wrapper task dresses
   // itself, so the breather has to come from this maximize. The keyword forces

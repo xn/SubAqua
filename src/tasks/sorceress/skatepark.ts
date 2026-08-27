@@ -69,6 +69,10 @@ export function claimIceBuff(): void {
 }
 
 /**
+ * Self-dressing helper: burn.ts's ladder calls this from inside other tasks'
+ * `do()`s, outside task machinery, so the gear is chosen here instead of on
+ * `War Resolution`'s outfit.
+ *
  * One war-resolution attempt (ash skatePark(), UTS:643-671): Holey Rollers
  * only fires with a skate blade EQUIPPED — bladeless serves Picking Sides
  * instead, costing an extra turn and forcer (G:213-221). Peridot must come
