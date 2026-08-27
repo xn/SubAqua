@@ -268,7 +268,8 @@ const yogHealOrder = $items`sea gel, Mer-kin healscroll, waterlogged scroll of h
  * elixir+unguent pair, then the spell ladder.
  */
 export function yogUrtFilter(): CombatFilter {
-  // Task 12 amends: fifth heal throw at one prayerbead.
+  // Five heal throws at one prayerbead, three at two, two at three
+  // (YogHealingsNeeded, G:709-714 at 89982f5).
   const thrown = new Set<Item>();
   let step = 0;
   let lastRound = -1;
@@ -327,6 +328,18 @@ export function yogUrtFilter(): CombatFilter {
       }
     }
     if (step === 4) {
+      step += 1;
+      // Second `< 2` throw (CCS:1107-1108 at 89982f5): a lone prayerbead
+      // leaves five heals to make, so the one-bead ladder throws twice here.
+      if (equippedAmount($item`Mer-kin prayerbeads`) < 2) {
+        const heal = next(yogHealOrder);
+        if (heal) {
+          thrown.add(heal);
+          return Macro.tryItem(heal).toString();
+        }
+      }
+    }
+    if (step === 5) {
       step += 1;
       if (
         itemAmount($item`Doc Galaktik's Homeopathic Elixir`) > 0 &&

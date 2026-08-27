@@ -132,3 +132,13 @@ export function sneakFamiliar(): Familiar | undefined {
   if (have($familiar`Disgeist`)) return $familiar`Disgeist`;
   return undefined;
 }
+
+/** Ash use_familiar("exp") (UTS:29-37 at 89982f5): a familiar that never
+ * attacks, so a boss soaks its experience instead. Chest Mimic -> Cooler Yeti
+ * -> Cookbookbat -> none. Used for the sorceress bosses (Yog-Urt, Shub). */
+export function expFamiliar(): Familiar | undefined {
+  if (have($familiar`Chest Mimic`)) return $familiar`Chest Mimic`;
+  if (have($familiar`Cooler Yeti`)) return $familiar`Cooler Yeti`;
+  if (have($familiar`Cookbookbat`)) return $familiar`Cookbookbat`;
+  return undefined;
+}
