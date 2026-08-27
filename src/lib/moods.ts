@@ -73,11 +73,18 @@ const swimmingPool = $item`Olympic-sized Clan crate`;
  * listed. Keeping the first N instead would invert the ash at every site that
  * runs mood("combat") before mood("itdrop") (UTS:2698-2699), evicting the
  * +item songs off an +item grind to keep Cantata.
+ *
+ * Every exported list in this file already returns a trimmed result, but a
+ * task can set `effects` to some other list entirely (e.g. Pellet/Garden
+ * Pellet's bare `itemDropEffects` — no combineMoods() in sight). trimSongs is
+ * exported so the engine's acquireEffects override (engine.ts) can trim
+ * task.effects at the one place every mood list funnels through on its way to
+ * grimoire, regardless of which function (or hand-written array) built it.
  */
 function maxSongs(): number {
   return have($skill`Mariachi Memory`) ? 4 : 3;
 }
-function trimSongs(effects: Effect[]): Effect[] {
+export function trimSongs(effects: Effect[]): Effect[] {
   const cap = maxSongs();
   const total = effects.filter((effect) => isSong(effect)).length;
   let dropsLeft = total - cap;

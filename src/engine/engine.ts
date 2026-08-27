@@ -47,7 +47,7 @@ import {
 } from "libram";
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
-import { reserveMpFor, routeDamageEffects, shrugBadEffects } from "../lib/moods";
+import { reserveMpFor, routeDamageEffects, shrugBadEffects, trimSongs } from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -413,8 +413,21 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // MP floor in recover() lands too late to pay for them — and ensureEffect
     // throws on a cast it cannot afford. MP is the one resource this run may
     // spend freely, so top up for exactly this list plus a nuke.
-    reserveMpFor(undelay(task.effects, this.getContext(task)) ?? []);
-    super.acquireEffects(task);
+    const effects = undelay(task.effects, this.getContext(task)) ?? [];
+    reserveMpFor(effects);
+    // Single choke point for the song cap. Every list moods.ts exports is
+    // already trimmed, but task.effects can be set to anything — Pellet/
+    // Garden Pellet sets it to the bare itemDropEffects() return, no
+    // combineMoods() involved — so trim again here regardless of what built
+    // the list. Without this, grimoire's own acquireEffects (engine.js:162-
+    // 181) either throws "Too many AT songs" outright (songs.length over cap)
+    // or, as it did live, casts every wanted song up to the cap and then
+    // throws an Ensure Error on the one that doesn't fit (it only shrugs
+    // ALREADY-ACTIVE songs the list doesn't want; it never trims the wanted
+    // list itself). Passing the trimmed list via a wrapped task rather than
+    // reimplementing the ensure loop, since super.acquireEffects(task) only
+    // reads task.effects and the context.
+    super.acquireEffects({ ...task, effects: trimSongs(effects) });
   }
 
   override createOutfit(task: Task): Outfit {
