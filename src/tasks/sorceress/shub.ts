@@ -5,15 +5,16 @@ import {
   itemAmount,
   myBuffedstat,
   myMaxhp,
+  print,
   use,
   useSkill,
 } from "kolmafia";
-import { $effect, $item, $location, $skill, $stat, get, have } from "libram";
+import { $item, $location, $skill, $stat, get, have, uneffect } from "libram";
 
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
-import { survivalEffects } from "../../lib/moods";
+import { dealsPassiveDamage, shrugBadEffects, survivalEffects } from "../../lib/moods";
 import { shubPrepShort } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
@@ -78,13 +79,37 @@ export function shubQuest(): Quest {
         // Damage mitigation, damage-free: the whole point of his filter is
         // that we deal no damage until the swings, so anything with Thorns /
         // Damage Aura is filtered out by survivalEffects({ damageFree: true })
-        // (see also the Scarysauce removal in prepare, which is that same rule
-        // applied to an effect an earlier res mood may have left up). What
+        // (see also the bad-effect sweep in prepare, which is that same rule
+        // applied to whatever an earlier task's mood left up). What
         // survives is pure Damage Absorption / resistance, which pairs with
         // this task's own "damage absorption, mus" maximize.
         effects: () => survivalEffects({ damageFree: true }),
         prepare: (): void => {
-          if (have($effect`Scarysauce`)) cliExecute("uneffect Scarysauce");
+          // Scarysauce (Thorns 1) was the ash's one named case; the sweep
+          // generalizes it to every passive-damage / teleportitis / fumble
+          // effect, with NO exclusion list here — this is the fight where a
+          // thorns tick doubles his retaliation (fights.ts:392-397), so even
+          // the route's own res-mood casts go.
+          const stuck = shrugBadEffects().filter((effect) => dealsPassiveDamage(effect));
+          for (const effect of stuck) {
+            // The targeted exception: an item cure is spending, so it is
+            // allowed only out of what is already in the pack. mafia's own
+            // fallback order is the cure-all, then the antidote
+            // (UneffectRequest:836-841); with one of them in inventory
+            // retrieveItem() cannot reach the mall.
+            if (
+              itemAmount($item`ancient cure-all`) > 0 ||
+              itemAmount($item`soft green echo eyedrop antidote`) > 0
+            ) {
+              uneffect(effect);
+            }
+            if (have(effect)) {
+              print(
+                `${effect} deals passive damage and cannot be shrugged; Shub's retaliation will double on it. Cure it (antidote/cure-all) and rerun, or accept the risk.`,
+                "red",
+              );
+            }
+          }
           if (currentPolicy().shubInsurancePulls || myBuffedstat($stat`Muscle`) < 1250) {
             if (
               itemAmount($item`gremlin juice`) === 0 &&

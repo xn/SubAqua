@@ -1,6 +1,17 @@
-import { Effect, getClanLounge, itemAmount, numericModifier } from "kolmafia";
+import {
+  booleanModifier,
+  Effect,
+  getClanLounge,
+  itemAmount,
+  moodList,
+  myEffects,
+  numericModifier,
+  toEffect,
+  toSkill,
+} from "kolmafia";
 import {
   $effect,
+  $effects,
   $item,
   $skill,
   AprilingBandHelmet,
@@ -9,6 +20,7 @@ import {
   get,
   have,
   isSong,
+  uneffect,
 } from "libram";
 
 import { bczAffordable } from "../resources/freekill";
@@ -345,4 +357,115 @@ export function colosseumEffects(): Effect[] {
   if (have($skill`The Magical Mojomuscular Melody`))
     effects.push($effect`The Magical Mojomuscular Melody`);
   return trimSongs(effects);
+}
+
+/**
+ * The route's own casts that the bad-effect sweep below would otherwise strip:
+ * Scarysauce is in resEffects() (ash mood():145-153) and carries Thorns 1
+ * (modifiers.txt:7769); Scariersauce is its velour-viscometer upgrade (:7768,
+ * UseSkillRequest:393-397). Shrugging them after every task would just fight
+ * the next task's own mood, burning MP a turn.
+ */
+export const routeDamageEffects = $effects`Scarysauce, Scariersauce`;
+
+/** Every bad effect currently up, by the garbo fork's own four categories
+ * (mood.ts:335-352): passive damage, "Alters Page Text", teleportitis
+ * ("Adventure Randomly"), and Blind / Always Fumble. Walks myEffects() rather
+ * than Effect.all() — the same set intersected with what we have, at ~20
+ * lookups a call instead of ~3000. */
+function activeBadEffects(): Effect[] {
+  return Object.keys(myEffects())
+    .map((name) => toEffect(name))
+    .filter(
+      (effect) =>
+        dealsPassiveDamage(effect) ||
+        booleanModifier(effect, "Alters Page Text") ||
+        booleanModifier(effect, "Adventure Randomly") ||
+        booleanModifier(effect, "Blind") ||
+        booleanModifier(effect, "Always Fumble"),
+    );
+}
+
+/**
+ * Is this effect one mafia will SHRUG (charsheet.php action=unbuff, free)
+ * rather than cure with an item? Mirrors UneffectRequest.isShruggable
+ * (:145-200): songs always, otherwise the effect must map to a skill that is a
+ * buff. (statuseffects.txt has no "remove" column — the `default` column is
+ * the action that GRANTS the effect, e.g. "use 1 wussiness potion" for
+ * Wussiness — so shruggability has to be derived the way mafia derives it.)
+ *
+ * The `toEffect(skill) === effect` tail covers isShruggable's last clause: an
+ * effect reached through a buff skill but only WITH a casting aid is not
+ * shruggable (UseSkillRequest.requiredItemForSkillEffect:473-493 over the
+ * replaceEffects/additionalEffects tables at :386-460). Those upgraded
+ * variants — Scariersauce, Snarl of Three Timberwolves, Tubes of Universal
+ * Meat … — map back to a skill whose own to_effect() is the BASE effect, so
+ * this comparison rejects exactly them.
+ */
+function shruggable(effect: Effect): boolean {
+  if (effect.attributes.includes("noremove")) return false;
+  if (isSong(effect)) return true;
+  const skill = toSkill(effect);
+  if (skill === $skill.none || !skill.buff) return false;
+  return toEffect(skill) === effect;
+}
+
+/** moodList() is a property read, not a page load, but the sweep runs after
+ * every task — read it once. */
+let moodCache: string[] | undefined;
+function myMoodList(): string[] {
+  return (moodCache ??= moodList());
+}
+
+/**
+ * Would mafia's own removal path spend an ITEM on this effect, however
+ * shruggable it is? UneffectRequest.getAction() (:683-706) reads the player's
+ * CURRENT MOOD for a "gain_effect" trigger first, and run() (:810-820)
+ * executes it verbatim unless it starts with uneffect / shrug / remedy — so a
+ * user whose mood says `gain_effect | Foo | use 1 hot dog` would have us eat a
+ * hot dog. mood_list() is that same trigger list (RuntimeLibrary:5413-5423,
+ * "type | name | action"), so we can see it coming and decline.
+ */
+function moodWouldSpend(effect: Effect): boolean {
+  const prefix = `gain_effect | ${effect.name} | `;
+  return myMoodList().some((line) => {
+    if (!line.startsWith(prefix)) return false;
+    const action = line.slice(prefix.length).trim().toLowerCase();
+    return !["uneffect", "shrug", "remedy"].some((verb) => action.startsWith(verb));
+  });
+}
+
+/**
+ * the garbo fork's shrugBadEffects() (mood.ts:345-358), narrowed to the one removal
+ * that is free: the shrug. the garbo fork uneffect()s the whole list, which in ronin
+ * means spending a soft green echo eyedrop antidote / anti-anti-antidote / hot
+ * dog on the effects that cannot be shrugged. Per the run's rule that only
+ * shrugs are free, anything item-cured is left alone — and, at the one site
+ * where it actually breaks a fight, warned about (shub.ts).
+ *
+ * Why it earns its place in-run: (a) any passive-damage effect breaks the
+ * deliberately damage-free Shub filter (fights.ts:392-397) and feeds the
+ * bladeswitcher's reflect (fights.ts:56-61); (b) teleportitis and Always
+ * Fumble silently burn turns in every zone.
+ *
+ * @param exclude effects to leave alone (the route's own casts).
+ * @returns the bad effects still up afterwards — the ones no shrug can reach.
+ */
+export function shrugBadEffects(...exclude: Effect[]): Effect[] {
+  const left: Effect[] = [];
+  for (const effect of activeBadEffects()) {
+    if (exclude.includes(effect)) continue;
+    if (!shruggable(effect) || moodWouldSpend(effect)) {
+      left.push(effect);
+      continue;
+    }
+    // libram's uneffect() is cliExecute("uneffect <name>"), which reaches
+    // UneffectRequest; for a shruggable effect that request is built against
+    // charsheet.php?action=unbuff (:69-90) and run() takes the "Shrugging off
+    // your buff" branch (:833) before any cure item is ever considered. No
+    // item, no meat.
+    uneffect(effect);
+    if (have(effect)) left.push(effect);
+  }
+  return left;
 }

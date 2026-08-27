@@ -46,6 +46,7 @@ import {
 } from "libram";
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
+import { routeDamageEffects, shrugBadEffects } from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -476,6 +477,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     // Poison cure — the ash handles exactly one tier (UTS:763-764).
     if (have($effect`Really Quite Poisoned`)) uneffect($effect`Really Quite Poisoned`);
+
+    // Bad-effect sweep, shrugs only (the garbo fork mood.ts:345-358 -> moods.ts
+    // shrugBadEffects). Beaten Up and Really Quite Poisoned above STAY as they
+    // are: both are deliberate ash parity (UTS:763-764) and neither is
+    // shruggable. Everything else the sweep touches costs nothing but a
+    // charsheet unbuff; the route's own Scarysauce is excluded so this does not
+    // undo the next task's res mood. Anything left over is reported once here
+    // rather than being cured with an item.
+    for (const stuck of shrugBadEffects(...routeDamageEffects)) {
+      print(`Bad effect ${stuck} needs an item cure; leaving it (only shrugs are free).`, "red");
+    }
 
     // Junk autosell: emergency meat only (UTS:773-777) — rough scales feed the
     // Madness Reef pristine conversion, so never sell above the meat floor.
