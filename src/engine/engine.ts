@@ -42,6 +42,7 @@ import {
   uneffect,
 } from "libram";
 
+import { dreadSeedCheck } from "../lib/dreadscroll";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import { selectFreeKill, selectYellowRay } from "../resources/freekill";
@@ -375,6 +376,14 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     // Zero-adventure pilsner diet (UTS:781-796); aborts with instructions when dry.
     emergencyDiet();
+
+    // Dreadscroll seed narrowing (ash post_adv UTS:253-254): active exactly
+    // between the seahorse tame and High Priesthood. Pure pref reads/writes —
+    // candidateSeeds() gates its own one-time scan cost (>= 2 clues + name)
+    // and cache-filters afterwards; no adventuring, per the hooks rule.
+    if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
+      dreadSeedCheck();
+    }
   }
 
   override setChoices(task: Task, manager: PropertiesManager): void {
