@@ -17,6 +17,7 @@ import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
 import { sneakEffects } from "../../lib/moods";
+import { selectFreeKill } from "../../resources/freekill";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 import { summon, summonsAvailable } from "../../resources/summon";
 
@@ -62,13 +63,30 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         // pay phone is absent (the ash's exact gate).
         name: "Sword Imprint",
         ready: () =>
-          have(sword) && summonsAvailable() >= 3 && (!opts.phonelessSwordOnly || !have(payphone)),
+          have(sword) &&
+          summonsAvailable() >= 3 &&
+          (!opts.phonelessSwordOnly || !have(payphone)) &&
+          // The ash fights this cowboy with a free kill: SWordLasso() wears
+          // freeKill() gear (UTS:1090-1097) and the CCS's sea cowboy case
+          // casts the imprint skill then calls free_kill(page_text, true)
+          // (CCS:1191-1194) — drop-safe, because the cowboy's sea lasso drop
+          // is the whole point of imprinting. A level-1 character cannot
+          // out-damage a sea cowboy (live: ~170 damage taken per round, lost
+          // after 10 rounds), so without a free-kill source the imprint is
+          // not worth a lost turn plus Beaten Up — the sword still imprints
+          // later in the corral. Mirrors the engine's own selection
+          // (engine.ts:172-179): this task's `do` is a function, so the
+          // engine passes location undefined, and every non-drop-safe source
+          // sorts after every drop-safe one in freeKillSources, so a
+          // drop-safe hit here is exactly what the engine will provide.
+          selectFreeKill({ dropsMatter: true }) !== undefined,
         completed: () => get("swordOfSWordsMonster") !== null,
         do: () => summon($monster`sea cowboy`),
         choices: { 1589: "1&victim=776" },
         combat: new CombatStrategy()
           // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
           .macro(Macro.trySkill($skill`%fn, kill a lot of these guys`), $monster`sea cowboy`)
+          .killFree($monster`sea cowboy`)
           .kill(),
         outfit: { modifier: "item", familiar: sword },
         prepare: () => recover(),
