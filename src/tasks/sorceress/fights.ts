@@ -30,6 +30,7 @@ import {
 } from "libram";
 
 import { killMacro } from "../../engine/combat";
+import { belowHpFloor, combatHealSkill, stallSpare } from "../../lib";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
 import { currentPolicy } from "../../resources/policy";
 
@@ -60,18 +61,22 @@ function reflectStall(monster: Monster, text: string): number {
   return 0;
 }
 
-/** Stall stock guard (CCS:288-303): while Yog-Urt is pending, one sea gel and
- * one Pungent Unguent are hers. */
-function stallSpare(it: Item): boolean {
-  const reserved = !get("yogUrtDefeated") ? 1 : 0;
-  return itemAmount(it) > reserved;
-}
-
 /** One stall round (CCS:329-337). Thrown items deal no damage -> reflect
  * nothing; every branch advances the round; free delevelers are BANNED here
  * (once-per-combat skills may already be spent — a refused submission would
  * not advance the round, CCS:305-328). */
 function stallAction(): string {
+  // HP floor (the garbo fork combat.ts:509-519, which refuses to stasis below 25%). A
+  // stall round is a free swing for the monster, so a breached floor is
+  // answered ahead of the ordinary ladder — and answered with MP first, since
+  // every item below is rationed against the Yog-Urt kit by stallSpare(). A
+  // heal skill deals no damage, so it is as reflect-safe as a thrown item, and
+  // combatHealSkill() checks MP itself, so it cannot be the refused submission
+  // the deleveler ban is about.
+  if (belowHpFloor()) {
+    const skill = combatHealSkill();
+    if (skill) return Macro.trySkill(skill).toString();
+  }
   if (myHp() * 2 < myMaxhp() && stallSpare($item`sea gel`)) {
     return Macro.tryItem($item`sea gel`).toString();
   }
@@ -377,6 +382,22 @@ export function yogUrtFilter(): CombatFilter {
           $item`Doc Galaktik's Homeopathic Elixir`,
           $item`Doc Galaktik's Pungent Unguent`,
         ]).toString();
+      }
+    }
+    // HP floor (the garbo fork combat.ts:509-519), applied to the damage race that
+    // follows the scripted ladder: past step 5 nothing above ever heals again,
+    // so a fight that has gone long trades a nuke round for a heal rather than
+    // walking into a loss. MP first; the item fallback draws only on Yog-Urt's
+    // OWN kit, in her own fight, and only on throws the ladder above has not
+    // already made — no other task's reserve is touched.
+    if (belowHpFloor()) {
+      const skill = combatHealSkill();
+      if (skill) return Macro.trySkill(skill).toString();
+      const heal = next(yogHealOrder);
+      if (heal) {
+        thrown.add(heal);
+        healsThrown += 1;
+        return Macro.tryItem(heal).toString();
       }
     }
     if (have($skill`Saucegeyser`) && myMp() >= mpCost($skill`Saucegeyser`)) {

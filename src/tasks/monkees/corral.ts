@@ -14,7 +14,7 @@ import {
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
-import { recover } from "../../lib";
+import { combatHealSkill, HP_FLOOR_PERCENT, recover, spareStallHeal } from "../../lib";
 import {
   applyEffects,
   combineMoods,
@@ -82,7 +82,37 @@ function seahorseMacro(): Macro {
     get("lassoTrainingCount", 0) >= 20 &&
     availableAmount(cowbell) >= 3 &&
     availableAmount(lasso) >= 1;
-  return ready ? tamingMacro() : Macro.runaway().repeat();
+  if (ready) return tamingMacro();
+
+  // HP floor on the runaway loop (the garbo fork combat.ts:509-519 welds
+  // `!hppercentbelow 25` into every stall/stasis predicate). the garbo fork's floor
+  // SKIPS the stall round; here the round cannot be skipped — the Run Away
+  // button is the only exit a boss allows — so the floor heals on the way
+  // instead. Every failed run is a free swing from an Atk 500 boss with Init
+  // 10000 (monsters.txt:797) against a ~570 HP character, and a lost combat
+  // here is a hard post() abort.
+  //
+  // MP heal first (free), then a thrown heal, and only ever a copy the Yog-Urt
+  // reserve does not want (spareStallHeal -> stallSpare, CCS:288-303) — an HP
+  // floor must never eat that kit. Both are chosen when the macro is built, but
+  // `hppercentbelow` is a real BALLS numeric predicate (macrohelper.6.js:
+  // 101-116) evaluated live, and `repeat` re-runs the whole macro from the top,
+  // so the guard tracks HP round by round.
+  const heal = new Macro();
+  let healed = false;
+  const skill = combatHealSkill();
+  if (skill) {
+    heal.trySkill(skill);
+    healed = true;
+  }
+  const item = spareStallHeal();
+  if (item) {
+    heal.tryItem(item);
+    healed = true;
+  }
+  return healed
+    ? Macro.if_(`hppercentbelow ${HP_FLOOR_PERCENT}`, heal).runaway().repeat()
+    : Macro.runaway().repeat();
 }
 
 /**
