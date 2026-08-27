@@ -68,20 +68,25 @@ type Fishysource = {
 };
 
 const FISHY_SOURCES: Fishysource[] = [
+  // The nigiri themselves have no item id/mall price (see the pseudoitem
+  // note above), so `item` here is their real fish-meat ingredient instead
+  // — a real, priced stand-in for the opportunity cost of burning it as
+  // sushi rather than something else. `use` (not the `item` field) is what
+  // useFishySource() actually consumes.
   {
-    item: $item`beefy nigiri`,
+    item: $item`beefy fish meat`,
     available: () => have($item`beefy fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
   },
   {
-    item: $item`glistening nigiri`,
+    item: $item`glistening fish meat`,
     available: () => have($item`glistening fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
   },
   {
-    item: $item`slick nigiri`,
+    item: $item`slick fish meat`,
     available: () => have($item`slick fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
@@ -113,11 +118,6 @@ const FISHY_SOURCES: Fishysource[] = [
     item: $item`powdered candy sushi set`,
     available: () => have($item`powdered candy sushi set`),
     turns: 30,
-  },
-  {
-    item: $item`super-sweet fish goo`,
-    available: () => have($item`super-sweet fish goo`),
-    turns: 15,
   },
   {
     item: $item`Aldebaran sardines`,
@@ -194,6 +194,10 @@ const FISHY_SOURCES: Fishysource[] = [
     available: () => have($item`Herringtini`),
     turns: 15,
   },
+  // "super-sweet fish goo" (unspoiled) has no item id in items.txt — only
+  // "super-sweet fish goo (spoiled)" exists, and statuseffects.txt confirms
+  // chewing it grants Fishy. A duplicate rung under the unspoiled name was
+  // removed rather than renamed, since this rung already covers the item.
   {
     item: $item`super-sweet fish goo (spoiled)`,
     available: () => have($item`super-sweet fish goo (spoiled)`),
@@ -205,13 +209,13 @@ const FISHY_SOURCES: Fishysource[] = [
     turns: 10,
   },
   {
-    item: $item`Sea jelly`,
-    available: () => have($item`Sea jelly`),
+    item: $item`sea jelly`,
+    available: () => have($item`sea jelly`),
     turns: 10,
   },
   {
-    item: $item`Fish sauce`,
-    available: () => have($item`Fish sauce`),
+    item: $item`fish sauce`,
+    available: () => have($item`fish sauce`),
     turns: 30,
   },
   {
