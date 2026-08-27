@@ -122,7 +122,7 @@ function activeSongs(): Effect[] {
  * ensureEffect(Richie) had no slot and threw. trimSongs() only caps the
  * REQUESTED list; it has no idea what's already active.
  */
-function shrugForSongs(wanted: Effect[]): void {
+export function shrugForSongs(wanted: Effect[]): void {
   const wantedSongs = wanted.filter((effect) => isSong(effect));
   if (wantedSongs.length === 0) return;
   const cap = maxSongs();
@@ -243,16 +243,79 @@ export function squintEffects(): Effect[] {
 }
 
 /**
+ * Is this effect permanently out of reach THIS RUN — its source skill costs
+ * more MP than the character's max MP could ever hold, no matter how much
+ * gets restored? (Live case: a level-2 Sauceror's 40 max MP against The
+ * Ballad of Richie Thingfinder's 50 MP cost.) Item-sourced effects
+ * (toSkill() === $skill.none) are never gated here — only a skill cast can be
+ * unaffordable in this permanent sense.
+ */
+export function exceedsMaxMp(effect: Effect): boolean {
+  const skill = toSkill(effect);
+  return skill !== $skill.none && mpCost(skill) > myMaxmp();
+}
+
+/**
+ * Resolve a raw wanted-effects list into what a caller will actually try to
+ * cast, and describe every drop as a one-line reason string for the caller to
+ * print. Two drops, in order: (1) exceedsMaxMp() — permanently unaffordable
+ * this run — and (2) the song cap (trimSongs' keep-last rule), evaluated
+ * AFTER (1) so an unaffordable song doesn't spend a cap slot that an
+ * affordable one would otherwise keep (see the desk-check in the engine
+ * override for the case this ordering matters). Shared by the engine's
+ * acquireEffects() (task.effects) and applyEffects() (the self-dressing
+ * helpers' path) so both give the same "what did this call actually try to
+ * get" transparency (user rule 2026-08-27).
+ */
+export function resolveWantedEffects(effects: Effect[]): {
+  wanted: Effect[];
+  skipLines: string[];
+} {
+  const skipLines: string[] = [];
+  const affordable = effects.filter((effect) => {
+    if (!exceedsMaxMp(effect)) return true;
+    skipLines.push(`skipped ${effect}: needs ${mpCost(toSkill(effect))} MP, max is ${myMaxmp()}`);
+    return false;
+  });
+  const wanted = trimSongs(affordable);
+  if (wanted.length !== affordable.length) {
+    const cap = maxSongs();
+    const wantedSongCount = affordable.filter((effect) => isSong(effect)).length;
+    for (const effect of affordable) {
+      if (!wanted.includes(effect)) {
+        skipLines.push(`skipped ${effect}: song cap (${wantedSongCount}/${cap})`);
+      }
+    }
+  }
+  return { wanted, skipLines };
+}
+
+/**
  * Acquire a mood list by hand, for the two places the engine's own
  * acquireEffects() cannot serve: a task's prepare() (which is the only hook
  * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
- * Same ensureEffect the engine uses, so the same abort-on-failure contract —
- * which is why every list above is gated to what the account can actually get.
+ *
+ * Buffs are optional (user rule 2026-08-27): a cast that still fails after
+ * resolveWantedEffects() has already dropped the unaffordable/over-cap
+ * entries — a song bumped back over cap by the character's own mood, a
+ * daily limit raced by something outside this file's gates, etc. — is
+ * fail-soft, same as the engine's acquireEffects() override.
+ *
+ * @param context optional label for the transparency line below (e.g. a task
+ * or call-site name); omitted callers just get "Effects: …".
  */
-export function applyEffects(effects: Effect[]): void {
+export function applyEffects(effects: Effect[], context?: string): void {
   reserveMpFor(effects);
-  shrugForSongs(effects);
-  for (const effect of effects) {
+  const { wanted, skipLines } = resolveWantedEffects(effects);
+  if (effects.length > 0) {
+    print(
+      `Effects${context ? ` (${context})` : ""}: ${wanted.length > 0 ? wanted.map((effect) => `${effect}`).join(", ") : "(none)"}`,
+      "blue",
+    );
+    for (const line of skipLines) print(line, "yellow");
+  }
+  shrugForSongs(wanted);
+  for (const effect of wanted) {
     const skill = toSkill(effect);
     if (!have(effect) && skill !== $skill.none && myMp() < mpCost(skill)) {
       // Skip rather than cast: ensureEffect would throw, and worse, several
@@ -261,10 +324,14 @@ export function applyEffects(effects: Effect[]): void {
       // Etude" (statuseffects.txt:535), and EffectDatabase.getDefaultAction
       // (:178-197) picks the branch that works, so an unaffordable cast turns
       // into a spent item. A missing buff is cheaper than either.
-      print(`Skipping ${effect}: needs ${mpCost(skill)} MP, have ${myMp()}.`, "red");
+      print(`skipped ${effect}: needs ${mpCost(skill)} MP, have ${myMp()}`, "yellow");
       continue;
     }
-    ensureEffect(effect);
+    try {
+      ensureEffect(effect);
+    } catch (e) {
+      print(`failed ${effect}: ${e}`, "yellow");
+    }
   }
 }
 

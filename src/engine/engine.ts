@@ -39,6 +39,7 @@ import {
   $monster,
   $skill,
   $slot,
+  ensureEffect,
   get,
   have,
   Macro,
@@ -49,7 +50,13 @@ import {
 } from "libram";
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
-import { reserveMpFor, routeDamageEffects, shrugBadEffects, trimSongs } from "../lib/moods";
+import {
+  reserveMpFor,
+  resolveWantedEffects,
+  routeDamageEffects,
+  shrugBadEffects,
+  shrugForSongs,
+} from "../lib/moods";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -417,19 +424,52 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // spend freely, so top up for exactly this list plus a nuke.
     const effects = undelay(task.effects, this.getContext(task)) ?? [];
     reserveMpFor(effects);
-    // Single choke point for the song cap. Every list moods.ts exports is
-    // already trimmed, but task.effects can be set to anything — Pellet/
-    // Garden Pellet sets it to the bare itemDropEffects() return, no
-    // combineMoods() involved — so trim again here regardless of what built
-    // the list. Without this, grimoire's own acquireEffects (engine.js:162-
-    // 181) either throws "Too many AT songs" outright (songs.length over cap)
-    // or, as it did live, casts every wanted song up to the cap and then
-    // throws an Ensure Error on the one that doesn't fit (it only shrugs
-    // ALREADY-ACTIVE songs the list doesn't want; it never trims the wanted
-    // list itself). Passing the trimmed list via a wrapped task rather than
-    // reimplementing the ensure loop, since super.acquireEffects(task) only
-    // reads task.effects and the context.
-    super.acquireEffects({ ...task, effects: trimSongs(effects) });
+
+    // resolveWantedEffects (moods.ts) drops two kinds of entry from a task's
+    // raw wanted list before anything is cast: (1) anything whose source
+    // skill costs more MP than this account's max MP could ever hold (e.g. a
+    // level-2 Sauceror against The Ballad of Richie Thingfinder's 50 MP), and
+    // (2) anything the song cap can't fit (trimSongs' keep-last rule; every
+    // list moods.ts exports is already trimmed, but task.effects can be set
+    // to anything — Pellet/Garden Pellet sets it to the bare
+    // itemDropEffects() return, no combineMoods() involved). (1) runs before
+    // (2) so an unaffordable song can't spend a cap slot an affordable one
+    // would otherwise keep. Desk check: level-2 Sauceror, max MP 40, wanted
+    // [Polka, Fat Leon's, Donho's, Richie 50] with a 3-song cap — Richie is
+    // dropped by (1) first, so (2) sees only 3 songs and drops none; without
+    // the ordering, trimSongs would instead evict Polka (oldest of 4) and
+    // leave Richie in the list to throw on the cast below.
+    const { wanted, skipLines } = resolveWantedEffects(effects);
+    if (effects.length > 0) {
+      print(
+        `Effects for ${task.name}: ${wanted.length > 0 ? wanted.map((effect) => `${effect}`).join(", ") : "(none)"}`,
+        "blue",
+      );
+      for (const line of skipLines) print(line, "yellow");
+    }
+
+    // Reproduce grimoire's ContextualEngine.acquireEffects (engine.js:162-182)
+    // by hand instead of delegating to super.acquireEffects(): buffs are
+    // optional (user rule 2026-08-27), so a failed cast must never abort the
+    // task it's decorating. Its "throw outright when the wanted songs alone
+    // are over cap" branch is intentionally not reproduced — resolveWantedEffects
+    // already guarantees `wanted` fits the cap, so that branch can never fire.
+    // shrugForSongs() below IS its "shrug active songs the wanted list
+    // doesn't want, down to the cap" loop, reused from moods.ts rather than
+    // re-inlined (its own doc comment cites the same engine.js lines). The
+    // only behavior actually changed from grimoire's loop is the cast itself:
+    // wrapped in try/catch so a cast that still fails here — a song bumped
+    // back over cap by the character's own mood, a daily limit raced by
+    // something outside resolveWantedEffects' gates, etc. — prints a note and
+    // lets the task continue instead of aborting the run.
+    shrugForSongs(wanted);
+    for (const effect of wanted) {
+      try {
+        ensureEffect(effect);
+      } catch (e) {
+        print(`failed ${effect}: ${e}`, "yellow");
+      }
+    }
   }
 
   override createOutfit(task: Task): Outfit {
