@@ -33,7 +33,7 @@ import {
 } from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
-import { diverHuntActive } from "../../resources/saber";
+import { diverHuntActive, forceGranted } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const outpost = $location`The Mer-Kin Outpost`;
@@ -188,9 +188,18 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               // waits for prepare() — the only hook that runs after dress()
               // (grimoire engine.js:101 vs :108), matching the ash's order
               // after tempEquipment at UTS:1402.
+              //
+              // And only when no Force covers this fight: "Forced and
+              // yellow-rayed drops ignore item bonuses, so the once-a-day
+              // squint only fires when neither covers this fight"
+              // (UTS:1395-1402, `if (!diverForceReady())`). forceGranted() is
+              // the same predicate the engine's provideSaber() uses to decide
+              // whether this task gets a Force at all (engine.ts:196-204);
+              // this task's `do` is a function, so it has no location, exactly
+              // as the engine sees it.
               prepare: (): void => {
                 recover();
-                applyEffects(squintEffects());
+                if (!forceGranted("diver")) applyEffects(squintEffects());
               },
               limit: { tries: 5 },
             },
@@ -210,10 +219,13 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // Same diver table as the summon lane above, same ash mood.
         effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
         choices: { 299: 1 },
-        // Squint after dress(), as above (ash UTS:1433).
+        // Squint after dress() and only behind a Force-less fight, as above
+        // (ash UTS:1430-1434). This lane DOES have a location, so it is passed
+        // — the engine's provideSaber() reads forceGranted(purpose, location)
+        // the same way (engine.ts:198).
         prepare: (): void => {
           recover();
-          applyEffects(squintEffects());
+          if (!forceGranted("diver", wreck)) applyEffects(squintEffects());
         },
         limit: { soft: 30, message: "Diver parts are not dropping; check item-drop gear." },
       },

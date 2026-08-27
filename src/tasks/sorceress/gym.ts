@@ -50,9 +50,10 @@ export function gymnasiumTurn(): void {
       "An NC forcer is pending while headed to the Mer-kin Gymnasium — it would be wasted on the zone NC (ash UTS:638-639). Spend it (e.g. at the Skate Park) and rerun.",
     );
   }
-  // Ash gymnasium() runs mood("combat") before its tempEquipment (UTS:636-640
-  // at 89982f5): the +combat buffs' own slots and levels have to be in place
-  // before the maximize prices gear against them. This wrapper dresses itself,
+  // Ash gymnasium() runs tempEquipment THEN mood("combat") (UTS:660-662 at
+  // HEAD). Casting first here is deliberate: the +combat buffs' own levels are
+  // then in place when the maximize prices gear against them, so no slot is
+  // spent on combat rate a buff already covers. This wrapper dresses itself,
   // so the engine's acquireEffects() never runs for it — cast them here.
   applyEffects(combatEffects());
   const warOpen = skateWarOpen();

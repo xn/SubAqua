@@ -266,7 +266,16 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           monster === undefined && reserved.length > 0
             ? Macro.ifNot(reserved, source.do)
             : source.do;
-        combat.macro(step, monster, true);
+        // NOT prepended. grimoire compiles startingMacro -> monster macros ->
+        // general macros -> monster actions -> general action (combat.js
+        // :242-272), so appending still puts the free kill ahead of every
+        // ACTION — the kill ladder stays the fallback — while leaving the
+        // task's own declared macros in front of it. The ash free_kills LAST,
+        // after the fight's real work: the eagle screech that banishes the
+        // construct phylum (CCS:524-528), the library's scroll throws
+        // (CCS:1026-1052), the sword imprint on the cowboy (CCS:1191-1193).
+        // A prepend would end those fights before their macro ever ran.
+        combat.macro(step, monster);
       };
       if (combat.getDefaultAction() === "kill") {
         upgradeKill();

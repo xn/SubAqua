@@ -39,12 +39,22 @@ export function bczCost(counterPref: string): number {
   return base * 10 ** (cast < 12 || (cast > 12 && mod === 0) ? tier : tier + 1);
 }
 
+/**
+ * Can the next cast of a BCZ skill be paid for out of `substat`, leaving
+ * `floor` substats behind? Stat.get("submoxie") and friends: mafia's runtime
+ * accepts substat names even though the typings' StatType union lists only the
+ * three mainstats; MafiaClass.get takes any string.
+ *
+ * The ash spells this out per skill: Sweat Bullets is submoxie over a 150-moxie
+ * floor (150² = 22500, G freeKill():473 and CCS:41), Refracted Gaze is
+ * submysticality over a 200 floor (40000, CCS:113).
+ */
+export function bczAffordable(counterPref: string, substat: string, floor: number): boolean {
+  return myBasestat(Stat.get(substat)) - floor > bczCost(counterPref);
+}
+
 function bczSweatBulletsAffordable(): boolean {
-  // Stat.get("submoxie"): mafia's runtime accepts substat names even though
-  // the typings' StatType union lists only the three mainstats; MafiaClass.get
-  // takes any string. Gate: base moxie substats above the 150-moxie floor
-  // (150² = 22500) must exceed the next cast's price (ash freeKill():249).
-  return myBasestat(Stat.get("submoxie")) - 22500 > bczCost("_bczSweatBulletsCasts");
+  return bczAffordable("_bczSweatBulletsCasts", "submoxie", 22500);
 }
 
 const sheriffZones = $locations`An Octopus's Garden, Mer-kin Gymnasium, The Caliginous Abyss`;

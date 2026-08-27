@@ -11,6 +11,8 @@ import {
   isSong,
 } from "libram";
 
+import { bczAffordable } from "../resources/freekill";
+
 import { currentTier } from "./tier";
 
 /**
@@ -45,16 +47,29 @@ function photoBoothReady(): boolean {
 /** The Clan VIP Olympic-sized swimming pool ("swim sprints"). */
 const swimmingPool = $item`Olympic-sized Clan crate`;
 
-/** grimoire throws "Too many AT songs" when a task's effects list carries more
- * songs than the shrine allows (engine.js:165-168, maxSongs()). The ash never
- * hits this because cli_execute just shoves the oldest song out; here the list
- * has to be trimmed, keeping the ash's own priority order. */
+/**
+ * grimoire THROWS "Too many AT songs" when a task's effects list carries more
+ * songs than the shrine allows (engine.js:165-168, maxSongs()); the ash never
+ * hits it because cli_execute just shoves a song out. Trim to the cap the same
+ * way the ash's casts settle: it casts each mood in order and every cast past
+ * the cap evicts the OLDEST song, so the songs that survive are the LAST ones
+ * listed. Keeping the first N instead would invert the ash at every site that
+ * runs mood("combat") before mood("itdrop") (UTS:2698-2699), evicting the
+ * +item songs off an +item grind to keep Cantata.
+ */
 function maxSongs(): number {
   return have($skill`Mariachi Memory`) ? 4 : 3;
 }
 function trimSongs(effects: Effect[]): Effect[] {
-  let songs = 0;
-  return effects.filter((effect) => !isSong(effect) || ++songs <= maxSongs());
+  const cap = maxSongs();
+  const total = effects.filter((effect) => isSong(effect)).length;
+  let dropsLeft = total - cap;
+  if (dropsLeft <= 0) return effects;
+  return effects.filter((effect) => {
+    if (!isSong(effect) || dropsLeft <= 0) return true;
+    dropsLeft -= 1;
+    return false;
+  });
 }
 
 /** Concatenate mood regimes for a task that wants several (the ash calls
@@ -101,6 +116,10 @@ export function sneakEffects(): Effect[] {
  */
 export function itemDropEffects(): Effect[] {
   const effects: Effect[] = [];
+  // Not an ash itdrop entry (it is +meat, not +item) but long-standing local
+  // behavior; listed FIRST so the keep-last song trim sheds it before any ash
+  // song.
+  if (have($skill`The Polka of Plenty`)) effects.push($effect`Polka of Plenty`);
   if (have($skill`Who's Going to Pay This Drunken Sailor?`))
     effects.push($effect`Who's Going to Pay This Drunken Sailor?`);
   if (have($skill`Fat Leon's Phat Loot Lyric`)) effects.push($effect`Fat Leon's Phat Loot Lyric`);
@@ -114,9 +133,6 @@ export function itemDropEffects(): Effect[] {
   if (have($skill`Donho's Bubbly Ballad`)) effects.push($effect`Donho's Bubbly Ballad`);
   if (have($skill`The Ballad of Richie Thingfinder`))
     effects.push($effect`The Ballad of Richie Thingfinder`);
-  // Not an ash itdrop entry (it is +meat, not +item) but long-standing local
-  // behavior; kept last so the song cap sheds it before any ash song.
-  if (have($skill`The Polka of Plenty`)) effects.push($effect`Polka of Plenty`);
   return trimSongs(effects);
 }
 
@@ -140,7 +156,10 @@ export function superItemDropEffects(): Effect[] {
   ) {
     effects.push($effect`Party Soundtrack`);
   }
-  if (have($skill`Heartstone: %pals`)) effects.push($effect`Best Pals`);
+  // dailylimits.txt:126 caps Heartstone: %pals at 5/day; past that the cast
+  // fails and ensureEffect throws (libram lib.js:566-570).
+  if (have($skill`Heartstone: %pals`) && get("_heartstonePalsUsed", 0) < 5)
+    effects.push($effect`Best Pals`);
   return trimSongs(effects);
 }
 
@@ -189,8 +208,21 @@ export function combatEffects(): Effect[] {
   if (get("yogUrtDefeated") && photoBoothReady()) effects.push($effect`Towering Muscles`);
   if (have($skill`Attract Snakes`)) effects.push($effect`Attracting Snakes`);
   // BCZ: Blood Bath is an equipment-granted skill, so have() is already an
-  // "is it castable right now" test. Skipped at low shiny per the ash.
-  if (have($skill`BCZ: Blood Bath`) && currentTier() !== "low") effects.push($effect`Bloodbathed`);
+  // "is it castable right now" test. Skipped at low shiny per the ash — and
+  // gated on the substat price the ash models for its OTHER BCZ casts
+  // (bczCost(), resources/freekill.ts), which the ash itself omits here: a BCZ
+  // skill you cannot pay for simply fails, and ensureEffect turns that into an
+  // abort. mafia does not record which substat each BCZ skill drains; the
+  // family split in the ash's own gates is Sweat -> submoxie (G:473, CCS:41)
+  // and Refracted Gaze -> submysticality (CCS:113), so Blood Bath is read as
+  // submuscle, over the same 150-stat floor the ash uses for Sweat Bullets.
+  if (
+    have($skill`BCZ: Blood Bath`) &&
+    currentTier() !== "low" &&
+    bczAffordable("_bczBloodBathCasts", "submuscle", 22500)
+  ) {
+    effects.push($effect`Bloodbathed`);
+  }
   return trimSongs(effects);
 }
 

@@ -1,5 +1,5 @@
 import { ActionDefaults, CombatStrategy as BaseCombatStrategy } from "grimoire-kolmafia";
-import { haveEquipped, Location, Monster, myLevel } from "kolmafia";
+import { haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
 import { $effect, $item, $skill, have, Macro } from "libram";
 
 const myActions = [
@@ -107,17 +107,27 @@ export function killMacro(hard?: boolean): Macro {
   // round/pastround, has(combat)item/skill, haseffect, monstername/id/phylum/
   // element, snarfblat, match, times — nothing reads the monster's attack), and
   // killMacro is built once per task at customize() time, before the monster is
-  // known, so the comparison cannot be pre-computed either. Cast them
-  // unconditionally instead: Micrometeorite has NO daily ration
-  // (_micrometeoriteUses models a 25% -> 10% potency decay, not a cap — the
-  // ten-a-day limit belongs to Macrometeorite) and Curse of Weaksauce costs
-  // only MP, so the divergence buys an over-cast of two cheap skills.
+  // known, so the comparison cannot be pre-computed either. Micrometeorite is
+  // therefore cast unconditionally: it has NO daily ration — _micrometeoriteUses
+  // models POTENCY, which decays across the day from a 25% delevel to a 10%
+  // floor and resets at rollover (the ten-a-day limit belongs to
+  // Macrometeorite). The ash pays the same price, since its cleanUp() casts it
+  // on every fight too; over-casting only walks that decay down sooner.
+  //
+  // Weaksauce keeps the ash's SECOND condition, my_mp() >= mp_cost, which BALLS
+  // CAN express as `mpabove`: the cost is read at macro-build time (mpCost
+  // moves with buffs, so a mid-task shift is not tracked) and the macro tests
+  // live MP each round.
   //
   // Never on `hard`: killMacro(true) is the boss / already-free path, and both
   // openers deal damage — enough to trip Shub-Jigguwatt's retaliation.
   if (!hard) {
     if (have($skill`Micrometeorite`)) result.trySkill($skill`Micrometeorite`);
-    if (have($skill`Curse of Weaksauce`)) result.trySkill($skill`Curse of Weaksauce`);
+    if (have($skill`Curse of Weaksauce`)) {
+      // `mpabove N` is MP > N, so the ash's >= becomes cost - 1.
+      const cost = mpCost($skill`Curse of Weaksauce`);
+      result.if_(`mpabove ${Math.max(0, cost - 1)}`, Macro.trySkill($skill`Curse of Weaksauce`));
+    }
   }
 
   if (!haveEquipped($item`June cleaver`) && have($skill`Saucegeyser`)) {
