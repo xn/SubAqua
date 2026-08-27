@@ -138,6 +138,37 @@ export function main(choice: number, _page: string) {
     } else {
       stashboxCheck([3, 1, 2]); // healer (CH:63-79)
     }
+  } else if (choice === 396) {
+    // Woolly Scaly Bully: option 3 unlocks the janitor's closet (monitor
+    // fights, ChoiceControl.java:5084-5089); other options just lose HP.
+    runChoice(3);
+  } else if (choice === 397) {
+    // Bored of Education: option 2 unlocks the bathrooms (wordquiz NC 401,
+    // ChoiceControl.java:5091-5096).
+    runChoice(2);
+  } else if (choice === 398) {
+    // A Mer-kin Graffiti: option 1 unlocks the teacher's lounge — the
+    // merkinElementaryTeacherUnlock the library route needs
+    // (ChoiceControl.java:5098-5103).
+    runChoice(1);
+  } else if (choice === 399) {
+    // The Case of the Closet: fight the Mer-kin monitor (cheatsheet source);
+    // ash CH:126-131 takes option 1 too.
+    runChoice(1);
+  } else if (choice === 400) {
+    // No Rest for the Room: fight the Mer-kin teacher (ash CH:126-131).
+    runChoice(1);
+  } else if (choice === 401) {
+    // Raising Cane: option 2 takes a Mer-kin wordquiz (ash CH:134-140).
+    runChoice(2);
+  } else if (choice === 701) {
+    // Ators Gonna Ate (Gymnasium): option 1 takes the item
+    // (ChoiceAdventures.java:3612-3619; ash simple-case list CH:44,55).
+    runChoice(1);
+  } else if (choice === 705) {
+    // Halls Passing in the Night: option 4 takes a wordquiz; mafia already
+    // deducted the hallpass on visit (ChoiceControl.java:7290-7291).
+    runChoice(4);
   } else if (choice === 1562) {
     const getPriority = (option: string): number => MOBIUS_PRIORITIES[option as MobiusOption];
     const bestChoice = Object.entries(options).reduce((a, b) =>
@@ -168,7 +199,75 @@ export function main(choice: number, _page: string) {
   }
 }
 
+/**
+ * dreadScrollGuesses is mafia's guess log: comma-joined
+ * `<8-digit-guess>:<wrong-count>` entries. Pull out just the codes we've
+ * already submitted, so fallback guesses can avoid repeating one.
+ */
+function parseGuessedCodes(): Set<string> {
+  const guessed = new Set<string>();
+  const pastGuesses = get("dreadScrollGuesses");
+  if (pastGuesses) {
+    for (const guess of pastGuesses.split(",")) {
+      const [code] = guess.split(":");
+      if (code) guessed.add(code);
+    }
+  }
+  return guessed;
+}
+
+/**
+ * Build a guess from the known clues (unknown positions default to "1"),
+ * then — if that guess was already submitted per dreadScrollGuesses —
+ * perturb the unknown positions like a base-4 odometer (digits 1->2->3->4,
+ * carrying into the next-lowest-index unknown on overflow) until we find a
+ * guess not yet tried. Used when there are too many unknowns to enumerate
+ * (F10) and when guess history is contradictory, so neither fallback path
+ * submits the identical wrong guess on every attempt and burns Deep-Tainted
+ * Mind cycles for nothing. If every combination has already been guessed,
+ * fall through and return the last one anyway — a branch must still always
+ * answer.
+ */
+function fallbackGuess(unknowns: number[]): string {
+  const digits = Array.from({ length: 8 }, (_, i) => get(`dreadScroll${i + 1}`, 0) || 1);
+  const guessed = parseGuessedCodes();
+  let candidate = digits.join("");
+  if (unknowns.length === 0 || !guessed.has(candidate)) return candidate;
+
+  const totalCombos = Math.pow(4, unknowns.length);
+  for (let attempt = 1; attempt < totalCombos; attempt++) {
+    let carry = 1;
+    for (const pos of unknowns) {
+      if (carry === 0) break;
+      const idx = pos - 1;
+      digits[idx] += carry;
+      carry = 0;
+      if (digits[idx] > 4) {
+        digits[idx] = 1;
+        carry = 1;
+      }
+    }
+    candidate = digits.join("");
+    if (!guessed.has(candidate)) return candidate;
+  }
+  return candidate;
+}
+
 function getDreadscrollGuess(): string {
+  const unknowns: number[] = [];
+  for (let i = 1; i <= 8; i++) {
+    if (get(`dreadScroll${i}`, 0) === 0) unknowns.push(i);
+  }
+  if (unknowns.length > 5) {
+    // Too blind to enumerate: 4^n candidates explodes past n=5 (4^6=4096
+    // is fine, but the scoring loop below is O(n^2) over the candidate
+    // pool and 4^7-4^8 hangs Rhino). The route never uses the scroll this
+    // blind (clues 1/6/8 gate acquisition), but a manual `use` shouldn't
+    // hang. Answer the known clues plus a guess-history-aware fallback
+    // (F10) instead of enumerating.
+    return fallbackGuess(unknowns);
+  }
+
   let possibleCodes: string[] = [""];
   for (let i = 1; i <= 8; i++) {
     const currentClue = get(`dreadScroll${i}`, 0);
@@ -205,6 +304,13 @@ function getDreadscrollGuess(): string {
         return differences === incorrectCount;
       });
     }
+  }
+  if (possibleCodes.length === 0) {
+    // Contradictory guess history (e.g. a pref was hand-edited by hand);
+    // bestCode would be undefined below. Fall back to known clues plus a
+    // guess-history-aware perturbation (F10) rather than submitting
+    // "undefined".
+    return fallbackGuess(unknowns);
   }
   // Choose the code that minimizes expected errors among possible codes
   let bestCode = possibleCodes[0];
