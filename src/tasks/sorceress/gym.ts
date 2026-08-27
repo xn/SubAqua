@@ -104,7 +104,14 @@ export function gearQuest(): Quest {
         // (fights.ts gladiatorFilter gym extras) and gymnasiumTurn() then hard-
         // aborts on the pending one, so without this guard the very next
         // selection pass kills the run.
-        ready: () => get("yogUrtDefeated") && !get("noncombatForcerActive"),
+        //
+        // ...but only while there is somewhere to spend it. With the war
+        // already closed nothing downstream is reachable either (all gear-
+        // gated), so hiding here would leave grimoire with no task at all and
+        // main.ts would exit on a bare "N tasks remaining" with no instruction
+        // (spec §9 wants an abort that says why). Staying ready hands the turn
+        // to gymnasiumTurn(), whose abort explains how to clear the forcer.
+        ready: () => get("yogUrtDefeated") && (!get("noncombatForcerActive") || !skateWarOpen()),
         completed: () => availableAmount(gladMask) > 0 && availableAmount(gladTail) > 0,
         do: gladiatorGearStep,
         underwater: true,
