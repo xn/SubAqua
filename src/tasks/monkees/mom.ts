@@ -26,7 +26,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
@@ -98,7 +98,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               completed: () => get("banishedPhyla").includes("construct"),
               do: $location`Madness Bakery`,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`))
+                .macro(openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)))
                 .kill(),
               outfit: { familiar: eagle },
               prepare: (): void => {
@@ -131,7 +131,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               },
               do: abyss,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`Recall Facts: Monster Habitats`), habitatTargets)
+                .macro(
+                  openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
+                  habitatTargets,
+                )
                 .kill(),
               outfit: { modifier: "item", equip: [glass] },
               effects: itemDropEffects,

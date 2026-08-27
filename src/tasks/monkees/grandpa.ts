@@ -1,7 +1,7 @@
 import { availableAmount, cliExecute } from "kolmafia";
 import { $effect, $item, $items, $monster, $monsters, $skill, get, have, Macro } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
@@ -77,8 +77,10 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
               do: () => summon(golem),
               combat: new CombatStrategy()
                 .macro(
-                  Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
-                    $skill`Club 'Em Into Next Week`,
+                  openerOnce(
+                    Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
+                      $skill`Club 'Em Into Next Week`,
+                    ),
                   ),
                   golem,
                 )

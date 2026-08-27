@@ -145,3 +145,29 @@ export function killMacro(hard?: boolean): Macro {
 export function runMacro(): Macro {
   return new Macro().tryItem($item`pulled indigo taffy`);
 }
+
+/**
+ * Round-guard a once-per-combat opener (the garbo fork combat.ts:333-340, :618-631 and
+ * the comment there): "if the fight outlives the macro, mafia re-runs it from
+ * the top, and re-casting a once-per-combat skill aborts mid-fight". The abort
+ * drops the rest of the fight on mafia's default action — a lost turn, or on a
+ * corral fight (cow HP 900 behind Def 675, exactly the fights that outlive a
+ * macro) a lost combat and a hard post() abort.
+ *
+ * libram's trySkill() does NOT cover this: it emits `if hasskill X`, which asks
+ * whether the skill is on the fight page, not whether its once-per-combat use
+ * is already spent.
+ *
+ * Round 2, not round 1, and that matters: `pastround N` is true once the round
+ * counter is past N (macrohelper.6.js:101-116 lists pastround among the numeric
+ * predicates), and each submitted action advances a round — so on any
+ * underwater task the engine's own round-1 lasso injection (engine.ts
+ * customize(), `Macro.ifNot("pastround 1", tryItem(sea lasso))`) pushes these
+ * openers to round 2. `!pastround 1` would therefore skip the opener forever
+ * while lasso training. `!pastround 2` allows rounds 1-2 — with or without the
+ * lasso — and still blocks the re-run, which lands many rounds later. Same
+ * threshold the garbo fork uses.
+ */
+export function openerOnce(macro: Macro): Macro {
+  return Macro.ifNot("pastround 2", macro);
+}

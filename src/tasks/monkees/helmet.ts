@@ -21,7 +21,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
 import {
@@ -174,7 +174,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               do: () => summon(diver),
               saberPurpose: "diver" as const,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`%fn, lay an egg`), diver)
+                .macro(openerOnce(Macro.trySkill($skill`%fn, lay an egg`)), diver)
                 .forceItems(diver),
               outfit: () => ({
                 modifier: "item",

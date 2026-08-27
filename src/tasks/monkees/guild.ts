@@ -12,7 +12,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
@@ -84,8 +84,13 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         do: () => summon($monster`sea cowboy`),
         choices: { 1589: "1&victim=776" },
         combat: new CombatStrategy()
-          // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-          .macro(Macro.trySkill($skill`%fn, kill a lot of these guys`), $monster`sea cowboy`)
+          .macro(
+            openerOnce(
+              // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+              Macro.trySkill($skill`%fn, kill a lot of these guys`),
+            ),
+            $monster`sea cowboy`,
+          )
           .killFree($monster`sea cowboy`)
           .kill(),
         outfit: { modifier: "item", familiar: sword },

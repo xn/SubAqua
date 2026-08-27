@@ -12,7 +12,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import {
@@ -112,7 +112,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                 tamed(),
               do: corral,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`Do an epic McTwist!`), cow)
+                .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
                 .kill($monsters`sea cow, sea cowboy`)
                 .banish(rustler)
                 .macro(seahorseMacro, seahorse)
@@ -144,7 +144,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         do: corral,
         saberPurpose: "seaCow" as const,
         combat: new CombatStrategy()
-          .macro(Macro.trySkill($skill`Do an epic McTwist!`), cow)
+          .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
           .forceItems(cow)
           .kill(cowboy)
           .banish(rustler)
@@ -190,8 +190,10 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           .macro(
             () =>
               swordOut()
-                ? // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-                  Macro.trySkill($skill`%fn, kill a lot of these guys`)
+                ? openerOnce(
+                    // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+                    Macro.trySkill($skill`%fn, kill a lot of these guys`),
+                  )
                 : new Macro(),
             cowboy,
           )

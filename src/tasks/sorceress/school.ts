@@ -24,7 +24,7 @@ import {
   uneffect,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
@@ -155,7 +155,9 @@ export function schoolQuest(): Quest {
         // Peridot pins the monitor (engine choice-1557 write); the ash used
         // mimic eggs (choiceAdventure1589 victim=852, UTS:1015) — Peridot is
         // our already-built equivalent. Duplicate doubles the drop table
-        // (1/day; trySkill self-gates once spent).
+        // (1/day, once per combat; openerOnce() keeps a macro re-run from
+        // re-issuing it — `hasskill` only asks whether the skill is on the
+        // page, not whether its use is spent).
         name: "Farm School",
         ready: () => !isKnucklebonesAndSushiEnough(),
         completed: () =>
@@ -169,7 +171,9 @@ export function schoolQuest(): Quest {
         },
         do: school,
         peridot: monitor,
-        combat: new CombatStrategy().macro(() => Macro.trySkill($skill`Duplicate`), monitor).kill(),
+        combat: new CombatStrategy()
+          .macro(() => openerOnce(Macro.trySkill($skill`Duplicate`)), monitor)
+          .kill(),
         outfit: () => ({
           modifier: availableAmount(bunwig) > 0 ? "item" : "item, hat drop",
           equip: crappyPieces,
