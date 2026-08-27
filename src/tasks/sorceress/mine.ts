@@ -174,8 +174,10 @@ function pickSquare(state: string): [number, number] {
 /** One dig (ash teflon(), UTS:603-615). Beaten Up from cave-ins is cleared by
  * engine post(). */
 function mineSquare(): void {
-  equip(digpick);
-  // No breathing gear here: `Mine Teflon` is `underwater: true`, so the
+  // No equips here at all. The digpick lives in `Mine Teflon`'s `outfit`
+  // (audit item 6) — a `do()` equip lands after dress() and fights the
+  // maximizer, which is the same anti-pattern as the trunks bug below.
+  // No breathing gear here either: `Mine Teflon` is `underwater: true`, so the
   // engine already owns player breathing (engine.ts customize()'s `sea`
   // keyword + dress()'s last-chance verification) and nothing between dress
   // and this loop changes gear. The ash's teflon() equips trunks via
@@ -244,6 +246,9 @@ export function mineQuest(): Quest {
           } while (itemAmount(ore) === 0 && freeDigAvailable());
           if (itemAmount(ore) === 0 && !freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
         },
+        // The digpick is the dig; `ready` already requires one, and
+        // createOutfit() strips it anyway on an account that has none.
+        outfit: { equip: [digpick] },
         freeaction: freeDigAvailable,
         underwater: true,
         limit: {
@@ -295,11 +300,16 @@ export function mineQuest(): Quest {
               `Need ${3 - availableAmount(scale)} more pristine fish scale(s) and out of hermitage clovers (3/day). Get scales (Lucky! caliginous abyss, or Madness Reef choice 310 conversions), then rerun.`,
             );
           }
-          equip(blackGlass); // accessory; required for the Abyss (KoLAdventure CALIGINOUS_ABYSS gate)
           equipFamiliarBreather();
           recover();
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
+        // Abyss gate accessory, declared not hand-equipped (audit item 7; same
+        // shape as mom.ts's black glass). The familiar breather stays a do()
+        // rider: engine famequip enforcement only fires for an outfit that
+        // names a `familiar`, and this task wants whatever familiar is up
+        // rather than a specific one.
+        outfit: { equip: [blackGlass] },
         underwater: true,
         limit: {
           soft: 8,
@@ -347,11 +357,12 @@ export function mineQuest(): Quest {
               `Need ${3 - availableAmount(scale)} more pristine fish scale(s) and out of hermitage clovers (3/day). Get scales, then rerun.`,
             );
           }
-          equip(blackGlass);
           equipFamiliarBreather();
           recover();
           adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
         },
+        // Same as the mask task above (audit item 7).
+        outfit: { equip: [blackGlass] },
         underwater: true,
         limit: {
           soft: 8,
