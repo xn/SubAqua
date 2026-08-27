@@ -1,0 +1,131 @@
+import {
+  adv1,
+  buy,
+  itemAmount,
+  maximize,
+  myBuffedstat,
+  myMaxhp,
+  numericModifier,
+  retrieveItem,
+  use,
+  useFamiliar,
+  useSkill,
+} from "kolmafia";
+import {
+  $coinmaster,
+  $effect,
+  $familiar,
+  $item,
+  $location,
+  $skill,
+  $stat,
+  get,
+  have,
+  set,
+} from "libram";
+
+import { Quest } from "../../engine/task";
+import { recover } from "../../lib";
+import { currentPolicy } from "../../resources/policy";
+
+import { gladiatorFilter } from "./fights";
+
+const gel = $item`sea gel`;
+const unguent = $item`Doc Galaktik's Pungent Unguent`;
+const cmoi = $item`Congressional Medal of Insanity`;
+
+/**
+ * Per-round regimen (ash colosseumRound(), UTS:2165-2224): 11 unguents +
+ * 5 sea gels (10-round stall stock + Yog-Urt's reserves, CCS:288-303);
+ * Up To 11 from round 4 on (the twice-fixed gate's FINAL form,
+ * UTS:2200-2202: lastRoundWon >= 3 && effect down && skill known);
+ * null-day at >= 6 while shavings are short for Shub.
+ */
+export function colosseumRoundPrep(): void {
+  if (itemAmount(unguent) < 11) retrieveItem(11, unguent);
+  while (itemAmount(gel) < 5 && itemAmount($item`sand penny`) >= 10) {
+    // Both loop conditions only move on a successful buy (ash UTS:2183-2188).
+    if (!buy($coinmaster`Wet Crap For Sale`, 1, gel)) break;
+  }
+  if (
+    get("lastColosseumRoundWon", 0) >= 3 &&
+    !have($effect`Up To 11`) &&
+    have($skill`BCZ: Dial it up to 11`)
+  ) {
+    useSkill($skill`BCZ: Dial it up to 11`);
+  }
+  if (
+    get("lastColosseumRoundWon", 0) >= 6 &&
+    itemAmount($item`crayon shavings`) < 8 &&
+    itemAmount($item`null-day exploit`) > 0 &&
+    !have($effect`Null Afternoon`)
+  ) {
+    use($item`null-day exploit`);
+  }
+}
+
+/** One colosseum round (UTS:2165-2224 + CCS:1220-1228: full-HP recovery,
+ * eagle-recharge familiar, spell-damage coefficient outfit, free-fight
+ * riders per tier policy; never the saber, never free runs). */
+export function colosseumRoundTurn(): void {
+  colosseumRoundPrep();
+  if (have($familiar`Patriotic Eagle`) && get("screechCombats", 0) > 0 && have(cmoi)) {
+    // Worthless-for-screech fights tick the recharge down (940514c; recharge
+    // counts only plain wins, UTS:1647-1650).
+    useFamiliar($familiar`Patriotic Eagle`);
+  } else if (have($familiar`Foul Ball`)) {
+    useFamiliar($familiar`Foul Ball`);
+  }
+  const pieces = ["+equip Mer-kin gladiator mask", "+equip Mer-kin gladiator tailpiece"];
+  if (have(cmoi)) pieces.push("+equip Congressional Medal of Insanity");
+  const policy = currentPolicy();
+  if (
+    policy.allowClubEmBackInTime &&
+    get("_clubEmTimeUsed", 0) < 5 &&
+    have($item`legendary seal-clubbing club`)
+  ) {
+    pieces.push("+equip legendary seal-clubbing club");
+  }
+  if (!policy.conserveFreeFights) {
+    if (get("_batWingsFreeFights", 0) < 5 && have($item`bat wings`)) {
+      pieces.push("+equip bat wings");
+    } else if (have($item`unwrapped knock-off retro superhero cape`)) {
+      // items.txt spells it lowercase-u (eslint-plugin-libram normalizes it).
+      pieces.push("+equip unwrapped knock-off retro superhero cape");
+    }
+  }
+  // Diminishing-returns coefficient (UTS:2216-2217): weight spell damage %
+  // against mys by the current multiplier.
+  const coeff =
+    (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
+  maximize([`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces].join(", "), false);
+  recover(myMaxhp()); // colosseum floor is FULL HP (setRecoveryTargets UTS:219-220)
+  adv1($location`Mer-kin Colosseum`, -1, gladiatorFilter());
+  if (get("lastEncounter") === "Been There, Won That") {
+    // Belt and suspenders — mafia parses this too (SeaMerkinRequest.java:57-66).
+    set("lastColosseumRoundWon", 15);
+    set("isMerkinGladiatorChampion", true);
+  }
+}
+
+export function colosseumQuest(): Quest {
+  return {
+    name: "Colosseum",
+    tasks: [
+      {
+        name: "Fifteen Rounds",
+        ready: () =>
+          itemAmount($item`Mer-kin gladiator mask`) +
+            itemAmount($item`Mer-kin gladiator tailpiece`) >=
+            2 || get("isMerkinGladiatorChampion"),
+        completed: () => get("lastColosseumRoundWon", 0) >= 15 || get("isMerkinGladiatorChampion"),
+        do: colosseumRoundTurn,
+        underwater: true,
+        limit: {
+          soft: 25,
+          message: "Colosseum rounds are not being won; inspect the gladiator filter.",
+        },
+      },
+    ],
+  };
+}
