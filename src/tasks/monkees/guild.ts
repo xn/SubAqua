@@ -86,10 +86,11 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         choices: { 1589: "1&victim=776" },
         combat: new CombatStrategy()
           .macro(
-            openerOnce(
-              // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-              Macro.trySkill($skill`%fn, kill a lot of these guys`),
-            ),
+            () =>
+              openerOnce(
+                // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+                Macro.trySkill($skill`%fn, kill a lot of these guys`),
+              ),
             $monster`sea cowboy`,
           )
           .killFree($monster`sea cowboy`)

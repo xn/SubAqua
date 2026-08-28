@@ -83,11 +83,12 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
               do: () => summon(golem),
               combat: new CombatStrategy()
                 .macro(
-                  openerOnce(
-                    Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
-                      $skill`Club 'Em Into Next Week`,
+                  () =>
+                    openerOnce(
+                      Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
+                        $skill`Club 'Em Into Next Week`,
+                      ),
                     ),
-                  ),
                   golem,
                 )
                 .kill(),

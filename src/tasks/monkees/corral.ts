@@ -192,10 +192,11 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
     const strategy = new CombatStrategy();
     if (opts.swordLane && have(sword)) {
       strategy.macro(
-        openerOnce(
-          // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-          Macro.trySkill($skill`%fn, kill a lot of these guys`),
-        ),
+        () =>
+          openerOnce(
+            // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+            Macro.trySkill($skill`%fn, kill a lot of these guys`),
+          ),
         cowboy,
       );
     }
@@ -230,7 +231,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                   ? { targets: $monsters`eye in the darkness, slithering thing` }
                   : undefined,
               combat: new CombatStrategy()
-                .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
+                .macro(() => openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
                 .kill($monsters`sea cow, sea cowboy`)
                 .banish(rustler)
                 .macro(seahorseMacro, seahorse)
@@ -263,7 +264,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         peridot: cow,
         saberPurpose: "seaCow" as const,
         combat: new CombatStrategy()
-          .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
+          .macro(() => openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
           .forceItems(cow)
           .kill(cowboy)
           .banish(rustler)

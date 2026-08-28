@@ -194,7 +194,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               do: () => summon(diver),
               saberPurpose: "diver" as const,
               combat: new CombatStrategy()
-                .macro(openerOnce(Macro.trySkill($skill`%fn, lay an egg`)), diver)
+                .macro(() => openerOnce(Macro.trySkill($skill`%fn, lay an egg`)), diver)
                 .forceItems(diver),
               outfit: () => ({
                 modifier: "item",

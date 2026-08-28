@@ -224,7 +224,9 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 get("banishedPhyla").includes("construct"),
               do: $location`Madness Bakery`,
               combat: new CombatStrategy()
-                .macro(openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)))
+                .macro(() =>
+                  openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)),
+                )
                 .kill(),
               outfit: { familiar: eagle },
               prepare: (): void => {
@@ -258,7 +260,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               do: abyss,
               combat: new CombatStrategy()
                 .macro(
-                  openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
+                  () => openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
                   habitatTargets,
                 )
                 .kill(),
