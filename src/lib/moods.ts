@@ -5,7 +5,9 @@ import {
   itemAmount,
   moodList,
   mpCost,
+  myClass,
   myEffects,
+  myLevel,
   myMaxmp,
   myMp,
   numericModifier,
@@ -15,6 +17,7 @@ import {
   toSkill,
 } from "kolmafia";
 import {
+  $class,
   $effect,
   $effects,
   $item,
@@ -24,6 +27,7 @@ import {
   ensureEffect,
   EnsureError,
   get,
+  getSongLimit,
   have,
   isSong,
   uneffect,
@@ -66,6 +70,54 @@ function photoBoothReady(): boolean {
 const swimmingPool = $item`Olympic-sized Clan crate`;
 
 /**
+ * The song shrine's capacity, mirroring mafia's own UseSkillRequest.songLimit()
+ * (UseSkillRequest.java:1197-1205): `3 + (Four Songs ? 1 : 0) + Additional
+ * Song`. libram ships exactly that formula as getSongLimit() (lib.js:13-17),
+ * so this defers to it rather than reimplementing the two modifier reads.
+ *
+ * It replaces grimoire's own `have($skill`Mariachi Memory`) ? 4 : 3`
+ * (engine.js:416-418), which sees only ONE of the shrine's sources: "Four
+ * Songs" also rides Brimstone Beret / Sombrero De Vida / plexiglass pendant /
+ * Scandalously Skimpy Bikini (modifiers.txt:131, 499, 3573, 3722) and
+ * "Additional Song" also rides the zombie accordion and La Hebilla del
+ * Cinturón de López (modifiers.txt:2151, 3364) beside Mariachi Memory
+ * (modifiers.txt:8963) — and it reads the modifier that is actually in effect
+ * rather than mere skill ownership.
+ *
+ * NB the live 2026-08-27 `failed The Ballad of Richie Thingfinder … (songs
+ * 3/4, MP 922/50, skill known)` line was NOT a cap bug: 3 songs against a cap
+ * of 4 is a free slot either way. See hoboSongCastable() below for what really
+ * refused that cast.
+ */
+function maxSongs(): number {
+  return getSongLimit();
+}
+
+/**
+ * The five Hobopolis Accordion Thief songs — The Ballad of Richie Thingfinder,
+ * Benetton's Medley of Diversity, Elron's Explosive Etude, Chorale of
+ * Companionship, Prelude of Precision — are castable ONLY by an Accordion
+ * Thief of level 15+, on top of their 10-a-day cap. mafia enforces it in
+ * UseSkillRequest.getMaximumCast() (UseSkillRequest.java:577-587:
+ * `if (!KoLCharacter.isAccordionThief() || KoLCharacter.getLevel() < 15)
+ * return 0`), which makes `cast 1 <song>` fail its own sim check inside
+ * EffectDatabase.getDefaultAction() (EffectDatabase.java:178-197) — so the
+ * request is never even sent and libram's ensureEffect throws on the unchanged
+ * effect (lib.js:563-572).
+ *
+ * Live evidence (chartreusenator 2026-08-27, `Class: Pastamancer` at session
+ * log:432, `_thingfinderCasts=0`, Mariachi Memory and Richie both in the known
+ * skill dump at :847-887): every single mood application from log:88496 to
+ * log:89661 emitted `failed The Ballad of Richie Thingfinder: Ensure Error`,
+ * and the session contains no `cast 1 The Ballad of Richie Thingfinder` line
+ * at all — the cast never left mafia. `have(skill)` is true for a permed
+ * cross-class song; it is not the gate.
+ */
+function hoboSongCastable(): boolean {
+  return myClass() === $class`Accordion Thief` && myLevel() >= 15;
+}
+
+/**
  * grimoire THROWS "Too many AT songs" when a task's effects list carries more
  * songs than the shrine allows (engine.js:165-168, maxSongs()); the ash never
  * hits it because cli_execute just shoves a song out. Trim to the cap the same
@@ -82,9 +134,6 @@ const swimmingPool = $item`Olympic-sized Clan crate`;
  * task.effects at the one place every mood list funnels through on its way to
  * grimoire, regardless of which function (or hand-written array) built it.
  */
-function maxSongs(): number {
-  return have($skill`Mariachi Memory`) ? 4 : 3;
-}
 export function trimSongs(effects: Effect[]): Effect[] {
   const cap = maxSongs();
   const total = effects.filter((effect) => isSong(effect)).length;
@@ -115,13 +164,13 @@ function activeSongs(): Effect[] {
  * the self-dressing gymnasiumTurn() helper) and so gets none of grimoire's
  * protection.
  *
- * Live case this fixes: gym.ts/colosseum.ts call
- * applyEffects(combineMoods(combatEffects(), survivalEffects())) directly.
- * Donho's, Fat Leon's, and Polka of Plenty were already active (3 = the
- * cap), and the trimmed wanted list was {Fat Leon's, Donho's, The Ballad of
- * Richie Thingfinder} — Polka is not wanted but nothing ever shrugged it, so
- * ensureEffect(Richie) had no slot and threw. trimSongs() only caps the
- * REQUESTED list; it has no idea what's already active.
+ * The case this covers: gym.ts/colosseum.ts call
+ * applyEffects(combineMoods(combatEffects(), survivalEffects())) directly, so
+ * a wanted song can arrive with the shrine already full of songs nobody in the
+ * wanted list asked for. trimSongs() only caps the REQUESTED list; it has no
+ * idea what is already active, and ensureEffect() throws rather than letting
+ * KoL evict for it. (The 2026-08-27 Richie aborts were misread as this; they
+ * were hoboSongCastable() — see there.)
  */
 export function shrugForSongs(wanted: Effect[]): void {
   const wantedSongs = wanted.filter((effect) => isSong(effect));
@@ -210,8 +259,16 @@ export function itemDropEffects(): Effect[] {
   if (have($skill`Leash of Linguini`)) effects.push($effect`Leash of Linguini`);
   if (have($skill`Empathy of the Newt`)) effects.push($effect`Empathy`);
   if (have($skill`Donho's Bubbly Ballad`)) effects.push($effect`Donho's Bubbly Ballad`);
-  if (have($skill`The Ballad of Richie Thingfinder`))
+  // hoboSongCastable(): a permed Richie on a non-AT is `have()`-true and
+  // uncastable, and every mood application then aborts the effect with an
+  // EnsureError. dailylimits.txt:204 caps it at 10 casts a day besides.
+  if (
+    have($skill`The Ballad of Richie Thingfinder`) &&
+    hoboSongCastable() &&
+    get("_thingfinderCasts", 0) < 10
+  ) {
     effects.push($effect`The Ballad of Richie Thingfinder`);
+  }
   return trimSongs(effects);
 }
 
@@ -591,8 +648,10 @@ export function colosseumEffects(): Effect[] {
   if (have($skill`Carol of the Hells`)) effects.push($effect`Carol of the Hells`);
   // dailylimits.txt:94 caps Elron's at 10 casts a day; past that the cast fails
   // and ensureEffect throws, and fifteen colosseum rounds can get there.
-  if (have($skill`Elron's Explosive Etude`) && get("_elronsCasts", 0) < 10)
+  // Elron's is one of the five hobo AT songs too (hoboSongCastable()).
+  if (have($skill`Elron's Explosive Etude`) && hoboSongCastable() && get("_elronsCasts", 0) < 10) {
     effects.push($effect`Elron's Explosive Etude`);
+  }
   if (have($skill`Get Big`)) effects.push($effect`Big`);
   if (have($skill`The Magical Mojomuscular Melody`))
     effects.push($effect`The Magical Mojomuscular Melody`);
