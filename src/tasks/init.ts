@@ -29,7 +29,6 @@ import {
 import { Quest } from "../engine/task";
 import { currentPolicy } from "../resources/policy";
 import { discretionaryPull } from "../resources/pulls";
-import { summonsAvailable } from "../resources/summon";
 
 const pearl = $item`unblemished pearl`;
 const sheriffOutfit = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
@@ -52,7 +51,6 @@ const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-ma
 // eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
 // (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
 // eslint-disable-next-line libram/verify-constants
-const swordOfSWords = $familiar`Sword of S Words`;
 
 export function initQuest(): Quest {
   const policy = currentPolicy();
@@ -340,7 +338,13 @@ export function initQuest(): Quest {
             if (have(it)) continue;
             if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
               continue;
-            if (it === $item`sea lasso` && summonsAvailable() >= 3 && have(swordOfSWords)) continue;
+            // The sea lasso is ALWAYS pulled (deviation from the ash's
+            // Sword-lane skip, UTS:600): the ash trains its seven throws in
+            // shadow-rift free fights, which this route dropped, so the
+            // throws ride the paid Grandpa/Outpost/Abyss fights instead —
+            // and that only works with a lasso in hand from turn 3. Live
+            // 2026-08-28 the first lasso arrived at turn 30 and training ran
+            // on ~12 paid corral fights.
             discretionaryPull(it);
           }
           const cmoi = $item`Congressional Medal of Insanity`;
