@@ -6,6 +6,7 @@ import {
   haveEffect,
   haveEquipped,
   itemAmount,
+  mpCost,
   retrieveItem,
   use,
   useSkill,
@@ -213,6 +214,23 @@ function pickSquare(state: string): [number, number] {
   );
 }
 
+/** Live 2026-08-27 (session log:90836-91923): two digs cost 754 and 739 HP,
+ * HP hit 0, and KoL refused the next ~530 dig requests until a Cocoon landed
+ * on the rerun. The ash heals after every dig at 0 HP (UTS:636-637
+ * `restore HP`) and lifts Beaten Up with the Walrus (liftBeatenUp()). Called
+ * before every dig: Walrus for Beaten Up, then HP back above the largest hit
+ * seen. Only the two allowed healing skills are reachable — recover() runs
+ * through the restorer list the engine filters to Cocoon + Walrus. */
+const DIG_HP_FLOOR = 760;
+function healForDig(): void {
+  const walrus = $skill`Tongue of the Walrus`;
+  if (have($effect`Beaten Up`) && have(walrus)) {
+    recover(0, mpCost(walrus));
+    useSkill(walrus);
+  }
+  recover(DIG_HP_FLOOR);
+}
+
 /** Result of one dig attempt, kept for the progress check / abort diagnostic
  * in `Mine Teflon`'s do() below. `response` is the raw text KoL returned for
  * the dig request itself (not the mine=3 refresh). */
@@ -337,6 +355,7 @@ export function mineQuest(): Quest {
                 `Mine Teflon hit its ${maxDigs}-dig safety cap without acquiring ore and without exhausting the free-dig budget; something is wrong with the loop itself. Open mining.php?mine=3 in the relay browser and dig one square manually, then rerun.`,
               );
             }
+            healForDig();
             const beforeState = get("mineState3", "");
             const beforeUsed = get("_unaccompaniedMinerUsed", 0);
             const beforeLoded = haveEffect($effect`Loded`);
