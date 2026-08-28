@@ -643,7 +643,16 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // famequip set is belt-and-braces with the keyword above — kept because
       // it also covers the outfits that already carry breathing gear (and so
       // never push the keyword) and because it names the exact item.
-      if (outfit.familiar && outfit.familiar !== $familiar.none && !outfit.familiar.underwater) {
+      //
+      // The FIELDED familiar, not just a declared one (live 2026-08-28, Farm
+      // School: the outfit names no familiar and its crappy Mer-kin mask is a
+      // breather, so neither this block nor the `sea` keyword ran; once
+      // Driving Waterproofly lapsed the Peace Turkey kept its crystal ball
+      // and mafia refused the zone 30 times — "Your familiar can't breathe
+      // underwater"). With no declared familiar the current one stays out,
+      // so a famslot breather set here is exactly what dress() will verify.
+      const breathingFamiliar = outfit.familiar ?? myFamiliar();
+      if (breathingFamiliar !== $familiar.none && !breathingFamiliar.underwater) {
         const famequip = outfit.equips.get($slot`familiar`) ?? $item.none;
         if (!familiarWaterBreathingEquipment.includes(famequip)) {
           const famBreather = familiarWaterBreathingEquipment.find((item) => have(item));
@@ -797,6 +806,22 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       equip(breather);
       if (!booleanModifier("Adventure Underwater")) {
         throw `Failed to establish underwater breathing for ${task.name}`;
+      }
+    }
+    // Same last chance for the familiar half: mafia refuses the zone for a
+    // non-aquatic familiar without a famslot breather (KoLAdventure.java:
+    // 2867-2884) — nothing after dress() can put one on.
+    if (
+      isUnderwaterTask(task) &&
+      myFamiliar() !== $familiar.none &&
+      !booleanModifier("Underwater Familiar") &&
+      !myFamiliar().underwater
+    ) {
+      const famBreather = familiarWaterBreathingEquipment.find((item) => have(item));
+      if (!famBreather) throw `Unable to equip familiar water breathing for ${task.name}`;
+      equip($slot`familiar`, famBreather);
+      if (!booleanModifier("Underwater Familiar")) {
+        throw `Failed to establish familiar underwater breathing for ${task.name}`;
       }
     }
   }
