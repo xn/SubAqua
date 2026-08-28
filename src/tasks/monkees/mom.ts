@@ -203,7 +203,17 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               completed: () => momDone() || get("_cyberFreeFights", 0) >= 10,
               do: $location`Cyberzone 1`,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`Throw Cyber Rock`).repeat(), habitatTargets)
+                // trySkillRepeat, not trySkill().repeat(): the latter compiles
+                // to `if hasskill X;skill X;endif;repeat;` and KoL's `repeat`
+                // re-runs the instruction before it — the `endif` — so after
+                // the first rock the macro spun "69 instructions executed
+                // without any actions" and mafia dropped the fight (live
+                // 2026-08-28, first Cyberzone 1 fight). trySkillRepeat puts
+                // `repeat hasskill X` right after the cast, inside the if
+                // (libram combat.js trySkillRepeat); the ash loops
+                // use_skill(Throw Cyber Rock) while current_round() > 0
+                // (CCS:737-741).
+                .macro(Macro.trySkillRepeat($skill`Throw Cyber Rock`), habitatTargets)
                 .kill(),
               outfit: () => ({
                 modifier: "moxie",
