@@ -12,7 +12,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, openerOnce } from "../../engine/combat";
+import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { HP_FLOOR_PERCENT, recover, runawayHeal } from "../../lib";
 import {
@@ -242,15 +242,20 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         do: corral,
         peridot: cowboy,
         combat: new CombatStrategy()
+          // monsterMacro(): with the sword stowed this resolves to an empty
+          // macro, and an empty monster macro still compiles to a bodyless
+          // `if monsterid …;endif;` block (see monsterMacro()).
           .macro(
-            () =>
-              swordOut()
-                ? openerOnce(
-                    // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-                    Macro.trySkill($skill`%fn, kill a lot of these guys`),
-                  )
-                : new Macro(),
-            cowboy,
+            monsterMacro(
+              () =>
+                swordOut()
+                  ? openerOnce(
+                      // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+                      Macro.trySkill($skill`%fn, kill a lot of these guys`),
+                    )
+                  : new Macro(),
+              cowboy,
+            ),
           )
           .kill($monsters`sea cowboy, sea cow`)
           .banish(rustler)

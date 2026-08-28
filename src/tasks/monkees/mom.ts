@@ -27,7 +27,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, openerOnce } from "../../engine/combat";
+import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
@@ -213,7 +213,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ready: () => have(glass),
         completed: momDone,
         do: abyss,
-        combat: new CombatStrategy().macro(vhsMacro, vhsTargets).kill(),
+        // monsterMacro(), not `.macro(vhsMacro, vhsTargets)`: vhsMacro is empty
+        // outside the recording window, and an empty monster macro still compiles
+        // to a bodyless `if monsterid …;endif;` block (see monsterMacro()).
+        combat: new CombatStrategy().macro(monsterMacro(vhsMacro, vhsTargets)).kill(),
         outfit: () => ({
           modifier: "item",
           equip: [glass, ...$items`shark jumper, scale-mail underwear`],

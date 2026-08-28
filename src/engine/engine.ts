@@ -488,11 +488,16 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // general macro runs ahead of every monster-specific ACTION (grimoire
       // combat.js compile order), so an unguarded general step would burn the
       // free kill on the monster we meant to banish, Force or run from.
+      // De-duplicated: a monster can sit on an action list AND in
+      // freeKillNever, and `!(monsterid 778 || monsterid 778)` is both noise
+      // and a needless second predicate.
       const reserved = [
-        ...combatActions
-          .filter((action) => action !== "kill")
-          .flatMap((action) => combat.where(action)),
-        ...freeKillNever,
+        ...new Set([
+          ...combatActions
+            .filter((action) => action !== "kill")
+            .flatMap((action) => combat.where(action)),
+          ...freeKillNever,
+        ]),
       ];
       const upgradeKill = (monster?: Monster): void => {
         const dropsMatter = freeKillTargetDropsMatter(location, monster);
@@ -502,10 +507,24 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // that didn't land means no free-kill step.
         if (!source) return;
         if (source.equip !== undefined && !equipResource(outfit, source.equip)) return;
+        // ONE reserved monster is passed as a bare Monster, not as a
+        // one-element array: libram's makeBALLSPredicate parenthesizes arrays
+        // (`!(monsterid 778)`) and leaves a lone Monster bare (`!monsterid
+        // 778`) (libram combat.js:298-306, 376-378). The parenthesized form is
+        // fine — the live 2026-08-27 Outpost macro
+        // `if !(monsterid 772 || monsterid 771 || monsterid 778);…` threw its
+        // dart against a Mer-kin healer (session log:85117 + the fight at
+        // :85161) — but the single-predicate group is a shape nothing in this
+        // route has ever exercised, so emit the form KoL certainly parses.
         const step =
           monster === undefined && reserved.length > 0
-            ? Macro.ifNot(reserved, source.do)
+            ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, source.do)
             : source.do;
+        // Never hand grimoire an empty macro: an empty monster macro still
+        // compiles to a bodyless `if monsterid …;endif;` block (combat.ts
+        // monsterMacro() has the mechanism), and an empty general macro is
+        // just dead weight.
+        if (step.components.length === 0) return;
         // Appended, never prepended. grimoire compiles startingMacro -> monster macros ->
         // general macros -> monster actions -> general action (combat.js
         // :242-272), so appending still puts the free kill ahead of every

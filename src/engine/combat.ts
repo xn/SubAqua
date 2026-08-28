@@ -311,3 +311,32 @@ export function runMacro(): Macro {
 export function openerOnce(macro: Macro, round = 2): Macro {
   return Macro.ifNot(`pastround ${round}`, macro);
 }
+
+/**
+ * Scope a POSSIBLY-EMPTY macro to a monster list without ever emitting a
+ * bodyless `if monsterid …;endif;` block.
+ *
+ * grimoire already tries to drop empty monster macros — CompressedMacro.add()
+ * bails on `macro.toString().length === 0` (grimoire combat.js:346-355) — but
+ * libram's Macro.toString() is `components.join(";") + ";"` collapsed
+ * (libram combat.js:134-136), so an EMPTY macro stringifies to `";"`, length
+ * 1, and the guard never fires. The block is emitted with nothing in it.
+ *
+ * Live 2026-08-27, Mom/Abyss Mom: `combat.macro(vhsMacro, vhsTargets)` with
+ * the VHS window closed compiled to
+ * `if monsterid 1375 || monsterid 1373 || monsterid 1374;endif;` at the head
+ * of every abyss macro (session log:89668), and the fight that followed was
+ * killed by mafia with "You're on your own, partner."
+ *
+ * Handing the block to the DEFAULT macro slot instead sidesteps the whole
+ * mechanism: grimoire steps default macros straight onto the result
+ * (combat.js:255-257) and libram's Macro.step() filters falsy components
+ * (combat.js:182-186), so an empty one contributes literally nothing. The
+ * monster guard is rebuilt inside the macro, which is where it belongs.
+ */
+export function monsterMacro(macro: () => Macro, monsters: Monster | Monster[]): () => Macro {
+  return () => {
+    const built = macro();
+    return built.components.length === 0 ? new Macro() : Macro.if_(monsters, built);
+  };
+}
