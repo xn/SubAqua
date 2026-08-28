@@ -13,6 +13,7 @@ import { helmetQuest } from "./monkees/helmet";
 import { momFinishQuest, momQuest, wandererTasks } from "./monkees/mom";
 import { outpostQuest } from "./monkees/outpost";
 import { pelletQuest } from "./monkees/pellet";
+import { shadowRiftQuest } from "./monkees/shadow";
 import { colosseumQuest } from "./sorceress/colosseum";
 import { sorceressDailies } from "./sorceress/daily";
 import { finaleQuest } from "./sorceress/finale";
@@ -35,7 +36,9 @@ import { yogUrtQuest } from "./sorceress/yogurt";
  *    the sword corral lane, and uses the abyss-only Mom lane (UTS:2165).
  *  - low/mid run the guild, golem, summon-diver lane, cyber Mom lanes, and
  *    the corral opener; the sword imprint fires only on phoneless accounts
- *    (UTS:1760-1767).
+ *    (UTS:1760-1767). Shadow Rift sits before the corral so it preempts
+ *    Corral Lassos the moment the hat and chaps exist (ash trains the lasso
+ *    in the rift, UTS:2432-2439; high skips it, !highShiny()).
  *
  * Then the sorceress endgame (Phase 4, ash UTS:2269-2999). Those quests carry
  * NO tier options — their tier behavior lives entirely in ResourcePolicy
@@ -66,6 +69,7 @@ export function buildRunplan(tier: Tier): Task[] {
     currentsQuest(),
     helmetQuest({ summonLane: !high }),
     momQuest({ cyber: !high }),
+    ...(high ? [] : [shadowRiftQuest()]),
     corralQuest({ opener: !high, swordLane: high }),
     // Sorceress endgame. Dailies first (they are free actions), then the mine:
     // the crappy disguise it builds gates every deepcity zone.

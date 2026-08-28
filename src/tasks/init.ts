@@ -46,10 +46,8 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
 // Elf Guard SCUBA tank is pullable in-path (not on InventoryManager.pullableInSeaPath's
 // blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
 // spec §3/§4's softcore exceptions list confirms it.
-// The FLUDA is deliberately absent: the ash equips it only in the shadow-rift
-// outfits and douses the shadow slab (UTS:866-885, 2379; CCS:543-546 at
-// 89982f5) — a subsystem SubAqua dropped — and upstream itself now skips the
-// pull without a pay phone (9eb5cd7). For us it is a dead pull slot.
+// The FLUDA is not pulled: its only site is the rift's Douse Foe rider,
+// which the shadow-rift port (tasks/monkees/shadow.ts) does not carry.
 const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Elf Guard SCUBA tank`;
 
 export function initQuest(): Quest {

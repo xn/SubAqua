@@ -7,7 +7,7 @@ import {
   print,
   runChoice,
 } from "kolmafia";
-import { $item, get, have, set, ValueOf } from "libram";
+import { $effect, $item, get, have, set, ValueOf } from "libram";
 
 import { peridotTargetId } from "../resources/peridot";
 
@@ -120,6 +120,19 @@ export function main(choice: number, page: string) {
   //Sea stuff
   else if (choice === 1565) {
     runChoice(1);
+  } else if (choice === 1497) {
+    // Calling Rufus: option 2 = the artifact quest (ash CH:37-41 simple list).
+    runChoice(2);
+  } else if (choice === 1498) {
+    // Calling Rufus Back: hand the artifact in, else hang up (mafia's own
+    // RufusManager decision, mirrored so the script always answers).
+    runChoice(get("questRufus") === "step1" ? 1 : 6);
+  } else if (choice === 1500) {
+    // Like a Loded Stone (ash CH:257-265): the fountain's Shadow Waters
+    // first; the forest loot once the waters are up and it is unlooted.
+    if (!have($effect`Shadow Waters`)) runChoice(2);
+    else if (!get("_shadowForestLooted", false)) runChoice(3);
+    else runChoice(2);
   } else if (choice === 312) {
     // Post-currents the outpost hut becomes a shop; option 3 opens the healer
     // stock (ash CH:55-59). Otherwise mafia auto-writes choiceAdventure312
