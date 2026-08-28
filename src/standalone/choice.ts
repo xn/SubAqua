@@ -1,5 +1,4 @@
 import {
-  abort,
   availableAmount,
   availableChoiceOptions,
   getProperty,
@@ -221,31 +220,32 @@ export function main(choice: number, page: string) {
     // should always be that.
     runChoice(1);
   } else if (choice === 1557) {
-    // Peering Through Your Peridot. ChoiceManager.invokeChoiceAdventureScript
-    // (mafia) runs this script BEFORE its own pref-based auto-answer, for
-    // EVERY occurrence of a choice — so when engine.ts has already
-    // registered a vetted choiceAdventure1557 answer (peridot.ts
-    // peridotTargetOffered(): equipped only once appearanceRates(location,
-    // true) actually lists the target), do nothing and let that answer
-    // through unchanged.
-    if (getProperty("choiceAdventure1557")) return;
-    // No vetted answer on file: the peridot opened this menu outside the
-    // engine's own gate. Resolve narrowly and NEVER resubmit an unlisted id
-    // on a loop — that resubmit loop is the live bug (hundreds of repeated
-    // "Took choice 1557/1" lines with no progress once KoL stops offering
-    // the monster). The bandersnatch id is present in the raw response even
-    // though its button label isn't (ChoiceAdventures.java
-    // decorateMonsterMap relabels display text only, keyed off the id, for
-    // the relay browser).
-    const wanted = peridotTargetId();
-    const firstMatch = /name="bandersnatch" value="(\d+)"/.exec(page);
-    const firstOffered = firstMatch ? Number(firstMatch[1]) : undefined;
-    if (wanted !== undefined && firstOffered === wanted) {
-      runChoice(1, `bandersnatch=${wanted}`);
+    // Peering Through Your Peridot. This handler is the ONLY thing that may
+    // answer 1557, and it only ever submits an id the page is offering (one
+    // `<input type="hidden" name="bandersnatch" value="ID">` per monster,
+    // ChoiceAdventures.java:6717). It never defers to choiceAdventure1557:
+    // mafia falls back to that pref whenever the script leaves the same
+    // choice up, and a pref pointing at an unlisted monster resubmits
+    // forever (live 2026-08-27 Wreck: 2,531 loops; 2026-08-28 school: 2,937
+    // — the engine had registered no answer that time, so the user's stale
+    // 758 went out). Preference order: the engine's target for this task,
+    // then the registered pref's id, then decline (option 2, "I choose
+    // peace") with a red line — a wasted peridot beats a hung session.
+    const offered: number[] = [];
+    const re = /name="bandersnatch" value="(\d+)"/g;
+    for (let m = re.exec(page); m !== null; m = re.exec(page)) offered.push(Number(m[1]));
+    const prefMatch = /bandersnatch=(\d+)/.exec(getProperty("choiceAdventure1557"));
+    const candidates = [peridotTargetId(), prefMatch ? Number(prefMatch[1]) : undefined];
+    const pick = candidates.find((id) => id !== undefined && offered.includes(id));
+    if (pick !== undefined) {
+      runChoice(1, `bandersnatch=${pick}`);
     } else {
-      abort(
-        "Peridot of Peril's monster menu (choice 1557) has no vetted target; pick a listed monster in the relay browser, then rerun.",
+      const wanted = candidates.filter((c) => c !== undefined).join(", ") || "none registered";
+      print(
+        `Peridot of Peril: none of the wanted monsters (${wanted}) is in the menu [${offered.join(", ")}]; declining the peril.`,
+        "red",
       );
+      runChoice(2);
     }
   }
 }
