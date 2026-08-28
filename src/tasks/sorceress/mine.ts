@@ -409,7 +409,7 @@ export function mineQuest(): Quest {
               }
               abort(
                 missing.length > 0
-                  ? `Grandma's ROW124 trade for the crappy Mer-kin mask failed; missing: ${missing.join(", ")}. Get them (retrieveItem the helmet, farm/pull scales), then rerun.`
+                  ? `Grandma's ROW124 trade for the crappy Mer-kin mask failed; missing: ${missing.join(", ")}. The aerated diving helmet only comes from the Helmet quest (Wreck of the Edgar Fitzsimmons rivet hunt -> Craft Helmet) — it has not produced one; check rivetHuntActive()'s inputs (rusty rivet/porthole/broken diving helmet counts) rather than retrieving the helmet directly. Farm/pull the scales if those are what's short, then rerun.`
                   : "Grandma's ROW124 trade for the crappy Mer-kin mask failed despite having an aerated diving helmet and 3 pristine fish scales; Grandma (Mer-Kin Outpost) may be unreachable. Check access, then rerun.",
               );
             }

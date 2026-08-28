@@ -1,4 +1,5 @@
 import {
+  abort,
   adv1,
   buy,
   itemAmount,
@@ -33,7 +34,7 @@ import {
 } from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
-import { diverHuntActive, forceGranted } from "../../resources/saber";
+import { forceGranted, rivetHuntActive } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const outpost = $location`The Mer-Kin Outpost`;
@@ -50,7 +51,7 @@ function rivetsDone(): boolean {
 }
 
 function helmetDone(): boolean {
-  return !diverHuntActive() || rivetsDone();
+  return !rivetHuntActive() || rivetsDone();
 }
 
 const rivet = $item`rusty rivet`;
@@ -169,7 +170,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               // egg first so diver #2 is free. diverTries < 4 in the ash;
               // tries 5 covers the first summon.
               name: "Diver Summon",
-              ready: () => summonsAvailable() >= 1 && diverHuntActive(),
+              ready: () => summonsAvailable() >= 1 && rivetHuntActive(),
               completed: helmetDone,
               do: () => summon(diver),
               saberPurpose: "diver" as const,
@@ -209,7 +210,7 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // Plan B (ash UTS:2106-2147): grind the Wreck for divers. Peridot
         // forces the diver; forceItems (ray or saber) forces the drops.
         name: "Wreck Rivets",
-        ready: () => diverHuntActive(),
+        ready: () => rivetHuntActive(),
         completed: helmetDone,
         do: wreck,
         peridot: diver,
@@ -232,8 +233,19 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
       {
         name: "Craft Helmet",
         ready: rivetsDone,
-        completed: () => !diverHuntActive(),
-        do: () => void retrieveItem($item`aerated diving helmet`),
+        completed: () => !rivetHuntActive(),
+        do: (): void => {
+          // aerated diving helmet = COMBINE bubblin' stone + rusty diving
+          // helmet; rusty diving helmet = SUSE rusty broken diving helmet +
+          // rusty porthole + 8 rusty rivet (concoctions.txt). rivetsDone()
+          // above already confirms the three hunt parts; a false return here
+          // means the bubblin' stone (or the combine itself) is the blocker.
+          if (!retrieveItem($item`aerated diving helmet`)) {
+            abort(
+              "Rivet hunt parts are in hand but crafting the aerated diving helmet failed; check the bubblin' stone (and any other COMBINE/SUSE input), then rerun.",
+            );
+          }
+        },
         freeaction: true,
         limit: { tries: 1 },
       },
