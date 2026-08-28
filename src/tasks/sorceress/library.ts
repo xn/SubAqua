@@ -19,7 +19,7 @@ import { godRunGuardCheck } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { eatSushi } from "../../resources/fishy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
-import { saberForcesFree } from "../../resources/saber";
+import { forceGranted } from "../../resources/saber";
 
 import { burnTurnElsewhere } from "./burn";
 import { sourceEnhanceItems } from "./daily";
@@ -126,7 +126,7 @@ function farmOutfit(): OutfitSpec {
     itemAmount(worktea) === 0 ||
     itemAmount(knucklebone) === 0;
   const saberForResearcher =
-    scrollsMissing && saberForcesFree() > 0 && have($item`Fourth of May Cosplay Saber`);
+    scrollsMissing && forceGranted("researcher") && have($item`Fourth of May Cosplay Saber`);
   const weapon = !saberForResearcher && scrollsMissing && have(monodent) ? [monodent] : [];
   // Unowned entries in `equip`/`avoid` are filtered by the engine before
   // Outfit.from (engine.ts:302-303), so no have() gate is needed here; `avoid`

@@ -114,8 +114,29 @@ export function forcesAfterHealer(): number {
   return forcesAfterDiver() - (prayerbeadsShort() ? 1 : 0);
 }
 
-export function saberForcesFree(): number {
+export function forcesAfterSeaCow(): number {
   return forcesAfterHealer() - (seaCowNeeded() ? 1 : 0);
+}
+
+/**
+ * One Force stays banked for the Mer-kin researcher while a combat scroll
+ * clue is still unresolved (the ash's researcherForce(), Globals:1019-1031:
+ * one charge lands both scrolls, "the slowest slots in the zone"). Deviation
+ * from the ash's chain, which treats the researcher as a "free" claimant —
+ * live 2026-08-28 all five Forces were gone by turn 31 (prayerbeads, two
+ * divers, two sea cows) and the library farmed the scrolls at paid turns
+ * (11 vs UTS 08-26's 2, which Forced the researcher at [19]).
+ */
+export function researcherNeeded(): boolean {
+  if (get("isMerkinHighPriest", false)) return false;
+  return (
+    (get("dreadScroll2", 0) === 0 && itemAmount($item`Mer-kin healscroll`) === 0) ||
+    (get("dreadScroll5", 0) === 0 && itemAmount($item`Mer-kin killscroll`) === 0)
+  );
+}
+
+export function saberForcesFree(): number {
+  return forcesAfterSeaCow() - (researcherNeeded() ? 1 : 0);
 }
 
 export type ForcePurpose = "diver" | "healer" | "seaCow" | "researcher" | "free";
@@ -148,8 +169,11 @@ export function forceGranted(purpose: ForcePurpose, location?: Location): boolea
     case "healer":
       return prayerbeadsShort() && forcesAfterDiver() > 0;
     case "seaCow":
-      return seaCowNeeded() && forcesAfterHealer() > 0;
+      // The researcher's bank comes off the top here too, or a second cow
+      // Force (seaCowNeeded() stays true until the whole set is in) eats it.
+      return seaCowNeeded() && forcesAfterHealer() - (researcherNeeded() ? 1 : 0) > 0;
     case "researcher":
+      return researcherNeeded() && forcesAfterSeaCow() > 0;
     case "free":
       return saberForcesFree() > 0;
   }
