@@ -31,8 +31,12 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
         combat: new CombatStrategy()
           .kill($monsters`giant squid, Mer-kin miner, Mer-kin tippler`)
           .freeRun(),
+        // "item, -100 combat" like the ash (UTS:1262 `item drop, -100 combat`):
+        // at equal weight the maximizer traded -combat slots for +item gear —
+        // live 2026-08-27 it left the latte mug / McHugeLarge ski off and the
+        // NC hunt ran 3 combats in 6 turns (UTS 08-26: 3 NCs in 3 turns).
         outfit: () => ({
-          modifier: "-combat, item",
+          modifier: "item, -100 combat",
           familiar: sneakFamiliar(),
           equip: $items`Mer-kin sneakmask`,
         }),
