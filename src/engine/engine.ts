@@ -301,6 +301,11 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     super.customize(task, outfit, combat, resources);
 
+    // Bat wings are banked (task.batWings): live 2026-08-28 an `initiative`
+    // maximize wore them at the corral and burned four free fights on
+    // tumbleweeds, costing two paid colosseum rounds and a paid Seaceress.
+    if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
+
     // Resolve abstract combat actions against the resource ladders (spec §2).
     // Anything unresolved falls through to MyActionDefaults' explicit
     // degradations — killFree still aborts by design when no source exists.

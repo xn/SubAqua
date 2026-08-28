@@ -91,6 +91,7 @@ export function finaleQuest(): Quest {
           recover();
         },
         do: () => void adv1($location`Mer-kin Temple (Center Door)`, -1, centerDoorFilter()),
+        batWings: true,
         outfit: () => ({
           modifier: "spell damage percent, mys",
           equip: [

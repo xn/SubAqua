@@ -28,4 +28,8 @@ export type Task = {
    * sites: pearl zones, the Wreck, the outpost's non-droppers. Default false
    * = plain runs only (the guild tests, ash CCS:505-521). */
   freeRunBanishes?: boolean;
+  /** This task may wear bat wings. Everywhere else the engine avoids them so
+   * the five daily free fights are banked for the colosseum and the
+   * Seaceress (ash if_equip(bat wings) sites: rift, Yog-Urt, colosseum, NS). */
+  batWings?: boolean;
 } & BaseTask<CombatActions>;

@@ -96,7 +96,7 @@ export function gymnasiumTurn(): void {
   // itself, so the breather has to come from this maximize. The keyword forces
   // "Adventure Underwater" (Evaluator.java:396-404) and lets the maximizer pick
   // the piece; it is omitted while Driving Waterproofly / Wet Willied covers us.
-  const terms = ["combat rate", ...pieces];
+  const terms = ["combat rate", "-equip bat wings", ...pieces];
   const sea = seaKeyword();
   // A `sea` maximize can FAIL — the keyword masks Underwater Familiar too
   // (Evaluator.java:396-401) and getScore() fails any candidate missing either

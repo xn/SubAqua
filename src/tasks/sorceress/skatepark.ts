@@ -91,7 +91,7 @@ export function skateParkTurn(): void {
   } else {
     // ...seaKeyword() makes the breather the maximizer's job (Evaluator.java:
     // 396-404); ensureHelperBreathing() below is the one fallback behind it.
-    const terms = ["-combat", "-equip Peridot of Peril"];
+    const terms = ["-combat", "-equip Peridot of Peril", "-equip bat wings"];
     // Re-pin the lasso gear (audit item 4), same as gym.ts: `War Resolution` is
     // `underwater: true` and non-`freeaction`, so engine customize() pinned sea
     // cowboy hat + sea chaps and dress() wore them — this maximize runs after

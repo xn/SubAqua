@@ -349,6 +349,7 @@ export function yogUrtQuest(): Quest {
           yogHpCheck();
         },
         do: () => void adv1($location`Mer-kin Temple (Right Door)`, -1, yogUrtFilter()),
+        batWings: true,
         outfit: () => {
           // Every prayerbead on hand goes in an accessory slot (UTS:2871-2891),
           // capped at the three slots. Declared as acc1/acc2/acc3 keys rather
