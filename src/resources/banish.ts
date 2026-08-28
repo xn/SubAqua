@@ -1,6 +1,7 @@
 import {
   abort,
   appearanceRates,
+  getFuel,
   Item,
   Location,
   Monster,
@@ -10,7 +11,7 @@ import {
   Skill,
   toMonster,
 } from "kolmafia";
-import { $class, $effect, $item, $skill, get, have } from "libram";
+import { $class, $effect, $item, $skill, AsdonMartin, get, have } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
@@ -35,6 +36,13 @@ export const banishSources: BanishSource[] = [
     name: "Asdon Martin",
     skill: $skill`Asdon Martin: Spring-Loaded Front Bumper`,
     available: (): boolean => {
+      // The bumper only appears on the fight page with the Asdon installed
+      // and 50+ fuel (the skill costs 50). Live 2026-08-28, Tame Seahorse:
+      // the day's pie-man fuel had gone to Waterproofly (37) plus one bumper
+      // at the Outpost, so at turn 44 the ladder "chose" a bumper KoL never
+      // offered (`if hasskill 7288` skipped) and the banish-hold invariant
+      // aborted the run. Same gap as loopstar-gap-analysis item 3.
+      if (!AsdonMartin.installed() || getFuel() < 50) return false;
       const banishes = get("banishedMonsters").split(":");
       const bumperIndex = banishes
         .map((string) => string.toLowerCase())
