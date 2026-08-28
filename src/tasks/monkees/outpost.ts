@@ -1,7 +1,7 @@
 import { availableAmount, cliExecute } from "kolmafia";
-import { $item, $location, $monster, $monsters, get, have } from "libram";
+import { $item, $location, $monster, $monsters, $skill, get, have, Macro } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
@@ -27,7 +27,24 @@ function stashboxDone(): boolean {
  * turn bleed (the garbo fork farmTurn.ts:124-130; see assertBanishHeld for the bounds). */
 const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
 
-const farmCombat = () => new CombatStrategy().banish(farmBanished).kill();
+const golem = $monster`Black Crayon Golem`;
+
+/** Second habitat recall, on a Black Crayon Golem met at the Outpost (ash
+ * CCS:669-675): once the first recall's fights are spent and only one recall
+ * has been used, recall the golem again so the lockkey hunt keeps drawing
+ * free golem copies. UTS 08-26 recalled at [9] and again at [11]; the third
+ * recall stays for the Abyss habitat lane (Abyss Habitats completes at
+ * recalled >= 3). */
+function golemRecallMacro(): Macro {
+  return have($skill`Just the Facts`) &&
+    get("_monsterHabitatsFightsLeft", 0) === 0 &&
+    get("_monsterHabitatsRecalled", 0) < 2
+    ? openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`))
+    : new Macro();
+}
+
+const farmCombat = () =>
+  new CombatStrategy().macro(monsterMacro(golemRecallMacro, golem)).banish(farmBanished).kill();
 
 export function outpostQuest(): Quest {
   return {
