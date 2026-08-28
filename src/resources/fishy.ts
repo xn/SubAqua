@@ -1,8 +1,10 @@
 import {
   abort,
   availableAmount,
+  buy,
   chew,
   cliExecute,
+  create,
   drink,
   drinksilent,
   eatsilent,
@@ -12,8 +14,10 @@ import {
   Item,
   mallPrice,
   myAdventures,
+  myAscensions,
   myFullness,
   myInebriety,
+  myMeat,
   mySpleenUse,
   retrieveItem,
   spleenLimit,
@@ -389,7 +393,8 @@ export function maintainFishy(): void {
  * Asdon Driving Waterproofly upkeep (ash post_adv UTS:799-809): effect-based
  * breathing that frees every gear slot. Only relevant when the Asdon is the
  * workshed. Fuel comes from the ash's dedicated pull ("pie man was not meant
- * to eat", one pull = ~100 fuel); we never mall-fuel in-run.
+ * to eat", one pull ≈ 150 fuel — a one-pull item), then the soda-bread
+ * route below once that is spent.
  */
 export function maintainWaterproofly(): void {
   if (!AsdonMartin.installed()) return;
@@ -399,7 +404,47 @@ export function maintainWaterproofly(): void {
     if (availableAmount(pie) === 0) pullSequence(pie);
     if (availableAmount(pie) > 0) AsdonMartin.insertFuel(pie, 1);
   }
+  if (getFuel() < 37) sodaBreadRefuel();
   if (getFuel() >= 37) cliExecute("asdonmartin drive Waterproofly");
+}
+
+const SODA_BREAD_MEAT_FLOOR = 15000;
+const SODA_BREAD_LOAVES = 23;
+
+/**
+ * Soda-bread refuel once the day's pie man is spent (user directive
+ * 2026-08-28; the same route as pearlo lib.ts fuelUp()): the pie is a
+ * one-pull item, so after Waterproofly + a bumper + Waterproofly (~150 fuel)
+ * the tank is dry for the rest of the run and every underwater slot goes
+ * back to breathing gear. Route: Desert Bus pass from the General Store
+ * (5,000, npcstores.txt ROW657) if neither it nor the bitchin' meatcar opens
+ * the Gift Shop; one all-purpose flower there (2,000) → wads of dough; soda
+ * water from the General Store (70 each); cook loaves (one adventure for
+ * the batch — session log 2026-08-27 `[71] Cook 42 wad of dough + 42 soda
+ * water`, or free under Holiday Multitasking); `asdonmartin fuel`. ~6 fuel a
+ * loaf, so 23 loaves ≈ 140 fuel ≈ four more drives. Only above a 15k meat
+ * floor so it never competes with the run's own purchases.
+ */
+function sodaBreadRefuel(): void {
+  if (myMeat() < SODA_BREAD_MEAT_FLOOR) return;
+  if (myAscensions() < 10) return;
+  const bread = $item`loaf of soda bread`;
+  const dough = $item`wad of dough`;
+  if (!have($item`bitchin' meatcar`) && !have($item`Desert Bus pass`)) {
+    buy(1, $item`Desert Bus pass`);
+    if (!have($item`Desert Bus pass`)) return;
+  }
+  if (availableAmount(dough) === 0) {
+    buy(1, $item`all-purpose flower`);
+    if (!have($item`all-purpose flower`)) return;
+    use(1, $item`all-purpose flower`);
+  }
+  const loaves = Math.min(SODA_BREAD_LOAVES, availableAmount(dough));
+  if (loaves === 0) return;
+  buy(Math.max(0, loaves - availableAmount($item`soda water`)), $item`soda water`);
+  create(loaves, bread);
+  if (availableAmount(bread) > 0)
+    cliExecute(`asdonmartin fuel ${availableAmount(bread)} loaf of soda bread`);
 }
 
 /**
