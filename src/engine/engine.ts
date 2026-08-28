@@ -83,7 +83,7 @@ import { peridotTargetOffered, setPeridotTargetId } from "../resources/peridot";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
 
-import { CombatActions, combatActions, killMacro, MyActionDefaults } from "./combat";
+import { CombatActions, combatActions, killMacro, MyActionDefaults, openerOnce } from "./combat";
 import {
   familiarWaterBreathingEquipment,
   hasBreathingEffect,
@@ -256,8 +256,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     // Train sea lasso once per fight (round 1 only): macros restart each round, and
     // tryItem only guards hascombatitem — sea lasso is limited per combat.
+    // `!pastround 2`, not 1: KoL's `pastround N` is already true on round N
+    // (see openerOnce()'s comment, combat.ts) — the old `pastround 1` guard
+    // never fired, and lassoTrainingCount sat at 0 for the whole 2026-08-27
+    // run. openerOnce(…, 1) is that exact guard.
     if (!undelay(task.freeaction) && isTrainingLasso() && isUnderwaterTask(task)) {
-      combat.startingMacro(Macro.ifNot("pastround 1", Macro.tryItem($item`sea lasso`)));
+      combat.startingMacro(openerOnce(Macro.tryItem($item`sea lasso`), 1));
       outfit.equip($item`sea cowboy hat`);
       outfit.equip($item`sea chaps`);
     }

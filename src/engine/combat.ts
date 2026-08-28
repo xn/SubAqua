@@ -293,23 +293,25 @@ export function runMacro(): Macro {
  * than whether its once-per-combat use is spent, and KoL does not reliably drop
  * a spent skill from that page. The guard costs nothing either way.
  *
- * `round` is the last round the opener may still fire on, and 2 rather than 1
- * is deliberate: `pastround N` is true once the round counter is past N
- * (macrohelper.6.js:101-116 lists pastround among the numeric predicates) and
- * every submitted action advances a round, so on an underwater task the
- * engine's own round-1 lasso injection (engine.ts customize(),
- * `Macro.ifNot("pastround 1", tryItem(sea lasso))`) already pushes a task
- * macro's opener to round 2. `!pastround 1` would skip it for the whole
- * lasso-training phase. Callers with more actions ahead of the opener —
+ * `round` is the last round the opener may still fire on. KoL's `pastround N`
+ * is ALREADY true on round N as mafia numbers it — verified live 2026-08-27
+ * (session log:90101 and the 27 fights after it): the engine's old
+ * `if !pastround 1;…use sea lasso` opener never threw a lasso the character
+ * was holding, while `if !pastround 2;…` blocks fired on mafia's "Round 1"
+ * (the `%fn` cowboy opener at :90255/:90343). So "may fire through round R"
+ * compiles to `!pastround R+1`. Default 2 rather than 1 is deliberate: every
+ * submitted action advances a round, so on an underwater task the engine's
+ * own round-1 lasso throw (engine.ts customize()) pushes a task macro's
+ * opener to round 2. Callers with more actions ahead of the opener —
  * killMacro's dart chain — pass a bigger number.
  *
  * The guard is one-directional: it blocks a re-run that lands past `round`,
  * which is the realistic case (a fight long enough to outlive the macro), but a
- * re-entry that happened to land ON round 2 could still double-fire. Same
- * threshold, and the same residual, as the garbo fork.
+ * re-entry that happened to land ON round `round` could still double-fire.
+ * Same threshold, and the same residual, as the garbo fork.
  */
 export function openerOnce(macro: Macro, round = 2): Macro {
-  return Macro.ifNot(`pastround ${round}`, macro);
+  return Macro.ifNot(`pastround ${round + 1}`, macro);
 }
 
 /**
