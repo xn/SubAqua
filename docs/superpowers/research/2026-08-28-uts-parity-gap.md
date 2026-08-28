@@ -168,3 +168,14 @@ lost-initiative fight (D:99102-99224), and 25 dolphin thefts with no whistle.
 
 With F1–F8 verified and G1–G10 ported, every phase in §1 lands on the UTS number or within RNG
 of it; the plan diff shows no remaining structural difference at mid tier.
+
+## Status 2026-08-28 (evening)
+
+G1–G10 ported on `worktree-phase4-sorceress` (plan
+`docs/superpowers/plans/2026-08-28-uts-parity-ports.md`), built and deployed with `yarn mafia`.
+None live-verified. First checkpoints on the next run: turn ~2 fight throws bang potions and
+`lastBangPotion819..827` fill; on taming, the seed scan prints ≤ 2 candidates and
+`dreadScroll1..8` are written before the school; the Shadow Rift quest runs after Craft Hat with
+`lassoTrainingCount` reaching 20 on free fights and shadow bricks in inventory; Tame Seahorse's
+first corral visit throws a waffle; no bat wings before the colosseum; the outpost's last habitat
+golem gets the eagle screech; no free-kill line on a Black Crayon Golem.

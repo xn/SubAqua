@@ -24,6 +24,7 @@
 ### Task 1: G1 — bang potions: pull, craft, use, identify in combat
 
 **Files:**
+
 - Create: `src/resources/bangpotions.ts`
 - Modify: `src/tasks/init.ts` (new task after "Sea Gear Pulls", ~line 325-353)
 - Modify: `src/engine/engine.ts` (customize(), after the lasso block ending ~line 280)
@@ -31,6 +32,7 @@
 - Modify: `src/sim.ts` (`routePulls`, line 22)
 
 **Interfaces:**
+
 - Produces: `bangPotions: Item[]`, `bangPotionIdentified(potion: Item): boolean`, `unidentifiedBangPotions(): Item[]`, `bangPotionMacro(): Macro` (round-guarded throws), `bangPotionCriteriaKey(): string`.
 - Consumes: `openerOnce` from `src/engine/combat.ts`, `discretionaryPull` from `src/resources/pulls.ts`.
 
@@ -134,20 +136,20 @@ In `src/tasks/init.ts` add the imports `retrieveItem` is already imported; add `
 In `src/engine/engine.ts` add `import { bangPotionMacro, bangPotionNever, unidentifiedBangPotions } from "../resources/bangpotions";` and insert immediately after the lasso block (the `if (!undelay(task.freeaction) && isTrainingLasso() && isUnderwaterTask(task)) {...}` statement, before `super.customize(...)`):
 
 ```ts
-    // Bang-potion identification (ash CCS:485-495): throw the unidentified
-    // potions on ordinary fights. AFTER the lasso opener in registration
-    // order so the round-1 throw is never pushed out; never on a fight whose
-    // whole point is a round-1 Force or free kill (those tasks declare
-    // forceItems/killFree/yellowRay), and never on a free-action task.
-    if (
-      !undelay(task.freeaction) &&
-      !combat.can("forceItems") &&
-      !combat.can("killFree") &&
-      !combat.can("yellowRay") &&
-      unidentifiedBangPotions().length > 0
-    ) {
-      combat.startingMacro(Macro.ifNot(bangPotionNever, bangPotionMacro()));
-    }
+// Bang-potion identification (ash CCS:485-495): throw the unidentified
+// potions on ordinary fights. AFTER the lasso opener in registration
+// order so the round-1 throw is never pushed out; never on a fight whose
+// whole point is a round-1 Force or free kill (those tasks declare
+// forceItems/killFree/yellowRay), and never on a free-action task.
+if (
+  !undelay(task.freeaction) &&
+  !combat.can("forceItems") &&
+  !combat.can("killFree") &&
+  !combat.can("yellowRay") &&
+  unidentifiedBangPotions().length > 0
+) {
+  combat.startingMacro(Macro.ifNot(bangPotionNever, bangPotionMacro()));
+}
 ```
 
 - [ ] **Step 4: Memo key**
@@ -155,7 +157,7 @@ In `src/engine/engine.ts` add `import { bangPotionMacro, bangPotionNever, uniden
 In `src/lib/dreadscroll.ts` import `bangPotionCriteriaKey` from `../resources/bangpotions` and change the key line in `candidateSeeds()` to:
 
 ```ts
-  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}`;
+const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}`;
 ```
 
 Check the import does not create a cycle: `bangpotions.ts` imports only kolmafia/libram — it must NOT import from `engine/` (keep `Macro.ifNot`, not `openerOnce`).
@@ -181,10 +183,12 @@ git commit -m "feat: identify the nine bang potions like the ash (large box pull
 ### Task 2: G6 + G10 — no free-kill or banish charges on already-free fights; Peanut is never free-killed
 
 **Files:**
+
 - Modify: `src/resources/freekill.ts` (`freeKillNever`, line ~291)
 - Modify: `src/engine/engine.ts` (banish provide ~line 312-326; `reserved` list ~line 527-534)
 
 **Interfaces:**
+
 - Consumes: `freeMonsters` from `src/resources/backup.ts` (already exported).
 
 Why (spec G6/G10): 08-28 spent Chest X-Ray #3 and four Sweat Bullets on habitat-copy golems and a curveball on a hipster Black Crayon Slime; the ash's `free_monster()` list (G:72-76) is exactly what it never `free_kill`s or runs from. Assert Your Authority on Peanut did not end the fight (D:84421) and the ash's own brick on Peanut was also a paid fight (B:114296).
@@ -204,19 +208,19 @@ and extend the doc comment above it with: `Peanut (Caliginous Abyss) shrugs off 
 In `engine.ts` import `freeMonsters` from `../resources/backup` (the file already imports `backupCamera, backupMacro, backupTarget` from there — extend that import). In the `reserved` array inside the opportunistic block replace the spread with:
 
 ```ts
-      const reserved = [
-        ...new Set([
-          ...combatActions
-            .filter((action) => action !== "kill")
-            .flatMap((action) => combat.where(action)),
-          ...freeKillNever,
-          // Fights that are already free — habitat/backup copies of the
-          // golem, crayon wanderers, Kramco goblins, time cops (ash
-          // free_monster(), G:72-76; backup.ts freeMonsters) — never earn a
-          // free-kill charge: live 2026-08-28 five charges went to golems.
-          ...freeMonsters,
-        ]),
-      ];
+const reserved = [
+  ...new Set([
+    ...combatActions
+      .filter((action) => action !== "kill")
+      .flatMap((action) => combat.where(action)),
+    ...freeKillNever,
+    // Fights that are already free — habitat/backup copies of the
+    // golem, crayon wanderers, Kramco goblins, time cops (ash
+    // free_monster(), G:72-76; backup.ts freeMonsters) — never earn a
+    // free-kill charge: live 2026-08-28 five charges went to golems.
+    ...freeMonsters,
+  ]),
+];
 ```
 
 - [ ] **Step 3: Free-monster guard on the banish provide**
@@ -224,10 +228,9 @@ In `engine.ts` import `freeMonsters` from `../resources/backup` (the file alread
 In the `combat.can("banish")` block change the provide to:
 
 ```ts
-        resources.provide("banish", {
-          do: () =>
-            Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro()),
-        });
+resources.provide("banish", {
+  do: () => Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro()),
+});
 ```
 
 (A free wanderer under a default `.banish()` — the Garden Pellet's hipster slime, a Kramco goblin at the Wreck — then falls to the kill ladder instead of eating the day's curveball.)
@@ -248,6 +251,7 @@ git commit -m "fix: never spend a free kill or banish on an already-free fight; 
 ### Task 3: G7 — task free-runs may spend banishing rungs
 
 **Files:**
+
 - Modify: `src/engine/task.ts` (Task type)
 - Modify: `src/engine/engine.ts` (freeRun provide, the three `selectFreeRun({...})` calls ~line 430-448)
 - Modify: `src/tasks/monkees/grandpa.ts` ("Find Grandpa"), `src/tasks/monkees/outpost.ts` ("Outpost Stashbox", "Prayerbeads"), `src/tasks/monkees/bigbrother.ts` ("Wreck Rescue (sneak)"), `src/tasks/monkees/helmet.ts` ("Wreck Rivets (hatch closed)")
@@ -271,22 +275,25 @@ In `src/engine/task.ts` add to the `Task` type, after `saberPurpose`:
 In the `combat.can("freeRun")` block define `const banish = task.freeRunBanishes === true;` right after `const sneak = sneakFamiliar();` and pass `banish` into all three `selectFreeRun({...})` calls in that block:
 
 ```ts
-            const candidate = selectFreeRun({
-              banish,
-              location,
-              exclude: new Set([...exclude, ...familiarRunSources]),
-            });
+const candidate = selectFreeRun({
+  banish,
+  location,
+  exclude: new Set([...exclude, ...familiarRunSources]),
+});
 ```
+
 ```ts
         : firstEquippable(outfit, (exclude) => selectFreeRun({ banish, location, exclude }));
 ```
+
 ```ts
-        source = firstEquippable(outfit, (exclude) => selectFreeRun({ banish, location, exclude }));
+source = firstEquippable(outfit, (exclude) => selectFreeRun({ banish, location, exclude }));
 ```
 
 - [ ] **Step 3: Flag the five tasks**
 
 Add `freeRunBanishes: true,` (with a one-line comment `// ash free_run(page_text, true) here, CCS:<cite>`) to:
+
 - `grandpa.ts` "Find Grandpa" (CCS:646-654)
 - `outpost.ts` "Outpost Stashbox" and "Prayerbeads" (CCS:721-724 burglar/raider)
 - `bigbrother.ts` "Wreck Rescue (sneak)" (CCS:586-598)
@@ -308,6 +315,7 @@ git commit -m "feat: -combat walks may banish non-targets like the ash's free_ru
 ### Task 4: G5 — bat wings only where the ash wears them
 
 **Files:**
+
 - Modify: `src/engine/task.ts` (Task type), `src/engine/engine.ts` (customize, after `super.customize`)
 - Modify: `src/tasks/sorceress/yogurt.ts` ("Yog-Urt" task), `src/tasks/sorceress/finale.ts` ("Nautical Seaceress" task)
 - Modify: `src/tasks/sorceress/gym.ts` (`gymnasiumTurn` terms), `src/tasks/sorceress/skatepark.ts` (`skateParkTurn` terms)
@@ -330,10 +338,10 @@ In `task.ts` add:
 In `engine.ts` customize(), immediately after `super.customize(task, outfit, combat, resources);`:
 
 ```ts
-    // Bat wings are banked (task.batWings): live 2026-08-28 an `initiative`
-    // maximize wore them at the corral and burned four free fights on
-    // tumbleweeds, costing two paid colosseum rounds and a paid Seaceress.
-    if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
+// Bat wings are banked (task.batWings): live 2026-08-28 an `initiative`
+// maximize wore them at the corral and burned four free fights on
+// tumbleweeds, costing two paid colosseum rounds and a paid Seaceress.
+if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
 ```
 
 - [ ] **Step 3: Flag the two grimoire tasks that equip them**
@@ -360,6 +368,7 @@ git commit -m "fix: bat wings only at Yog-Urt, the colosseum and the Seaceress �
 ### Task 5: G9 — Digpick never adventures once the pull lands
 
 **Files:**
+
 - Modify: `src/tasks/sorceress/mine.ts` ("Digpick" task, ~line 336-351)
 
 - [ ] **Step 1: Function `do`**
@@ -391,13 +400,14 @@ git commit -m "fix: Digpick stops after a successful pull instead of adventuring
 ### Task 6: G8 — banish constructs on the last habitat golem at the Outpost
 
 **Files:**
+
 - Modify: `src/tasks/monkees/outpost.ts` (`golemRecallMacro`, `farmCombat`, the two farm tasks' outfits)
 
 Why (spec G8): the ash screeches on the last habitat golem with the eagle out (CCS:676-678, familiar swap UTS:1319-1322) at zero turns; we paid a Madness Bakery turn. "Banish Constructs" (mom.ts) already completes when `banishedPhyla` contains "construct", so it becomes the fallback automatically.
 
 - [ ] **Step 1: Eagle turn predicate + macro**
 
-In `outpost.ts` add `const eagle = $familiar\`Patriotic Eagle\`;` (import `$familiar`) and:
+In `outpost.ts` add `const eagle = $familiar\`Patriotic Eagle\`;`(import`$familiar`) and:
 
 ```ts
 /** The last habitat golem fight (fights left 1 BEFORE the fight; mafia
@@ -456,6 +466,7 @@ git commit -m "feat: the eagle screeches on the last outpost habitat golem; the 
 ### Task 7: G3 — Sea \*dent: Talk to Some Fish on non-target fights
 
 **Files:**
+
 - Modify: `src/engine/combat.ts` (new `fishMacro()`, `MyActionDefaults.freeRun/banish`)
 - Modify: `src/engine/engine.ts` (`fallbackMacro`, banish + freeRun provides)
 - Modify: `src/tasks/monkees/guild.ts` ("Guild Test" outfit), `grandpa.ts` ("Find Grandpa"), `bigbrother.ts` ("Wreck Rescue (sneak)"), `outpost.ts` ("Outpost Stashbox", "Prayerbeads"), `helmet.ts` ("Wreck Rivets (hatch closed)")
@@ -517,7 +528,7 @@ function fallbackMacro(options: { fish?: boolean } = {}): Macro {
 
 - [ ] **Step 4: Pin the Monodent on the -combat walks and the guild test**
 
-Add `$item\`Monodent of the Sea\`` to the outfit `equip` list of: "Guild Test" (guild.ts — the outfit is a function returning `{ modifier: "-combat", familiar }`; add `equip: $items\`Monodent of the Sea\``), "Find Grandpa" (grandpa.ts, alongside the sneakmask), "Wreck Rescue (sneak)" (bigbrother.ts), "Outpost Stashbox" and "Prayerbeads" (outpost.ts), "Wreck Rivets (hatch closed)" (helmet.ts). createOutfit() strips unowned gear, so no `have()` gates.
+Add `$item\`Monodent of the Sea\``to the outfit`equip`list of: "Guild Test" (guild.ts — the outfit is a function returning`{ modifier: "-combat", familiar }`; add `equip: $items\`Monodent of the Sea\``), "Find Grandpa" (grandpa.ts, alongside the sneakmask), "Wreck Rescue (sneak)" (bigbrother.ts), "Outpost Stashbox" and "Prayerbeads" (outpost.ts), "Wreck Rivets (hatch closed)" (helmet.ts). createOutfit() strips unowned gear, so no `have()` gates.
 
 - [ ] **Step 5: Verify**
 
@@ -535,6 +546,7 @@ git commit -m "feat: Talk to Some Fish on non-target fights while the crappy dis
 ### Task 8: G4 — Waffle Day and the corral waffle re-roll
 
 **Files:**
+
 - Modify: `src/resources/policy.ts` (new field `castWaffleDay`)
 - Modify: `src/tasks/init.ts` (new task after "Bang Potions")
 - Modify: `src/tasks/monkees/corral.ts` ("Tame Seahorse" combat)
@@ -546,9 +558,9 @@ Why (spec G4): the ash casts _Aug. 24th: Waffle Day!_ at init (UTS:481-482, not 
 In `policy.ts` add to `ResourcePolicy`:
 
 ```ts
-  /** Cast Aug. 24th: Waffle Day! at init — the waffle throw is the corral's
-   * seahorse summon (ash UTS:481-482 skips it at high shiny). */
-  castWaffleDay: boolean;
+/** Cast Aug. 24th: Waffle Day! at init — the waffle throw is the corral's
+ * seahorse summon (ash UTS:481-482 skips it at high shiny). */
+castWaffleDay: boolean;
 ```
 
 and set `castWaffleDay: true` in `low` and `mid`, `false` in `high`.
@@ -580,7 +592,7 @@ In `init.ts` (imports: `useSkill` from kolmafia, `$skill` from libram) add after
 
 - [ ] **Step 3: Corral re-roll**
 
-In `corral.ts` add `const waffle = $item\`waffle\`;` and (import `itemAmount` from kolmafia):
+In `corral.ts` add `const waffle = $item\`waffle\`;`and (import`itemAmount` from kolmafia):
 
 ```ts
 /**
@@ -625,6 +637,7 @@ git commit -m "feat: Waffle Day at init and the corral waffle re-roll for the se
 ### Task 9: G2 — the Shadow Rift lane (Rufus quests, Shadow Waters, free lasso training, shadow bricks)
 
 **Files:**
+
 - Create: `src/tasks/monkees/shadow.ts`
 - Modify: `src/standalone/choice.ts` (choices 1497, 1498, 1500)
 - Modify: `src/tasks/runplans.ts` (insert the quest before `corralQuest`, mid/low only)
@@ -632,6 +645,7 @@ git commit -m "feat: Waffle Day at init and the corral waffle re-roll for the se
 - Modify: `src/sim.ts` (remove the "No FLUDA … dropped" comment sentence; add `Shadow Rift` note to `routeSkills`? no — leave skills)
 
 **Interfaces:**
+
 - Produces: `shadowRiftQuest(): Quest` with tasks "Rufus Quest", "Rufus Labyrinth", "Rufus Turn-in", "Loded Stone", "Rift Fights".
 - Consumes: `forceNextNoncombat` (resources/ncforce.ts), `pawWish` (resources/paw.ts), `fishMacro`, `killMacro`, `openerOnce` (engine/combat.ts), `recover` (lib), `itemDropEffects` (lib/moods).
 
@@ -845,6 +859,7 @@ git commit -m "feat: shadow-rift lane — two Rufus artifact quests, Shadow Wate
 ### Task 10: Build, deploy, and record
 
 **Files:**
+
 - Modify: `docs/superpowers/research/2026-08-28-uts-parity-gap.md` (append a "Status" section)
 
 - [ ] **Step 1: Full verification**
