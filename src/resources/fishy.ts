@@ -53,7 +53,14 @@ export function eatSushi(): boolean {
   cliExecute("refresh inventory");
   for (const [sushi, meat] of nigiris) {
     if (availableAmount(meat) > 0 && availableAmount($item`white rice`) > 0) {
-      cliExecute(`eat 1 ${sushi}`);
+      // `make`, not `eat`: sushi are pseudo-items with no item id, and
+      // mafia's eat command refuses them outright ("For now, you must
+      // 'create <sushi>'", UseItemCommand.java:138-143 — live 2026-08-28 it
+      // printed "[beefy nigiri] cannot be eaten." and the run aborted at
+      // Teflon/Digpick). SushiRequest's create IS the eat (sushi.php roll +
+      // eat), which is why the ash's eatSushi() runs `make <sushi>`
+      // (Globals:635-647).
+      cliExecute(`make ${sushi}`);
       if (have(fishy)) return true;
     }
   }
