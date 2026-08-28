@@ -325,8 +325,18 @@ function computeCandidateSeeds(): number[] | undefined {
     }
   }
 
-  // Full-scan triggers: seahorse name (always set in this phase) + >= 2 clues.
-  if (c.seahorse === "" || c.clues.filter((v) => v > 0).length < 2) return undefined;
+  // Full-scan trigger: seahorse name (set the turn the seahorse is tamed).
+  // Seahorse name is the only hard trigger — NOT a clue count. The ash scans
+  // the turn the seahorse is tamed (post_adv -> dreadSeedCheck, UTS:262-263;
+  // seedfinder needs no clues) and, with a candidate set in hand, its
+  // isKBandSushiEnough() lets it SKIP the vocabulary grind. Live 2026-08-28:
+  // the old ">= 2 clues" gate (a Phase 4 cost ruling) left candidateSeeds()
+  // undefined at turn 52, isKnucklebonesAndSushiEnough() false by
+  // construction, and Farm School ground mastery to 90 over 41 turns
+  // (UTS 08-26: 5 school turns, no grind). Name + full condo order is
+  // ~1/33 x 1/720 selective, a few hundred candidates — under CACHE_MAX;
+  // the overflow floor below still guards the sparse-constraint case.
+  if (c.seahorse === "") return undefined;
   // A prior scan overflowed at this constraint strength (this ascension): wait for new evidence.
   if (constraintCount(c) <= scanFloor()) return undefined;
 
