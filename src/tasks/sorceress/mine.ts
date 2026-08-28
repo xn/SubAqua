@@ -29,7 +29,7 @@ import { requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
-import { discretionaryPull, pulledToday, pullSequence } from "../../resources/pulls";
+import { discretionaryPull, pullSequence } from "../../resources/pulls";
 
 const digpick = $item`Mer-kin digpick`;
 const ore = $item`teflon ore`;
@@ -82,6 +82,8 @@ function equipFamiliarBreather(): void {
   if (famBreather !== $item.none) equip($slot`familiar`, famBreather);
 }
 
+const lodestone = $item`lodestone`;
+
 /** Free-pick budget: 5/day Unaccompanied Miner or an active Loded effect
  * (from the lodestone). Shared by prepare/do/freeaction below so the three
  * checks can't drift apart. */
@@ -92,9 +94,47 @@ function freeDigAvailable(): boolean {
   );
 }
 
+/** Unaccompanied Miner picks not yet spent today (0 without the skill). */
+function remainingFreePicks(): number {
+  return have($skill`Unaccompanied Miner`) ? Math.max(0, 5 - get("_unaccompaniedMinerUsed", 0)) : 0;
+}
+
+type LodestoneAttempt = "ok" | "used-today" | "unavailable";
+
+/** Live bug fix (2026-08-27): the lodestone's Loded effect is itself a free
+ * dig source (countFreeMines(), libram mining.ts) and must be tried before
+ * Mine Teflon gives up -- not just pulled speculatively in `prepare()` while
+ * Unaccompanied Miner picks were still available (which meant the lodestone
+ * was never reached: do() would spend the 5 picks and abort before any later
+ * `prepare` ran). Called only when `freeDigAvailable()` is already false, so
+ * it never double-uses a still-active Loded. Returns "ok" once Loded is
+ * confirmed up (whether it was already up or just got triggered here), so a
+ * caller can safely treat "ok" as "go ahead and dig". */
+function tryLodestone(): LodestoneAttempt {
+  if (freeDigAvailable()) return "ok";
+  if (get("_lodestoneUsed", false)) return "used-today";
+  if (!have(lodestone) && !pullSequence(lodestone)) return "unavailable";
+  use(lodestone);
+  return have($effect`Loded`) ? "ok" : "unavailable";
+}
+
+function lodestoneDetail(result: LodestoneAttempt): string {
+  switch (result) {
+    case "used-today":
+      return " (lodestone already used today)";
+    case "unavailable":
+      return " (no lodestone available: pull budget exhausted or none in storage/inventory)";
+    case "ok":
+      return "";
+  }
+}
+
 /** User feedback 2026-08-27 (net-turn rule: no paid digs): Mine Teflon
- * aborts on this once the free pick period ends without ore, rather than
- * spending a real turn per square. */
+ * aborts on this once the free pick period -- 5 Unaccompanied Miner picks
+ * plus the lodestone's Loded charges -- ends without ore, rather than
+ * spending a real turn per square. A minin' dynamite pull is a separate pull
+ * decision this policy has not made, so it's offered only as a manual
+ * option, never auto-pulled. */
 const NO_FREE_DIG_MESSAGE =
   "Free mining (5 Unaccompanied Miner picks + lodestone Loded) ended without teflon ore. Options: pull a minin' dynamite for one more free blast (ash hint UTS:2348-2350), or mine manually (ores show in adjacent veins of 5), then rerun.";
 
@@ -249,12 +289,13 @@ export function mineQuest(): Quest {
         completed: oreSecured,
         prepare: (): void => {
           recover();
-          if (!freeDigAvailable() && !pulledToday($item`lodestone`)) {
-            if (pullSequence($item`lodestone`)) use($item`lodestone`);
-          }
+          // The actual lodestone pull+use lives in do() below (live bug
+          // 2026-08-27): at prepare() time the day's Unaccompanied Miner
+          // picks are typically still unspent, so freeDigAvailable() reads
+          // true here and this would never fire before do() burns through
+          // them. Nothing to duplicate that check for.
         },
         do: (): void => {
-          if (!freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
           // Live-bug precheck (2026-08-27): a session logged ~30 consecutive
           // mining.php hits with no "You start digging" and no state change
           // -- KoL was refusing every dig. mafia has no client-side gate on
@@ -266,13 +307,31 @@ export function mineQuest(): Quest {
               "Mer-kin digpick is not equipped (the outfit should have placed it -- dress() may have failed to keep it on). Equip it manually and rerun.",
             );
           }
-          // Bounded + progress-checked: cap at the free-pick budget (5
-          // Unaccompanied Miner, +5 more if Loded is up) plus one spare, and
-          // require real progress every iteration instead of trusting KoL to
-          // eventually say yes.
-          const maxDigs = 5 + (have($effect`Loded`) ? 5 : 0) + 1;
+          // Free picks first; only reach for the lodestone once those are
+          // gone and no ore is in hand yet (live bug 2026-08-27: the picks
+          // used to get spent by the loop below with the lodestone never
+          // tried at all -- see tryLodestone()'s doc comment).
+          let lodestoneResult: LodestoneAttempt = "ok";
+          if (!freeDigAvailable()) lodestoneResult = tryLodestone();
+          if (!freeDigAvailable()) {
+            abort(NO_FREE_DIG_MESSAGE + lodestoneDetail(lodestoneResult));
+          }
+          // Bounded + progress-checked: cap at the currently-known free-dig
+          // budget (remaining Unaccompanied Miner picks + Loded's live turn
+          // count -- countFreeMines(), libram mining.ts, confirms Loded's
+          // haveEffect() count IS its remaining free-dig count, decrementing
+          // one per dig) plus one spare, and require real progress every
+          // iteration instead of trusting KoL to eventually say yes. The cap
+          // grows if a mid-loop lodestone use adds more Loded turns.
+          let maxDigs = remainingFreePicks() + haveEffect($effect`Loded`) + 1;
           let digs = 0;
-          while (itemAmount(ore) === 0 && freeDigAvailable()) {
+          for (;;) {
+            if (itemAmount(ore) > 0) break;
+            if (!freeDigAvailable()) {
+              lodestoneResult = tryLodestone();
+              if (lodestoneResult !== "ok") break;
+              maxDigs += haveEffect($effect`Loded`);
+            }
             if (digs >= maxDigs) {
               abort(
                 `Mine Teflon hit its ${maxDigs}-dig safety cap without acquiring ore and without exhausting the free-dig budget; something is wrong with the loop itself. Open mining.php?mine=3 in the relay browser and dig one square manually, then rerun.`,
@@ -300,7 +359,9 @@ export function mineQuest(): Quest {
               );
             }
           }
-          if (itemAmount(ore) === 0 && !freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
+          if (itemAmount(ore) === 0 && !freeDigAvailable()) {
+            abort(NO_FREE_DIG_MESSAGE + lodestoneDetail(lodestoneResult));
+          }
         },
         // The digpick is the dig; `ready` already requires one, and
         // createOutfit() strips it anyway on an account that has none.
