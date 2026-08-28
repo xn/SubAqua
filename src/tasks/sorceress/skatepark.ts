@@ -153,6 +153,9 @@ export function skateParkQuest(): Quest {
         // skateWarOpen()'s mapToTheSkateParkPurchased gate makes this true.
         completed: () => !skateWarOpen(),
         do: skateParkTurn,
+        // Picking Sides (403): the blade, same as the ash (CH:43). The choice
+        // script answers it too; this pins the pref for the forced NC path.
+        choices: { 403: 1 },
         underwater: true,
         limit: {
           soft: 8,

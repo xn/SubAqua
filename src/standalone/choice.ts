@@ -171,6 +171,12 @@ export function main(choice: number, page: string) {
   } else if (choice === 401) {
     // Raising Cane: option 2 takes a Mer-kin wordquiz (ash CH:134-140).
     runChoice(2);
+  } else if (choice === 403) {
+    // Picking Sides (Skate Park): option 1 takes the skate blade, siding with
+    // the ice skaters — the lutz Fishy buff lives on the ice state. The ash's
+    // simple run_choice(1) list (CH:43); mafia's ChoiceAdventures.java 403.
+    // Live 2026-08-28: unhandled → "Manual control requested" mid-war.
+    runChoice(1);
   } else if (choice === 701) {
     // Ators Gonna Ate (Gymnasium): option 1 takes the item
     // (ChoiceAdventures.java:3612-3619; ash simple-case list CH:44,55).
