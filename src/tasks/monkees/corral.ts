@@ -202,6 +202,13 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                 have($item`sea cowboy hat`) ||
                 tamed(),
               do: corral,
+              // The ash's "1 turn coral corral" (UTS:1659-1662, CCS:754-763):
+              // with an Abyss monster as the last copyable, the first corral
+              // turn backs up to it — Mom progress on a refunded turn.
+              backup: () =>
+                get("momSeaMonkeeProgress", 0) < 40
+                  ? { targets: $monsters`eye in the darkness, slithering thing` }
+                  : undefined,
               combat: new CombatStrategy()
                 .macro(openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
                 .kill($monsters`sea cow, sea cowboy`)

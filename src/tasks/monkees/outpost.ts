@@ -43,6 +43,19 @@ function golemRecallMacro(): Macro {
     : new Macro();
 }
 
+/** Outpost backups (ash CCS:684-708), cap 7 (UTS:1338): golem copies once
+ * the habitat fights are spent and both recalls used; healer copies while the
+ * prayerbeads are short. */
+const farmBackup = () => ({
+  targets: [
+    ...(get("_monsterHabitatsFightsLeft", 0) === 0 && get("_monsterHabitatsRecalled", 0) >= 2
+      ? [golem]
+      : []),
+    ...(availableAmount(beads) < 2 ? [$monster`Mer-kin healer`] : []),
+  ],
+  cap: 7,
+});
+
 const farmCombat = () =>
   new CombatStrategy().macro(monsterMacro(golemRecallMacro, golem)).banish(farmBanished).kill();
 
@@ -77,6 +90,7 @@ export function outpostQuest(): Quest {
         ready: () => monkeesStep() >= 6,
         completed: () => monkeesStep() >= 9,
         do: outpost,
+        backup: farmBackup,
         combat: farmCombat(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,
@@ -96,6 +110,7 @@ export function outpostQuest(): Quest {
         ready: () => monkeesStep() >= 9,
         completed: () => get("merkinLockkeyMonster") !== null || stashboxDone(),
         do: outpost,
+        backup: farmBackup,
         combat: farmCombat(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,

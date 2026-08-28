@@ -126,6 +126,7 @@ export function schoolQuest(): Quest {
           recover();
         },
         do: school,
+        backup: { targets: "free" }, // ash CCS:969-971
         combat: new CombatStrategy().kill(),
         outfit: () => ({
           modifier: "-combat",
@@ -170,6 +171,7 @@ export function schoolQuest(): Quest {
           recover();
         },
         do: school,
+        backup: { targets: "free" }, // ash CCS:969-971, camera worn UTS:1039
         peridot: monitor,
         combat: new CombatStrategy()
           .macro(() => openerOnce(Macro.trySkill($skill`Duplicate`)), monitor)

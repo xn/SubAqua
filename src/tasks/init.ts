@@ -48,9 +48,6 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
 // 89982f5) — a subsystem SubAqua dropped — and upstream itself now skips the
 // pull without a pay phone (9eb5cd7). For us it is a dead pull slot.
 const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Elf Guard SCUBA tank`;
-// eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
-// (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
-// eslint-disable-next-line libram/verify-constants
 
 export function initQuest(): Quest {
   const policy = currentPolicy();

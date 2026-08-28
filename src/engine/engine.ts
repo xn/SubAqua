@@ -65,6 +65,7 @@ import {
   shrugBadEffects,
   shrugForSongs,
 } from "../lib/moods";
+import { backupCamera, backupMacro, backupTarget } from "../resources/backup";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -240,7 +241,19 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // (see its doc comment) — gating the equip on it here means a target the
     // zone cannot currently produce never gets the slot, and `do()` below
     // never writes a `choiceAdventure1557` answer mafia can loop on.
-    const peridotTarget = undelay(task.peridot);
+    // Backup camera (resources/backup.ts): wear it and back up on round 1
+    // when the last copyable monster is one this task wants. Prepended so it
+    // runs ahead of the lasso throw and every task macro — the copy is what
+    // the rest of the macro then sees. A peridot force is skipped on a
+    // backup turn: the ash unequips the peridot before its backup corral
+    // turn (UTS:1657), since the forced fight would only be overwritten.
+    const backupSpec = undelay(task.backup);
+    const backupTo = backupSpec ? backupTarget(backupSpec) : undefined;
+    if (backupTo && outfit.equip(backupCamera)) {
+      combat.startingMacro(openerOnce(backupMacro(backupTo), 1), true);
+    }
+
+    const peridotTarget = backupTo ? undefined : undelay(task.peridot);
     if (
       peridotTarget &&
       task.do instanceof Location &&

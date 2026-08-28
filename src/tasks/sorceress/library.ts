@@ -167,6 +167,7 @@ function libraryFarmTask(force: boolean): Task {
     completed: farmCompleted,
     prepare: farmPrepare,
     do: library,
+    backup: { targets: "free" }, // ash CCS:1041-1044, camera worn UTS:761
     ...(force ? { saberPurpose: "researcher" as const } : {}),
     combat: force
       ? new CombatStrategy().macro(clueThrows).forceItems(researcher).kill()

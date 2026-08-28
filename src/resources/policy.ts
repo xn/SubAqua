@@ -46,6 +46,9 @@ export type ResourcePolicy = {
    * to miss (ash lowShiny() branch, UTS:2932-2944); all tiers still pull
    * them when buffed muscle < 1250 — that half is game-state, not tier. */
   shubInsurancePulls: boolean;
+  /** Wear the backup camera and back up to worthwhile last-copyables
+   * (resources/backup.ts). High banks the copies for aftercore (UTS:761). */
+  useBackupCamera: boolean;
 };
 
 /** Leprecondo priorities, ash UTS:1062-1067 (ids are KoL furniture ids;
@@ -66,6 +69,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     conserveFreeFights: false,
     usePyec: true,
     shubInsurancePulls: true,
+    useBackupCamera: true,
   },
   mid: {
     freeKillMode: "full",
@@ -79,6 +83,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     conserveFreeFights: false,
     usePyec: true,
     shubInsurancePulls: false,
+    useBackupCamera: true,
   },
   high: {
     freeKillMode: "dartsOnly",
@@ -92,6 +97,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     conserveFreeFights: true,
     usePyec: false,
     shubInsurancePulls: false,
+    useBackupCamera: false,
   },
 };
 
