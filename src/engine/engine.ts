@@ -66,6 +66,11 @@ import {
   shrugForSongs,
 } from "../lib/moods";
 import { backupCamera, backupMacro, backupTarget } from "../resources/backup";
+import {
+  bangPotionMacro,
+  bangPotionNever,
+  unidentifiedBangPotions,
+} from "../resources/bangpotions";
 import { pickBanishSource } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
@@ -277,6 +282,21 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       combat.startingMacro(openerOnce(Macro.tryItem($item`sea lasso`), 1));
       outfit.equip($item`sea cowboy hat`);
       outfit.equip($item`sea chaps`);
+    }
+
+    // Bang-potion identification (ash CCS:485-495): throw the unidentified
+    // potions on ordinary fights. AFTER the lasso opener in registration
+    // order so the round-1 throw is never pushed out; never on a fight whose
+    // whole point is a round-1 Force or free kill (those tasks declare
+    // forceItems/killFree/yellowRay), and never on a free-action task.
+    if (
+      !undelay(task.freeaction) &&
+      !combat.can("forceItems") &&
+      !combat.can("killFree") &&
+      !combat.can("yellowRay") &&
+      unidentifiedBangPotions().length > 0
+    ) {
+      combat.startingMacro(Macro.ifNot(bangPotionNever, bangPotionMacro()));
     }
 
     super.customize(task, outfit, combat, resources);

@@ -27,6 +27,7 @@ import {
 } from "libram";
 
 import { Quest } from "../engine/task";
+import { bangPotions } from "../resources/bangpotions";
 import { currentPolicy } from "../resources/policy";
 import { discretionaryPull } from "../resources/pulls";
 
@@ -347,6 +348,28 @@ export function initQuest(): Quest {
           const cmoi = $item`Congressional Medal of Insanity`;
           if (!have(cmoi) && storageAmount(cmoi) > 0) discretionaryPull(cmoi);
           set("_subaqua_gear_pulled", true);
+        },
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
+        // Ash UTS:594-619: ten-leaf clover + large box pulls, crafted into a
+        // blessed large box and used for nine bang potions. Their identities
+        // (thrown in combat by the engine's opener, resources/bangpotions.ts)
+        // are what pins the dreadscroll seed from the seahorse name alone.
+        // Marker pref, not item state: at low shiny discretionaryPull refuses
+        // and the task must still complete.
+        name: "Bang Potions",
+        completed: () => get("_subaqua_bang_pulled", false),
+        do: (): void => {
+          const box = $item`blessed large box`;
+          if (!have(box) && !bangPotions.some((potion) => have(potion))) {
+            if (!have($item`ten-leaf clover`)) discretionaryPull($item`ten-leaf clover`);
+            if (!have($item`large box`)) discretionaryPull($item`large box`);
+            if (have($item`ten-leaf clover`) && have($item`large box`)) retrieveItem(box);
+          }
+          if (have(box)) use(box);
+          set("_subaqua_bang_pulled", true);
         },
         freeaction: true,
         limit: { tries: 1 },

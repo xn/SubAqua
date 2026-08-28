@@ -2,6 +2,7 @@ import { abort, myAscensions, phpMtRand, phpRand, phpSeed, print, turnsPlayed } 
 import { get, set } from "libram";
 
 import { args } from "../args";
+import { bangPotionCriteriaKey } from "../resources/bangpotions";
 
 /**
  * Native port of VeeArrKoL/seedfinder (checkout at /Users/xn/sites/KOL/seedfinder,
@@ -386,7 +387,7 @@ let memoValue: number[] | undefined;
 export function candidateSeeds(): number[] | undefined {
   if (!args.seedScan) return undefined;
 
-  const key = `${turnsPlayed()}|${currentClues().join(",")}|${get("subaqua_seedCandidates", "")}`;
+  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}`;
   if (key === memoKey) return memoValue;
 
   const result = computeCandidateSeeds();
