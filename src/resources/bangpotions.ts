@@ -38,10 +38,10 @@ export const bangPotionNever = [$monster`sea cowboy`, $monster`wild seahorse`];
 /**
  * Throw every unidentified potion, funkslinging pairs when the skill is
  * known (ash bangA()/bangB(), CCS:379-395). Each throw is guarded on its
- * own round so the batch stops at round 5 like the ash's `current_round() < 5`
+ * own round so the batch stops after round 4 like the ash's `current_round() < 5`
  * loop — a throw is a round, and a long potion volley on a hard fight is a
- * lost fight. Guard is `!pastround 6` because KoL's `pastround N` is already
- * true on round N (combat.ts openerOnce()).
+ * lost fight. Guard is `!pastround 5` because KoL's `pastround N` is already
+ * true on round N, so "through round 4" compiles to `!pastround 5` (combat.ts openerOnce()).
  */
 export function bangPotionMacro(): Macro {
   const potions = unidentifiedBangPotions();
@@ -53,6 +53,6 @@ export function bangPotionMacro(): Macro {
   } else {
     throws.push(...potions);
   }
-  for (const item of throws) macro.step(Macro.ifNot("pastround 6", Macro.tryItem(item)));
+  for (const item of throws) macro.step(Macro.ifNot("pastround 5", Macro.tryItem(item)));
   return macro;
 }
