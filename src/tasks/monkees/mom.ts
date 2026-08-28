@@ -38,7 +38,25 @@ const glass = $item`black glass`;
 const vhs = $item`Spooky VHS Tape`;
 const eagle = $familiar`Patriotic Eagle`;
 const habitatTargets = [$monster`slithering thing`, $monster`eye in the darkness`];
-const vhsTargets = [...habitatTargets, $monster`school of many`];
+const school = $monster`school of many`;
+const vhsTargets = [...habitatTargets, school];
+const monodent = $item`Monodent of the Sea`;
+
+/** The school of many gives no Mom progress. The ash keeps the Monodent on in
+ * the Abyss until it is banished (UTS:381, 724, 1601) and, on meeting it,
+ * throws the Monodent's Lightning Bolt then four Garbage Novas (CCS:938-941).
+ * Live 2026-08-27: 7 of the 19 Abyss Mom turns were zero-progress school
+ * fights, one of them 132 rounds long. */
+function schoolBanished(): boolean {
+  return get("banishedMonsters").includes("school of many");
+}
+function schoolMacro(): Macro {
+  return Macro.trySkill($skill`Sea *dent: Throw a Lightning Bolt`)
+    .trySkill($skill`Garbage Nova`)
+    .trySkill($skill`Garbage Nova`)
+    .trySkill($skill`Garbage Nova`)
+    .trySkill($skill`Garbage Nova`);
+}
 
 function momDone(): boolean {
   return get("questS02Monkees") === "finished" || get("momSeaMonkeeProgress", 0) >= 40;
@@ -216,10 +234,22 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         // monsterMacro(), not `.macro(vhsMacro, vhsTargets)`: vhsMacro is empty
         // outside the recording window, and an empty monster macro still compiles
         // to a bodyless `if monsterid …;endif;` block (see monsterMacro()).
-        combat: new CombatStrategy().macro(monsterMacro(vhsMacro, vhsTargets)).kill(),
+        combat: new CombatStrategy()
+          .macro(monsterMacro(vhsMacro, vhsTargets))
+          .macro(schoolMacro(), school)
+          .kill(),
+        // Peridot on the eye, as the ash wears it on every Abyss trip
+        // (UTS:383, 706): the engine only equips it while the zone offers the
+        // target and the daily per-zone lock is open, and the eye is both
+        // +3 progress and a habitat target.
+        peridot: $monster`eye in the darkness`,
         outfit: () => ({
           modifier: "item",
-          equip: [glass, ...$items`shark jumper, scale-mail underwear`],
+          equip: [
+            glass,
+            ...$items`shark jumper, scale-mail underwear`,
+            ...(schoolBanished() ? [] : [monodent]),
+          ],
         }),
         effects: itemDropEffects,
         prepare: (): void => {
