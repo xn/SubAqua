@@ -3,6 +3,8 @@ import {
   adv1,
   availableAmount,
   equip,
+  haveEffect,
+  haveEquipped,
   itemAmount,
   retrieveItem,
   use,
@@ -171,9 +173,19 @@ function pickSquare(state: string): [number, number] {
   );
 }
 
+/** Result of one dig attempt, kept for the progress check / abort diagnostic
+ * in `Mine Teflon`'s do() below. `response` is the raw text KoL returned for
+ * the dig request itself (not the mine=3 refresh). */
+interface DigResult {
+  col: number;
+  row: number;
+  which: number;
+  response: string;
+}
+
 /** One dig (ash teflon(), UTS:603-615). Beaten Up from cave-ins is cleared by
  * engine post(). */
-function mineSquare(): void {
+function mineSquare(): DigResult {
   // No equips here at all. The digpick lives in `Mine Teflon`'s `outfit`
   // (audit item 6) — a `do()` equip lands after dress() and fights the
   // maximizer, which is the same anti-pattern as the trunks bug below.
@@ -191,7 +203,9 @@ function mineSquare(): void {
     );
   }
   const [col, row] = pickSquare(state);
-  visitUrl(`mining.php?mine=3&which=${row * 8 + col}`);
+  const which = row * 8 + col;
+  const response = visitUrl(`mining.php?mine=3&which=${which}`);
+  return { col, row, which, response };
 }
 
 export function mineQuest(): Quest {
@@ -241,9 +255,51 @@ export function mineQuest(): Quest {
         },
         do: (): void => {
           if (!freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
-          do {
-            mineSquare();
-          } while (itemAmount(ore) === 0 && freeDigAvailable());
+          // Live-bug precheck (2026-08-27): a session logged ~30 consecutive
+          // mining.php hits with no "You start digging" and no state change
+          // -- KoL was refusing every dig. mafia has no client-side gate on
+          // this (MineDecorator.parseResponse only reacts to the response,
+          // it never validates the request), so catch the two plausible
+          // causes mafia *can* see before spending a request on them.
+          if (!haveEquipped(digpick)) {
+            abort(
+              "Mer-kin digpick is not equipped (the outfit should have placed it -- dress() may have failed to keep it on). Equip it manually and rerun.",
+            );
+          }
+          // Bounded + progress-checked: cap at the free-pick budget (5
+          // Unaccompanied Miner, +5 more if Loded is up) plus one spare, and
+          // require real progress every iteration instead of trusting KoL to
+          // eventually say yes.
+          const maxDigs = 5 + (have($effect`Loded`) ? 5 : 0) + 1;
+          let digs = 0;
+          while (itemAmount(ore) === 0 && freeDigAvailable()) {
+            if (digs >= maxDigs) {
+              abort(
+                `Mine Teflon hit its ${maxDigs}-dig safety cap without acquiring ore and without exhausting the free-dig budget; something is wrong with the loop itself. Open mining.php?mine=3 in the relay browser and dig one square manually, then rerun.`,
+              );
+            }
+            const beforeState = get("mineState3", "");
+            const beforeUsed = get("_unaccompaniedMinerUsed", 0);
+            const beforeLoded = haveEffect($effect`Loded`);
+            const { col, row, which, response } = mineSquare();
+            digs++;
+            const progressed =
+              get("mineState3", "") !== beforeState ||
+              get("_unaccompaniedMinerUsed", 0) !== beforeUsed ||
+              itemAmount(ore) > 0 ||
+              haveEffect($effect`Loded`) < beforeLoded;
+            if (!progressed) {
+              abort(
+                `KoL refused the dig at (col ${col}, row ${row}, which=${which}); mineState3, ` +
+                  `_unaccompaniedMinerUsed, and Loded turns are all unchanged and no ore was acquired. ` +
+                  `mineState3: ${beforeState}. _unaccompaniedMinerUsed: ${beforeUsed}. ` +
+                  `digpick equipped: ${haveEquipped(digpick)}. Beaten Up: ${have($effect`Beaten Up`)} ` +
+                  `(a likely cause if true -- KoL may refuse mining while beaten up). ` +
+                  `Response (first 200 chars): ${response.slice(0, 200)}. ` +
+                  `Open mining.php?mine=3 in the relay browser and dig one square manually, then rerun.`,
+              );
+            }
+          }
           if (itemAmount(ore) === 0 && !freeDigAvailable()) abort(NO_FREE_DIG_MESSAGE);
         },
         // The digpick is the dig; `ready` already requires one, and
