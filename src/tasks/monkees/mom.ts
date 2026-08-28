@@ -59,9 +59,24 @@ function schoolMacro(): Macro {
     .trySkill($skill`Garbage Nova`);
 }
 
+/** The ash loops finishCaliginous() on `questS02Monkees == "step12"`
+ * (UnderTheSea.ash ab1105e:2846-2847, 2872-2873) — the quest, not the
+ * progress bar, gates the endgame loop. momSeaMonkeeProgress hitting 40 is
+ * NOT done: the rescue non-combat ("Yo' Mama So Possessed By Evil . . .")
+ * still needs one more Abyss adventure with black glass equipped to fire and
+ * finish questS02Monkees (live 2026-08-28, session log 100339-100342, where
+ * the bar had been at 40 for turns and only the other script's extra Abyss
+ * visit closed the quest). The early no-kit grind is capped independently by
+ * initialMomProgress() in "Abyss Mom"'s own `completed`. */
 function momDone(): boolean {
-  return get("questS02Monkees") === "finished" || get("momSeaMonkeeProgress", 0) >= 40;
+  return get("questS02Monkees") === "finished";
 }
+
+/** At 40 the eye's backup/habitat copies are worthless progress, and a
+ * forced Peridot eye fight would pre-empt the rescue NC that finishes the
+ * quest — so stop offering it once the bar caps. */
+const abyssPeridot = () =>
+  get("momSeaMonkeeProgress", 0) < 40 ? $monster`eye in the darkness` : undefined;
 
 /** Ash initialMomProgress (UTS:1573-1578): how far the early Abyss grind goes
  * on an account WITHOUT the cyber kit. Everything past it is meant to come
@@ -102,7 +117,7 @@ export function momFinishQuest(): Quest {
         ready: () => have(glass),
         completed: momDone,
         do: abyss,
-        peridot: $monster`eye in the darkness`,
+        peridot: abyssPeridot,
         combat: abyssCombat(),
         outfit: abyssOutfit,
         effects: itemDropEffects,
@@ -310,7 +325,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ready: () => have(glass) && !(opts.cyber && cyberKit()),
         completed: () => momDone() || get("momSeaMonkeeProgress", 0) >= initialMomProgress(),
         do: abyss,
-        peridot: $monster`eye in the darkness`,
+        peridot: abyssPeridot,
         combat: abyssCombat(),
         outfit: abyssOutfit,
         effects: itemDropEffects,

@@ -10,8 +10,9 @@ import { claimIceBuff, skateParkTurn, skateWarOpen } from "./skatepark";
  * used by the Deep-Tainted Mind and Gummiheart waits: skate war first, then
  * gymnasium (guard farming; the gear TRADE stays post-Yog — see gym.ts's
  * scholar-strand guard), then colosseum rounds. The ash's caliginous rung
- * (questS02Monkees step12) is dropped: Phase 3's momQuest finishes that
- * quest before the sorceress phase begins.
+ * (questS02Monkees step12) is dropped: with the kit, Phase 3's "Mom Finish"
+ * task (mom.ts) grinds that quest to completion right before Shub, so it is
+ * already finished before the sorceress phase begins.
  *
  * A pending NC forcer skips the gymnasium rung entirely: gymnasiumTurn()
  * hard-aborts on one (it would be wasted on the zone NC), and this ladder
