@@ -74,8 +74,16 @@ export function diverHuntActive(): boolean {
  * fills no hat slot, so it can release the saber Force reservation without
  * ending the hunt. The Diver Summon, Wreck Rivets, and Craft Helmet tasks
  * must gate on this, not on diverHuntActive(). */
+/** A hat-slot breather is in hand: the hunt's payoff exists, so nothing in
+ * the Helmet quest is left to do. Distinct from `!rivetHuntActive()`, which
+ * is ALSO true at the moment every part is collected but the helmet is not
+ * yet crafted — Craft Helmet must key on this, not on the hunt predicate. */
+export function hatBreatherOwned(): boolean {
+  return hatBreathers.some((it) => have(it));
+}
+
 export function rivetHuntActive(): boolean {
-  return helmetPartsMissing() && !hatBreathers.some((it) => have(it));
+  return helmetPartsMissing() && !hatBreatherOwned();
 }
 
 export function prayerbeadsShort(): boolean {

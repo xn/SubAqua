@@ -34,7 +34,7 @@ import {
 } from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
-import { forceGranted, rivetHuntActive } from "../../resources/saber";
+import { forceGranted, hatBreatherOwned, rivetHuntActive } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const outpost = $location`The Mer-Kin Outpost`;
@@ -233,7 +233,11 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
       {
         name: "Craft Helmet",
         ready: rivetsDone,
-        completed: () => !rivetHuntActive(),
+        // Not `!rivetHuntActive()`: that reads true the instant the parts are
+        // all collected (nothing "missing" any more), which would mark this
+        // task complete before the craft ever ran. Done means a hat breather
+        // exists.
+        completed: hatBreatherOwned,
         do: (): void => {
           // aerated diving helmet = COMBINE bubblin' stone + rusty diving
           // helmet; rusty diving helmet = SUSE rusty broken diving helmet +
