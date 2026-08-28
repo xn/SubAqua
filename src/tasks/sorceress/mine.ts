@@ -139,6 +139,66 @@ function lodestoneDetail(result: LodestoneAttempt): string {
 const NO_FREE_DIG_MESSAGE =
   "Free mining (5 Unaccompanied Miner picks + lodestone Loded) ended without teflon ore. Options: pull a minin' dynamite for one more free blast (ash hint UTS:2348-2350), or mine manually (ores show in adjacent veins of 5), then rerun.";
 
+const abyss = $location`The Caliginous Abyss`;
+const reef = $location`Madness Reef`;
+const roughScale = $item`rough fish scale`;
+
+/** Pure mirror of getLucky()'s rungs, for outfit/effect decisions that run
+ * before do() and must not buy a clover as a side effect. */
+function luckyObtainable(): boolean {
+  if (have($effect`Lucky!`)) return true;
+  if (
+    have($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`) &&
+    !get("_aug2Cast", false) &&
+    get("_augSkillsCast", 0) < 5
+  ) {
+    return true;
+  }
+  return itemAmount($item`11-leaf clover`) > 0 || get("_cloversPurchased", 0) < 3;
+}
+
+/** The Economist of Scales rung is next when no Lucky! source is left and the
+ * rough scales banked by the University trips (5 per trip) can be cashed. */
+function reefTripNext(): boolean {
+  return !luckyObtainable() && itemAmount(roughScale) >= 10;
+}
+
+/**
+ * One scale-getting trip for the crappy disguise, cheapest first:
+ *  1. Lucky! → A University of Fish in the Caliginous Abyss (1 pristine +
+ *     5 rough + 10 dull; ash UTS:2455-2466).
+ *  2. Madness Reef → "Heavily Invested in Pun Futures" (choice 311/1) →
+ *     The Economist of Scales, where standalone/choice.ts's 310 handler
+ *     trades every 10 rough for 1 pristine (310/2) and skips (310/6) when
+ *     short. mafia's choice data: ChoiceAdventures.java "The Economist of
+ *     Scales" (310 costs) / "Heavily Invested in Pun Futures" (311).
+ * Live 2026-08-27: both this script and the deployed ash abort after the
+ * third hermit clover (UTS:2572) — this run did so holding 22 rough scales,
+ * and the user hand-drove the exchange for UnderTheSea (session
+ * log:97784-97799, 2 turns, 20 rough → 2 pristine). Four Lucky! trips bank
+ * exactly the 20 rough the tailpiece's last two scales need.
+ * Returns false when neither rung is available (caller aborts).
+ */
+function scaleTrip(): boolean {
+  getLucky();
+  if (have($effect`Lucky!`)) {
+    equipFamiliarBreather();
+    recover();
+    adv1(abyss, -1, () => killMacro(false).toString());
+    return true;
+  }
+  if (itemAmount(roughScale) >= 10) {
+    equipFamiliarBreather();
+    recover();
+    adv1(reef, -1, () => killMacro(false).toString());
+    return true;
+  }
+  return false;
+}
+
+const NO_SCALE_SOURCE = (need: number): string =>
+  `Need ${need} more pristine fish scale(s): out of hermitage clovers (3/day) and fewer than 10 rough fish scales for the Madness Reef exchange (choice 311/1 -> 310/2). Get scales (a Lucky! source for the Caliginous Abyss, or rough scales to trade), then rerun.`;
+
 /** Lucky! ladder (ash getLucky, G:259-275; the heartstone %luck rung is
  * skipped — %fn-family naming, add only if a live account needs it). The
  * 3/day hermit clover cap is the caller's abort condition. */
@@ -434,22 +494,16 @@ export function mineQuest(): Quest {
             }
             return;
           }
-          getLucky();
-          if (!have($effect`Lucky!`)) {
-            abort(
-              `Need ${3 - availableAmount(scale)} more pristine fish scale(s) and out of hermitage clovers (3/day). Get scales (Lucky! caliginous abyss, or Madness Reef choice 310 conversions), then rerun.`,
-            );
-          }
-          equipFamiliarBreather();
-          recover();
-          adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
+          if (!scaleTrip()) abort(NO_SCALE_SOURCE(3 - availableAmount(scale)));
         },
         // Abyss gate accessory, declared not hand-equipped (audit item 7; same
         // shape as mom.ts's black glass). The familiar breather stays a do()
         // rider: engine famequip enforcement only fires for an outfit that
         // names a `familiar`, and this task wants whatever familiar is up
-        // rather than a specific one.
-        outfit: { equip: [blackGlass] },
+        // rather than a specific one. The reef trip hunts an NC, so it dresses
+        // -combat (no forcer: the day's Forces are the rivet hunt's).
+        outfit: () => ({ equip: [blackGlass], modifier: reefTripNext() ? "-combat" : undefined }),
+        choices: { 311: 1 },
         underwater: true,
         limit: {
           soft: 8,
@@ -491,18 +545,11 @@ export function mineQuest(): Quest {
             }
             return;
           }
-          getLucky();
-          if (!have($effect`Lucky!`)) {
-            abort(
-              `Need ${3 - availableAmount(scale)} more pristine fish scale(s) and out of hermitage clovers (3/day). Get scales, then rerun.`,
-            );
-          }
-          equipFamiliarBreather();
-          recover();
-          adv1($location`The Caliginous Abyss`, -1, () => killMacro(false).toString());
+          if (!scaleTrip()) abort(NO_SCALE_SOURCE(3 - availableAmount(scale)));
         },
         // Same as the mask task above (audit item 7).
-        outfit: { equip: [blackGlass] },
+        outfit: () => ({ equip: [blackGlass], modifier: reefTripNext() ? "-combat" : undefined }),
+        choices: { 311: 1 },
         underwater: true,
         limit: {
           soft: 8,
