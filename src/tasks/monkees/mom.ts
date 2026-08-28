@@ -63,6 +63,59 @@ function momDone(): boolean {
   return get("questS02Monkees") === "finished" || get("momSeaMonkeeProgress", 0) >= 40;
 }
 
+/** Ash initialMomProgress (UTS:1573-1578): how far the early Abyss grind goes
+ * on an account WITHOUT the cyber kit. Everything past it is meant to come
+ * free — corral/library backup copies of the eye, VHS wanderers — with the
+ * rest ground out late (ash finishCaliginous() before Shub, UTS:2963-2965). */
+function initialMomProgress(): number {
+  let bar = 24;
+  if (!have($item`backup camera`)) bar += 4;
+  if (!have($item`2002 Mr. Store Catalog`)) bar += 12;
+  return bar;
+}
+
+const abyssCombat = () =>
+  new CombatStrategy()
+    .macro(monsterMacro(vhsMacro, vhsTargets))
+    .macro(schoolMacro(), school)
+    .kill();
+
+const abyssOutfit = () => ({
+  modifier: "item",
+  equip: [
+    glass,
+    ...$items`shark jumper, scale-mail underwear`,
+    ...(schoolBanished() ? [] : [monodent]),
+  ],
+  avoid: [crystalBall],
+});
+
+/** The late Abyss grind to 40 (ash `while (step12) finishCaliginous()`,
+ * UTS:2963-2965) — runs right before Shub so the backup copies and wanderers
+ * have had the whole run to fill the bar first. */
+export function momFinishQuest(): Quest {
+  return {
+    name: "Mom Finish",
+    tasks: [
+      {
+        name: "Abyss Finish",
+        ready: () => have(glass),
+        completed: momDone,
+        do: abyss,
+        peridot: $monster`eye in the darkness`,
+        combat: abyssCombat(),
+        outfit: abyssOutfit,
+        effects: itemDropEffects,
+        prepare: (): void => {
+          recover();
+          combJellyPrep();
+        },
+        limit: { soft: 20, message: "Mom's rescue is stalling; check momSeaMonkeeProgress." },
+      },
+    ],
+  };
+}
+
 /** Ash pearlRes (UTS:22-26): the class zone's element. */
 export function pearlResModifier(): string {
   switch (myPrimestat()) {
@@ -249,30 +302,17 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         // "Abyss Habitats" above. VHS recording rides along during the
         // window.
         name: "Abyss Mom",
-        ready: () => have(glass),
-        completed: momDone,
+        // Early grind only on an account without the cyber kit, and only to
+        // initialMomProgress() (ash UTS:1641-1643); with the kit the cyber
+        // lane is the whole early phase and the remainder is deferred to
+        // Mom Finish (runplans.ts). Live 2026-08-28 this ground 21 -> 40 at
+        // 7 paid turns right after the cyber lane.
+        ready: () => have(glass) && !(opts.cyber && cyberKit()),
+        completed: () => momDone() || get("momSeaMonkeeProgress", 0) >= initialMomProgress(),
         do: abyss,
-        // monsterMacro(), not `.macro(vhsMacro, vhsTargets)`: vhsMacro is empty
-        // outside the recording window, and an empty monster macro still compiles
-        // to a bodyless `if monsterid …;endif;` block (see monsterMacro()).
-        combat: new CombatStrategy()
-          .macro(monsterMacro(vhsMacro, vhsTargets))
-          .macro(schoolMacro(), school)
-          .kill(),
-        // Peridot on the eye, as the ash wears it on every Abyss trip
-        // (UTS:383, 706): the engine only equips it while the zone offers the
-        // target and the daily per-zone lock is open, and the eye is both
-        // +3 progress and a habitat target.
         peridot: $monster`eye in the darkness`,
-        outfit: () => ({
-          modifier: "item",
-          equip: [
-            glass,
-            ...$items`shark jumper, scale-mail underwear`,
-            ...(schoolBanished() ? [] : [monodent]),
-          ],
-          avoid: [crystalBall], // see Abyss Habitats
-        }),
+        combat: abyssCombat(),
+        outfit: abyssOutfit,
         effects: itemDropEffects,
         prepare: (): void => {
           recover();

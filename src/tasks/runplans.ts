@@ -10,7 +10,7 @@ import { currentsQuest } from "./monkees/currents";
 import { grandpaQuest } from "./monkees/grandpa";
 import { guildTasks } from "./monkees/guild";
 import { helmetQuest } from "./monkees/helmet";
-import { momQuest, wandererTasks } from "./monkees/mom";
+import { momFinishQuest, momQuest, wandererTasks } from "./monkees/mom";
 import { outpostQuest } from "./monkees/outpost";
 import { pelletQuest } from "./monkees/pellet";
 import { colosseumQuest } from "./sorceress/colosseum";
@@ -90,6 +90,9 @@ export function buildRunplan(tier: Tier): Task[] {
     skateParkQuest(),
     // Colosseum needs the gladiator mask + tailpiece from gearQuest.
     colosseumQuest(),
+    // Mom's remaining Abyss progress, deferred here like the ash (UTS:2963-2965)
+    // so backup copies and wanderers fill the bar first.
+    momFinishQuest(),
     // Shub (Left Door) needs isMerkinGladiatorChampion, from the Colosseum.
     shubQuest(),
     // Finale needs both gods dead.
