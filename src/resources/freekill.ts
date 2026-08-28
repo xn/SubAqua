@@ -287,8 +287,11 @@ const freeKillMonsters = new Map<Monster, boolean>([
  * instakill only glances, and a glanced dart still spends Everything Looks Red
  * for the day. The ash never reaches free_kill() with one in front of it — its
  * corral case tames or runs first (CCS:746-760, 838-851).
+ * Peanut (Caliginous Abyss) shrugs off instakills: live 2026-08-28 Assert Your Authority
+ * landed and the fight ran ten more rounds (session log:84421); UTS 08-21's shadow brick on it
+ * was a paid fight too (:114296).
  */
-export const freeKillNever: Monster[] = [$monster`wild seahorse`];
+export const freeKillNever: Monster[] = [$monster`wild seahorse`, $monster`Peanut`];
 
 /**
  * Whether the ash free-kills this fight, and with what drop discipline.

@@ -65,7 +65,7 @@ import {
   shrugBadEffects,
   shrugForSongs,
 } from "../lib/moods";
-import { backupCamera, backupMacro, backupTarget } from "../resources/backup";
+import { backupCamera, backupMacro, backupTarget, freeMonsters } from "../resources/backup";
 import {
   bangPotionMacro,
   bangPotionNever,
@@ -341,7 +341,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
             : Macro.tryItem(banisher.skill);
         // Macro.step() copies rather than appending to `banish` in place, so
         // a re-compile cannot double the fallback onto it.
-        resources.provide("banish", { do: () => Macro.step(banish).step(fallbackMacro()) });
+        resources.provide("banish", {
+          do: () => Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro()),
+        });
       }
     }
     if (combat.can("killFree")) {
@@ -550,6 +552,11 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
             .filter((action) => action !== "kill")
             .flatMap((action) => combat.where(action)),
           ...freeKillNever,
+          // Fights that are already free — habitat/backup copies of the
+          // golem, crayon wanderers, Kramco goblins, time cops (ash
+          // free_monster(), G:72-76; backup.ts freeMonsters) — never earn a
+          // free-kill charge: live 2026-08-28 five charges went to golems.
+          ...freeMonsters,
         ]),
       ];
       const upgradeKill = (monster?: Monster): void => {
