@@ -15,9 +15,11 @@ import {
   equip,
   equippedAmount,
   Familiar,
+  handlingChoice,
   haveEquipped,
   Item,
   itemAmount,
+  lastChoice,
   Location,
   Monster,
   mpCost,
@@ -77,6 +79,7 @@ import {
   isFreeRunSource,
   selectFreeRun,
 } from "../resources/freerun";
+import { peridotTargetOffered, setPeridotTargetId } from "../resources/peridot";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
 
@@ -227,15 +230,28 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     combat: CombatStrategy<CombatActions>,
     resources: CombatResources<CombatActions>,
   ): void {
+    // The peridot's menu (choice 1557) only ever offers monsters the zone is
+    // CURRENTLY weighting nonzero (live bug: The Wreck of the Edgar
+    // Fitzsimmons drops mine crab/unholy diver from the table outside its
+    // ~20-turn hatch window, AreaCombatData.java:1950-1961 — a peridot stuck
+    // on the diver there re-submits an unlisted choice forever, since KoL
+    // just re-offers the same menu). peridotTargetOffered() is the same
+    // conditional-weighting check the game applies, forced fresh every call
+    // (see its doc comment) — gating the equip on it here means a target the
+    // zone cannot currently produce never gets the slot, and `do()` below
+    // never writes a `choiceAdventure1557` answer mafia can loop on.
     const peridotTarget = undelay(task.peridot);
     if (
       peridotTarget &&
       task.do instanceof Location &&
-      !get("_perilLocations").split(",").includes(`${task.do.id}`)
+      !get("_perilLocations").split(",").includes(`${task.do.id}`) &&
+      peridotTargetOffered(task.do, peridotTarget)
     ) {
       outfit.equip($item`Peridot of Peril`);
+      setPeridotTargetId(peridotTarget);
     } else {
       outfit.equip({ avoid: $items`Peridot of Peril` });
+      setPeridotTargetId(undefined);
     }
 
     // Train sea lasso once per fight (round 1 only): macros restart each round, and
@@ -787,13 +803,32 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       ...task,
       do: () => {
         const peridotTarget = undelay(task.peridot);
-        if (peridotTarget && haveEquipped($item`Peridot of Peril`)) {
+        // Same gate as customize(): never register a choiceAdventure1557
+        // answer mafia can loop on resubmitting for a monster the zone is
+        // not currently offering.
+        if (
+          peridotTarget &&
+          haveEquipped($item`Peridot of Peril`) &&
+          task.do instanceof Location &&
+          peridotTargetOffered(task.do, peridotTarget)
+        ) {
           propertyManager.setChoice(1557, `1&bandersnatch=${peridotTarget.id}`);
         }
         if (task.do instanceof Location) return task.do;
         return task.do();
       },
     });
+    // Hard stop: if the peridot's menu still lands on 1557 with nothing
+    // resolving it — no vetted engine answer above, and the choice.ts
+    // fallback (standalone/choice.ts) also found no listed target to match —
+    // surface it as a one-shot abort instead of a silent freeze. Live
+    // evidence for the bug this guards against: a session log ending in
+    // hundreds of repeated "Took choice 1557/1: <monster>" lines with no
+    // progress, from mafia's own auto-choice resolver resubmitting a fixed,
+    // unlisted answer forever.
+    if (handlingChoice() && lastChoice() === 1557) {
+      throw `Stuck in the Peridot of Peril's monster menu (choice 1557) after ${task.name}; the target isn't in the pull-down. Pick a listed monster in the relay browser, then rerun.`;
+    }
   }
 
   override post(task: Task): void {

@@ -5,6 +5,7 @@ import {
   itemAmount,
   pullsRemaining,
   retrieveItem,
+  turnsPlayed,
   use,
   useSkill,
   visitUrl,
@@ -23,12 +24,14 @@ import {
 } from "libram";
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
+import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
 import {
   applyEffects,
   combineMoods,
   itemDropEffects,
+  sneakEffects,
   squintEffects,
   superItemDropEffects,
 } from "../../lib/moods";
@@ -41,6 +44,21 @@ const outpost = $location`The Mer-Kin Outpost`;
 const wreck = $location`The Wreck of the Edgar Fitzsimmons`;
 const diver = $monster`unholy diver`;
 const mimic = $familiar`Chest Mimic`;
+
+/**
+ * Mafia's Wreck-hatch rule (AreaCombatData.java:1950-1961,
+ * adjustConditionalWeighting()): once choice 299 option 1 sets
+ * _lastFitzsimmonsHatch (ChoiceControl.java:5019-5027, which only fires
+ * post-bigBrotherRescued), mine crab/unholy diver are the ONLY non-scavenger
+ * monsters on the table for the next 20 turns; cargo crab/drowned sailor are
+ * the only ones OFF the table during that window (Mer-kin scavenger is
+ * always present either way). Outside the window the diver simply cannot be
+ * fought — a peridot or forceItems aimed at it there is aimed at nothing.
+ */
+function hatchOpen(): boolean {
+  const hatchTurn = get("_lastFitzsimmonsHatch", -1);
+  return hatchTurn >= 0 && turnsPlayed() - hatchTurn < 20;
+}
 
 function rivetsDone(): boolean {
   return (
@@ -207,10 +225,42 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
           ]
         : []),
       {
-        // Plan B (ash UTS:2106-2147): grind the Wreck for divers. Peridot
-        // forces the diver; forceItems (ray or saber) forces the drops.
+        // Plan B, hatch closed (ash UTS:1424-1430): mine crab/unholy diver
+        // are OFF the table outside the ~20-turn hatch window (hatchOpen()
+        // above; AreaCombatData.java:1950-1961), so fighting here can never
+        // land a diver — only cargo crab/drowned sailor/Mer-kin scavenger are
+        // offered. The ash's own closed branch just hunts the hatch faster
+        // (tempEquipment("-combat", "Monodent of the Sea", ...) +
+        // mood("-combat")); this mirrors Big Brother's identical NC hunt for
+        // the same choice 299 in the same zone ("Wreck Rescue (sneak)",
+        // bigbrother.ts) rather than inventing a second mechanism. grimoire
+        // freezes a task's `combat` at build time (library.ts's two-lane
+        // comment), so this has to be a sibling task, not a delayed field on
+        // the open-hatch lane below.
+        name: "Wreck Rivets (hatch closed)",
+        ready: () => rivetHuntActive() && !hatchOpen(),
+        completed: helmetDone,
+        do: wreck,
+        combat: new CombatStrategy().freeRun(),
+        outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
+        effects: sneakEffects,
+        choices: { 299: 1 },
+        prepare: () => recover(),
+        limit: {
+          soft: 20,
+          message:
+            "Down at the Hatch is hiding, so the hatch never reopens (it stays open ~20 turns once it does); check -combat sources.",
+        },
+      },
+      {
+        // Plan B, hatch open (ash UTS:2106-2147): grind the Wreck for divers
+        // while mine crab/unholy diver are the only non-scavenger monsters on
+        // the table (hatchOpen() above). Peridot forces the diver; forceItems
+        // (ray or saber) forces the drops. Never targets the peridot/1387
+        // Force outside this window — see the sibling closed-hatch task and
+        // engine.ts's appearanceRates() equip gate.
         name: "Wreck Rivets",
-        ready: () => rivetHuntActive(),
+        ready: () => rivetHuntActive() && hatchOpen(),
         completed: helmetDone,
         do: wreck,
         peridot: diver,
@@ -223,7 +273,9 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // Squint after dress() and only behind a Force-less fight, as above
         // (ash UTS:1430-1434). This lane DOES have a location, so it is passed
         // — the engine's provideSaber() reads forceGranted(purpose, location)
-        // the same way (engine.ts:198).
+        // the same way (engine.ts:198). Only reached while the hatch is open,
+        // so it's never a Force-less probabilistic diver fight with no diver
+        // even on the table.
         prepare: (): void => {
           recover();
           if (!forceGranted("diver", wreck)) applyEffects(squintEffects(), "Wreck Rivets");

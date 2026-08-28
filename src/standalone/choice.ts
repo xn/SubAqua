@@ -1,5 +1,14 @@
-import { availableAmount, availableChoiceOptions, getProperty, print, runChoice } from "kolmafia";
+import {
+  abort,
+  availableAmount,
+  availableChoiceOptions,
+  getProperty,
+  print,
+  runChoice,
+} from "kolmafia";
 import { $item, get, have, set, ValueOf } from "libram";
+
+import { peridotTargetId } from "../resources/peridot";
 
 /**
  * Ash stashboxCheck (CH:9-20): walk the per-lockkey-monster search order,
@@ -22,7 +31,7 @@ function stashboxCheck(order: number[]): void {
   runChoice(order[0]);
 }
 
-export function main(choice: number, _page: string) {
+export function main(choice: number, page: string) {
   const options: { [key: number]: string } = availableChoiceOptions();
 
   if (choice === 923 && options[5]) {
@@ -203,6 +212,33 @@ export function main(choice: number, _page: string) {
     // _legendaryNoodlesSpleen and banks a free spleen point; user rule: it
     // should always be that.
     runChoice(1);
+  } else if (choice === 1557) {
+    // Peering Through Your Peridot. ChoiceManager.invokeChoiceAdventureScript
+    // (mafia) runs this script BEFORE its own pref-based auto-answer, for
+    // EVERY occurrence of a choice — so when engine.ts has already
+    // registered a vetted choiceAdventure1557 answer (peridot.ts
+    // peridotTargetOffered(): equipped only once appearanceRates(location,
+    // true) actually lists the target), do nothing and let that answer
+    // through unchanged.
+    if (getProperty("choiceAdventure1557")) return;
+    // No vetted answer on file: the peridot opened this menu outside the
+    // engine's own gate. Resolve narrowly and NEVER resubmit an unlisted id
+    // on a loop — that resubmit loop is the live bug (hundreds of repeated
+    // "Took choice 1557/1" lines with no progress once KoL stops offering
+    // the monster). The bandersnatch id is present in the raw response even
+    // though its button label isn't (ChoiceAdventures.java
+    // decorateMonsterMap relabels display text only, keyed off the id, for
+    // the relay browser).
+    const wanted = peridotTargetId();
+    const firstMatch = /name="bandersnatch" value="(\d+)"/.exec(page);
+    const firstOffered = firstMatch ? Number(firstMatch[1]) : undefined;
+    if (wanted !== undefined && firstOffered === wanted) {
+      runChoice(1, `bandersnatch=${wanted}`);
+    } else {
+      abort(
+        "Peridot of Peril's monster menu (choice 1557) has no vetted target; pick a listed monster in the relay browser, then rerun.",
+      );
+    }
   }
 }
 
