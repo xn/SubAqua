@@ -934,7 +934,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // clears dolphinItem once the whistle is used (GenericRequest.java:2574),
     // so a later count of 0 cannot re-fire on a stale theft.
     const stolen = get("dolphinItem", $item.none);
-    const alwaysWhistle = $items`sea lasso, sea leather, sea cowbell`;
+    // Library clue items too: live 2026-08-28 a knucklebone and two
+    // killscrolls were stolen un-whistled, each re-farmed at a paid turn.
+    const alwaysWhistle = $items`sea lasso, sea leather, sea cowbell, Mer-kin knucklebone, Mer-kin killscroll, Mer-kin healscroll, Mer-kin worktea`;
     const outpostWhistle = $items`Mer-kin prayerbeads, rusty rivet`;
     if (
       have($item`durable dolphin whistle`) &&
@@ -955,7 +957,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     // Dreadscroll seed narrowing (ash post_adv UTS:253-254): active exactly
     // between the seahorse tame and High Priesthood. Pure pref reads/writes —
-    // candidateSeeds() gates its own one-time scan cost (>= 2 clues + name)
+    // candidateSeeds() gates its own one-time scan cost (seahorse name)
     // and cache-filters afterwards; no adventuring, per the hooks rule.
     if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
       dreadSeedCheck();
