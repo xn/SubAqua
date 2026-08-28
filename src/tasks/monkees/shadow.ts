@@ -54,6 +54,15 @@ function riftOutfit() {
   };
 }
 
+/** Shared "Rufus Labyrinth"/"Rift Fights" prep: heal up, and wish for a
+ * lasso when the stock is dry mid-training (UTS:864-868) — both tasks can be
+ * the one spending the day's free rift fights, depending on whether a
+ * forcer landed the Labyrinth NC or the fights ran out naturally first. */
+function riftPrepare(): void {
+  recover();
+  if (training() < 20 && itemAmount(lasso) === 0) pawWish(lasso);
+}
+
 export function shadowRiftQuest(): Quest {
   return {
     name: "Shadow Rift",
@@ -61,10 +70,10 @@ export function shadowRiftQuest(): Quest {
       {
         // Ash UTS:851-853, 862-869: an artifact quest from Rufus (choice
         // 1497 -> 2, standalone/choice.ts). Twice a day: before Shadow
-        // Waters (its lodestone unlocks the waters) and again once the waters
-        // are up but the affinity is unclaimed (its lodestone is the forest
-        // loot). Never a third: with the affinity spent and the waters up the
-        // second disjunct is false.
+        // Waters (its lodestone unlocks the waters) and again while the
+        // waters are up but the forest is unlooted (its lodestone is the
+        // forest loot). Never a third: the loot flag closes the second
+        // disjunct once it is set.
         name: "Rufus Quest",
         ready: () =>
           have(phone) &&
@@ -72,7 +81,7 @@ export function shadowRiftQuest(): Quest {
           get("questRufus") === "unstarted" &&
           !have(lodestone) &&
           get("encountersUntilSRChoice", 11) > 9 &&
-          (!have(waters) || riftFightsFree()),
+          (!have(waters) || !get("_shadowForestLooted", false)),
         completed: () => get("questRufus") !== "unstarted" || have(lodestone),
         do: () => void use(phone),
         freeaction: true,
@@ -80,17 +89,26 @@ export function shadowRiftQuest(): Quest {
       },
       {
         // Ash UTS:853-855: force the Labyrinth NC (mafia picks the artifact's
-        // theme, RufusManager.shadowLabyrinthChoiceDecision). The second
-        // quest's Labyrinth arrives naturally at encountersUntilSRChoice 0,
-        // so the forcer is only armed while fights are still owed. A fight
-        // that lands instead is a normal rift fight (same combat/outfit).
+        // theme, RufusManager.shadowLabyrinthChoiceDecision). The first
+        // quest's Labyrinth is forced (saves the day's 11 free fights for
+        // bricks/lasso training, ash NCforce() sits in its no-Shadow-Waters
+        // branch, UTS ab1105e:815-846); the second quest's Labyrinth arrives
+        // naturally at counter 0 after the 11 free fights (affinity and
+        // counter both start at 11 after Loded Stone #1 and drain together).
+        // The task adventures only when the fight is free, the NC is owed
+        // now, or a forcer is already armed.
         name: "Rufus Labyrinth",
         ready: () =>
-          have(phone) && get("questRufus") === "started" && get("rufusQuestType") === "artifact",
+          have(phone) &&
+          get("questRufus") === "started" &&
+          get("rufusQuestType") === "artifact" &&
+          (riftFightsFree() ||
+            get("encountersUntilSRChoice", 11) === 0 ||
+            get("noncombatForcerActive")),
         completed: () => get("questRufus") !== "started",
         prepare: (): void => {
-          recover();
-          if (get("encountersUntilSRChoice", 11) > 0) forceNextNoncombat();
+          riftPrepare();
+          if (!have(waters) && get("encountersUntilSRChoice", 11) > 0) forceNextNoncombat();
         },
         do: rift,
         combat: riftCombat(),
@@ -131,15 +149,12 @@ export function shadowRiftQuest(): Quest {
         // Ash UTS:858-897 + 2432-2439 + 2536-2547: spend the day's free rift
         // fights — seven lasso throws train to 20, the rest are shadow bricks
         // (13 free kills' worth over the day) and Fishy. Runs only under
-        // Shadow Waters like the ash. A lasso is wished for when the stock is
-        // dry mid-training (UTS:864-868).
+        // Shadow Waters like the ash. Tail task: covers leftover affinity on
+        // days a forcer was unavailable for the Labyrinth.
         name: "Rift Fights",
         ready: () => have(phone) && trainingGearReady() && have(waters) && riftFightsFree(),
         completed: () => !riftFightsFree(),
-        prepare: (): void => {
-          recover();
-          if (training() < 20 && itemAmount(lasso) === 0) pawWish(lasso);
-        },
+        prepare: riftPrepare,
         do: rift,
         combat: riftCombat(),
         outfit: riftOutfit,
