@@ -1,5 +1,16 @@
 import { availableAmount, cliExecute } from "kolmafia";
-import { $familiar, $item, $location, $monster, $monsters, $skill, get, have, Macro } from "libram";
+import {
+  $familiar,
+  $item,
+  $items,
+  $location,
+  $monster,
+  $monsters,
+  $skill,
+  get,
+  have,
+  Macro,
+} from "libram";
 
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
@@ -153,7 +164,11 @@ export function outpostQuest(): Quest {
         // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
         freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
-        outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         prepare: (): void => {
           recover();
@@ -187,7 +202,11 @@ export function outpostQuest(): Quest {
         // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
         freeRunBanishes: true,
         combat: new CombatStrategy().forceItems($monster`Mer-kin healer`).freeRun(),
-        outfit: () => ({ modifier: "-combat, item", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat, item",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         prepare: (): void => {
           recover();

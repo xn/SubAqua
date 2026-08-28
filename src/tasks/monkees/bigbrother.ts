@@ -1,5 +1,5 @@
 import { visitUrl } from "kolmafia";
-import { $location, get } from "libram";
+import { $items, $location, get } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
@@ -43,7 +43,11 @@ export function bigBrotherQuest(): Quest {
         // ash free_run(page_text, true) here, CCS:586-598
         freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
-        outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         choices: { 299: 1 },
         prepare: () => recover(),

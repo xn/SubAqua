@@ -15,6 +15,7 @@ import {
   $effect,
   $familiar,
   $item,
+  $items,
   $location,
   $monster,
   $skill,
@@ -244,7 +245,11 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         // ash free_run(page_text, true) here, CCS:586-598 (same Wreck handler)
         freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
-        outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         choices: { 299: 1 },
         prepare: () => recover(),

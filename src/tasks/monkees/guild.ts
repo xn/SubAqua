@@ -2,6 +2,7 @@ import { Location, myPrimestat, Stat, storageAmount, visitUrl } from "kolmafia";
 import {
   $familiar,
   $item,
+  $items,
   $location,
   $monster,
   $monsters,
@@ -125,6 +126,7 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         outfit: () => ({
           modifier: "-combat",
           familiar: have(gothKid) ? gothKid : sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
         }),
         effects: sneakEffects,
         prepare: (): void => {

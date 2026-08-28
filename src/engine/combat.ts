@@ -1,5 +1,5 @@
 import { ActionDefaults, CombatStrategy as BaseCombatStrategy } from "grimoire-kolmafia";
-import { haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
+import { availableAmount, haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
 import { $effect, $item, $skill, have, Macro } from "libram";
 
 const myActions = [
@@ -67,9 +67,9 @@ export class MyActionDefaults implements ActionDefaults<CombatActions> {
     // for a function `do`), so "unknown" has to mean underwater: every
     // function-`do` task in this route is a sea task.
     if (target instanceof Location && target.environment !== "underwater") {
-      return killMacro(false);
+      return fishMacro().step(killMacro(false));
     }
-    return runMacro().step(killMacro(false));
+    return runMacro().step(fishMacro()).step(killMacro(false));
   }
   ignore(target?: Monster | Location) {
     return this.kill(target);
@@ -93,7 +93,9 @@ export class MyActionDefaults implements ActionDefaults<CombatActions> {
     return this.abort();
   }
   banish(target?: Monster | Location) {
-    return this.kill(target);
+    // No banish source left: the fight is unwanted anyway, so a fish is the
+    // best thing it can become before the kill ladder (ash CCS:650).
+    return fishMacro().step(this.kill(target));
   }
   abort() {
     return new Macro().abort();
@@ -275,6 +277,22 @@ export function killMacro(hard = false, options: { bullseye?: boolean } = {}): M
  */
 export function runMacro(): Macro {
   return new Macro().tryItem($item`pulled indigo taffy`);
+}
+
+/**
+ * Sea *dent: Talk to Some Fish (Monodent, CCS:551 and the sites listed in the
+ * 2026-08-28 parity report G3): turns a non-target monster into "some fish"
+ * (monsters.txt: pristine fish scale 10%, rough 20%, dull 30%; the original
+ * drops still land, session log 08-21:110093, :111402). Only while the crappy
+ * disguise still needs scales (6 = mask 3 + tailpiece 3, ash `< 6`), and only
+ * when the skill is castable — libram's have(Skill) is true for a
+ * Monodent-granted skill only while the Monodent is worn, which is why this is
+ * built after dress() like killMacro().
+ */
+export function fishMacro(): Macro {
+  if (!have($skill`Sea *dent: Talk to Some Fish`)) return new Macro();
+  if (availableAmount($item`pristine fish scale`) >= 6) return new Macro();
+  return Macro.trySkill($skill`Sea *dent: Talk to Some Fish`);
 }
 
 /**

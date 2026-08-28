@@ -89,7 +89,14 @@ import { peridotTargetOffered, setPeridotTargetId } from "../resources/peridot";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
 
-import { CombatActions, combatActions, killMacro, MyActionDefaults, openerOnce } from "./combat";
+import {
+  CombatActions,
+  combatActions,
+  fishMacro,
+  killMacro,
+  MyActionDefaults,
+  openerOnce,
+} from "./combat";
 import {
   familiarWaterBreathingEquipment,
   hasBreathingEffect,
@@ -154,8 +161,8 @@ function equipResource(
  * Called from inside each provide's delayed `do`, so it sees the dressed
  * outfit — that part is load-bearing and unchanged.
  */
-function fallbackMacro(): Macro {
-  return killMacro(false);
+function fallbackMacro(options: { fish?: boolean } = {}): Macro {
+  return options.fish ? fishMacro().step(killMacro(false)) : killMacro(false);
 }
 
 /**
@@ -347,7 +354,8 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // Macro.step() copies rather than appending to `banish` in place, so
         // a re-compile cannot double the fallback onto it.
         resources.provide("banish", {
-          do: () => Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro()),
+          do: () =>
+            Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro({ fish: true })),
         });
       }
     }
@@ -479,7 +487,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       if (source) {
         resources.provide("freeRun", {
           prepare: source.prepare,
-          do: () => Macro.step(source.do).step(fallbackMacro()),
+          do: () => Macro.step(source.do).step(fallbackMacro({ fish: true })),
         });
       }
     }

@@ -40,7 +40,7 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
         outfit: () => ({
           modifier: "item, -100 combat",
           familiar: sneakFamiliar(),
-          equip: $items`Mer-kin sneakmask`,
+          equip: $items`Mer-kin sneakmask, Monodent of the Sea`,
         }),
         effects: () => combineMoods(sneakEffects(), resEffects()),
         choices: { 302: 1, 303: 1, 304: 2, 305: 2, 306: 1, 307: 1, 308: 1, 309: 2 },
