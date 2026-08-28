@@ -1,5 +1,5 @@
 import { availableAmount, cliExecute } from "kolmafia";
-import { $item, $location, $monster, $monsters, $skill, get, have, Macro } from "libram";
+import { $familiar, $item, $location, $monster, $monsters, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
@@ -28,6 +28,7 @@ function stashboxDone(): boolean {
 const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
 
 const golem = $monster`Black Crayon Golem`;
+const eagle = $familiar`Patriotic Eagle`;
 
 /** Second habitat recall, on a Black Crayon Golem met at the Outpost (ash
  * CCS:669-675): once the first recall's fights are spent and only one recall
@@ -35,12 +36,33 @@ const golem = $monster`Black Crayon Golem`;
  * free golem copies. UTS 08-26 recalled at [9] and again at [11]; the third
  * recall stays for the Abyss habitat lane (Abyss Habitats completes at
  * recalled >= 3). */
+/** The last habitat golem fight (fights left 1 BEFORE the fight; mafia
+ * decrements on encounter) once both outpost recalls are spent, on an
+ * account with the cyber kit and no construct banish yet: the ash fields the
+ * eagle for exactly that fight and screeches in it (UTS:1319-1322,
+ * CCS:676-678) — the construct banish costs no turn there, where the Madness
+ * Bakery lane costs one. */
+function screechTurn(): boolean {
+  return (
+    have(eagle) &&
+    have($item`server room key`) &&
+    !get("banishedPhyla").includes("construct") &&
+    get("_monsterHabitatsFightsLeft", 0) === 1 &&
+    get("_monsterHabitatsRecalled", 0) >= 2
+  );
+}
+
 function golemRecallMacro(): Macro {
-  return have($skill`Just the Facts`) &&
+  const macro = new Macro();
+  if (
+    have($skill`Just the Facts`) &&
     get("_monsterHabitatsFightsLeft", 0) === 0 &&
     get("_monsterHabitatsRecalled", 0) < 2
-    ? openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`))
-    : new Macro();
+  ) {
+    macro.trySkill($skill`Recall Facts: Monster Habitats`);
+  }
+  if (screechTurn()) macro.trySkill($skill`%fn, Release the Patriotic Screech!`);
+  return macro.components.length > 0 ? openerOnce(macro) : macro;
 }
 
 /** Outpost backups (ash CCS:684-708), cap 7 (UTS:1338): golem copies once
@@ -92,7 +114,7 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: farmBackup,
         combat: farmCombat(),
-        outfit: { modifier: "item" },
+        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Grandma");
@@ -112,7 +134,7 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: farmBackup,
         combat: farmCombat(),
-        outfit: { modifier: "item" },
+        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");
