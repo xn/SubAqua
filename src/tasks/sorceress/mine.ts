@@ -340,7 +340,12 @@ export function mineQuest(): Quest {
           recover();
           if (availableAmount(digpick) === 0) discretionaryPull(digpick);
         },
-        do: $location`Anemone Mine`,
+        // Function do: grimoire only adventures on a returned Location, so the
+        // pull in prepare() (which runs after ready/completed) ends the task
+        // without a fight. Live 2026-08-28: the pull landed and the task still
+        // fought a Mer-kin miner, which dropped a second digpick (log:87539-87593).
+        do: () => (availableAmount(digpick) > 0 ? undefined : $location`Anemone Mine`),
+        underwater: true,
         combat: new CombatStrategy().kill(),
         outfit: { modifier: "item" },
         effects: itemDropEffects,
