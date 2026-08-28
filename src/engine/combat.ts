@@ -333,10 +333,30 @@ export function openerOnce(macro: Macro, round = 2): Macro {
  * (combat.js:255-257) and libram's Macro.step() filters falsy components
  * (combat.js:182-186), so an empty one contributes literally nothing. The
  * monster guard is rebuilt inside the macro, which is where it belongs.
+ *
+ * ORDERING TRAP — only use this where the compile position does not matter.
+ * A default-slot macro compiles AFTER every monster macro (combat.js:249-257),
+ * and the engine's opportunistic free-kill upgrade emits per-monster macros
+ * (engine.ts customize(), the `combat.macro(step, monster)` branch). So moving
+ * a monster macro into the default slot to dodge the empty-block bug puts the
+ * free kill IN FRONT of it, inverting the "ash free_kills LAST" invariant
+ * documented at that call site. When order matters, keep the monster macro and
+ * make its body unconditionally non-empty instead (corral.ts's sword opener:
+ * the `if hasskill <id>` libram already emits is the runtime gate, so the
+ * TypeScript-side conditional that produced the empty macro is unnecessary).
+ *
+ * The guard is built as a raw predicate STRING rather than by handing libram
+ * the Monster[] — `Macro.if_(monsters, …)` would parenthesize the group
+ * (`if (monsterid a || monsterid b)`, libram combat.js:302-306), a shape
+ * grimoire's own compiler never emits (`if monsterid a || monsterid b`,
+ * grimoire combat.js:358-364) and one nothing in this route has exercised
+ * against KoL's BALLS parser. Byte-identical to grimoire is the safe target.
  */
 export function monsterMacro(macro: () => Macro, monsters: Monster | Monster[]): () => Macro {
+  const targets = Array.isArray(monsters) ? monsters : [monsters];
+  const guard = targets.map((monster) => `monsterid ${monster.id}`).join(" || ");
   return () => {
     const built = macro();
-    return built.components.length === 0 ? new Macro() : Macro.if_(monsters, built);
+    return built.components.length === 0 ? new Macro() : Macro.if_(guard, built);
   };
 }

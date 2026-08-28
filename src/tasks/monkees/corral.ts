@@ -12,7 +12,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { HP_FLOOR_PERCENT, recover, runawayHeal } from "../../lib";
 import {
@@ -141,6 +141,50 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
     have(sword) &&
     get("swordOfSWordsMonster") !== null &&
     availableAmount(lasso) < 7;
+
+  /**
+   * "Corral Lassos" combat, built here so the sword opener can be registered —
+   * or not — rather than emitted as a macro that may resolve to nothing.
+   *
+   * The opener must stay a MONSTER macro: grimoire compiles monster macros
+   * before default macros (grimoire combat.js:249-257) and the engine's
+   * opportunistic free-kill upgrade emits its own per-monster step for the
+   * cowboy/cow, so a default-slot opener would let the free kill end the fight
+   * in front of the sword swing (engine.ts's "ash free_kills LAST" invariant).
+   * A monster macro that resolves EMPTY, though, compiles to a bodyless
+   * `if monsterid …;endif;` block (combat.ts monsterMacro() has the mechanism
+   * and the live 2026-08-27 evidence).
+   *
+   * Both constraints are met by registering an unconditionally non-empty body
+   * and letting BALLS do the gating that the old `swordOut() ? … : new Macro()`
+   * ternary did in TypeScript: libram renders this skill by id (its name fails
+   * `/^[A-Za-z ]+$/`, libram combat.js:94-100), so trySkill emits
+   * `if hasskill <id>;skill <id>;endif` — inert on every turn the Sword of S
+   * Words is not the fielded familiar, which is exactly every turn swordOut()
+   * is false, since swordOut() is what fields it.
+   *
+   * The registration itself is gated on the BUILD-TIME-stable half of
+   * swordOut(): the run plan is composed once (runplans.ts buildRunplan, called
+   * from main.ts:48), while swordOut()'s other two conjuncts — the imprint pref
+   * and the lasso count — both move during the run and so cannot be read here.
+   */
+  const lassoCombat = (): CombatStrategy => {
+    const strategy = new CombatStrategy();
+    if (opts.swordLane && have(sword)) {
+      strategy.macro(
+        openerOnce(
+          // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
+          Macro.trySkill($skill`%fn, kill a lot of these guys`),
+        ),
+        cowboy,
+      );
+    }
+    return strategy
+      .kill($monsters`sea cowboy, sea cow`)
+      .banish(rustler)
+      .macro(seahorseMacro, seahorse);
+  };
+
   return {
     name: "Corral",
     tasks: [
@@ -241,25 +285,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         completed: () => (lassosDone() && availableAmount(lasso) >= 1) || tamed(),
         do: corral,
         peridot: cowboy,
-        combat: new CombatStrategy()
-          // monsterMacro(): with the sword stowed this resolves to an empty
-          // macro, and an empty monster macro still compiles to a bodyless
-          // `if monsterid …;endif;` block (see monsterMacro()).
-          .macro(
-            monsterMacro(
-              () =>
-                swordOut()
-                  ? openerOnce(
-                      // eslint-disable-next-line libram/verify-constants -- Sword of S Words skill, plugin data lags (classskills.txt:1170)
-                      Macro.trySkill($skill`%fn, kill a lot of these guys`),
-                    )
-                  : new Macro(),
-              cowboy,
-            ),
-          )
-          .kill($monsters`sea cowboy, sea cow`)
-          .banish(rustler)
-          .macro(seahorseMacro, seahorse),
+        combat: lassoCombat(),
         outfit: () => ({ modifier: "item", familiar: swordOut() ? sword : undefined }),
         effects: () => combineMoods(itemDropEffects(), survivalEffects()),
         prepare: (): void => {
