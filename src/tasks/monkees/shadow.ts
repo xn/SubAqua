@@ -63,6 +63,22 @@ function riftPrepare(): void {
   if (training() < 20 && itemAmount(lasso) === 0) pawWish(lasso);
 }
 
+/** Cast Summon a Wave right after ANY rift adventure (ash UTS:853-855): mafia
+ * stamps `_seadentWaveZone` to the CURRENT zone when the skill is cast
+ * (KoLCharacter.java:5402), and AdventureDatabase.isUnderwater (:933) treats
+ * that stamped zone as underwater for the rest of the day — that stamp is
+ * what lets the sea lasso be thrown in the rift (riftCombat()'s opener).
+ * Attached as `post` so it runs with the rift still the current location and
+ * the Monodent still worn (`have(Skill)` is true for a Monodent-granted
+ * skill only while the Monodent is equipped) regardless of which task's
+ * adv1() got there — and so an aborted adv1 never strands the cast for the
+ * day the way inlining it in one task's `do` did. */
+function riftPost(): void {
+  if (!get("_seadentWaveUsed", false) && have($skill`Sea *dent: Summon a Wave`)) {
+    useSkill($skill`Sea *dent: Summon a Wave`);
+  }
+}
+
 export function shadowRiftQuest(): Quest {
   return {
     name: "Shadow Rift",
@@ -111,6 +127,7 @@ export function shadowRiftQuest(): Quest {
           if (!have(waters) && get("encountersUntilSRChoice", 11) > 0) forceNextNoncombat();
         },
         do: rift,
+        post: riftPost,
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,
@@ -129,20 +146,19 @@ export function shadowRiftQuest(): Quest {
       {
         // The lodestone makes the next rift adventure "Like a Loded Stone"
         // (choice 1500: Shadow Waters first, forest loot second — the
-        // choice script decides). Ash UTS:857, 2546. Cast the wave here, right
-        // after a rift adventure, the way the ash does (UTS:853-855): the
-        // lasso throw in the rift is gated on it (CCS:534).
+        // choice script decides). Ash UTS:857, 2546. The wave is cast by
+        // riftPost() after this (or any) rift adventure, the way the ash
+        // does (UTS:853-855): the lasso throw in the rift is gated on it
+        // (CCS:534).
         name: "Loded Stone",
         ready: () => have(lodestone),
         completed: () => !have(lodestone),
-        do: (): void => {
-          adv1(rift, -1, "");
-          if (!get("_seadentWaveUsed", false) && have($skill`Sea *dent: Summon a Wave`)) {
-            useSkill($skill`Sea *dent: Summon a Wave`);
-          }
-        },
+        prepare: riftPrepare,
+        do: () => void adv1(rift, -1, ""),
+        post: riftPost,
         combat: riftCombat(),
         outfit: riftOutfit,
+        effects: itemDropEffects,
         limit: { tries: 2 },
       },
       {
@@ -156,6 +172,7 @@ export function shadowRiftQuest(): Quest {
         completed: () => !riftFightsFree(),
         prepare: riftPrepare,
         do: rift,
+        post: riftPost,
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,

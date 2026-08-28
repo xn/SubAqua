@@ -2,6 +2,9 @@ import { ActionDefaults, CombatStrategy as BaseCombatStrategy } from "grimoire-k
 import { availableAmount, haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
 import { $effect, $item, $skill, have, Macro } from "libram";
 
+import { freeMonsters } from "../resources/backup";
+import { bangPotionRounds } from "../resources/bangpotions";
+
 const myActions = [
   "ignore", // Task doesn't care what happens
   "ignoreSoftBanish", // Do not seek out a banish, but it is advantageous to have it
@@ -159,13 +162,17 @@ export function killMacro(hard = false, options: { bullseye?: boolean } = {}): M
   // ...plus slack for everything grimoire compiles BETWEEN the starting macro
   // and this one, which killMacro cannot see from here: the per-monster task
   // macro and then the general macros, ahead of any ACTION (combat.js
-  // :242-272). Three actions covers every case in this repo — Golem Recall's
-  // Recall Facts + Club 'Em Into Next Week is the longest task macro at two,
-  // and the engine appends one more step of its own, the opportunistic free
-  // kill (engine.ts customize()), which costs a round when it fires without
-  // ending the fight. Erring wide is free: the guard exists only to block a
-  // macro RE-RUN, which lands tens of rounds later, and a too-tight number
-  // silently drops the delevel openers instead.
+  // :242-272). Three actions covers every TASK-MACRO case in this repo —
+  // Golem Recall's Recall Facts + Club 'Em Into Next Week is the longest task
+  // macro at two, and the engine appends one more step of its own, the
+  // opportunistic free kill (engine.ts customize()), which costs a round when
+  // it fires without ending the fight. The engine's bang-potion opener (also
+  // ahead of the task macro, up to 4 rounds) is NOT covered by this constant:
+  // it is handled separately by openerOnce()'s own dynamic
+  // bangPotionRounds() slack (bangpotions.ts), so this constant only needs to
+  // account for task-macro actions. Erring wide is free: the guard exists
+  // only to block a macro RE-RUN, which lands tens of rounds later, and a
+  // too-tight number silently drops the delevel openers instead.
   leadingActions += 3;
 
   // Delevel openers, ash CCS develOpeners() (CCS:171-198), which cleanUp()
@@ -288,11 +295,23 @@ export function runMacro(): Macro {
  * when the skill is castable — libram's have(Skill) is true for a
  * Monodent-granted skill only while the Monodent is worn, which is why this is
  * built after dress() like killMacro().
+ *
+ * The ash additionally gates the cast on `!free_monster(mob)` (CCS:832): a
+ * habitat/backup golem converted to a fish would also lose
+ * `lastCopyableMonster`, the property outpost.ts's farmBackup() relies on to
+ * copy that monster, so freeMonsters is excluded here too. The cast is
+ * wrapped in openerOnce (round 3, to survive the engine's round-1 lasso
+ * opener plus a round-2 run/banish step) because the skill has no
+ * per-combat counter in mafia and would otherwise re-fire on every BALLS
+ * `repeat` pass.
  */
 export function fishMacro(): Macro {
   if (!have($skill`Sea *dent: Talk to Some Fish`)) return new Macro();
   if (availableAmount($item`pristine fish scale`) >= 6) return new Macro();
-  return Macro.trySkill($skill`Sea *dent: Talk to Some Fish`);
+  return Macro.ifNot(
+    freeMonsters,
+    openerOnce(Macro.trySkill($skill`Sea *dent: Talk to Some Fish`), 3),
+  );
 }
 
 /**
@@ -327,9 +346,20 @@ export function fishMacro(): Macro {
  * which is the realistic case (a fight long enough to outlive the macro), but a
  * re-entry that happened to land ON round `round` could still double-fire.
  * Same threshold, and the same residual, as the garbo fork.
+ *
+ * `bangPotionRounds()` (bangpotions.ts) adds further slack on top of `round`.
+ * The engine's own bang-potion opener (engine.ts customize()) throws every
+ * unidentified potion ahead of the task macro, one per round (pairs under
+ * Ambidextrous Funkslinging), for up to 4 rounds — rounds that a fixed
+ * `round` value cannot see coming. Without the slack, a potion volley would
+ * push a round-guarded task opener PAST its guard and silently drop it
+ * rather than merely delay it. The accepted cost: on the few fights the
+ * engine excludes potions from (free actions, forceItems/killFree/yellowRay
+ * fights) the guard is loosened by up to 4 rounds it doesn't need, but only
+ * during the first ~2 fights of the day, before every potion is identified.
  */
 export function openerOnce(macro: Macro, round = 2): Macro {
-  return Macro.ifNot(`pastround ${round + 1}`, macro);
+  return Macro.ifNot(`pastround ${round + 1 + bangPotionRounds()}`, macro);
 }
 
 /**

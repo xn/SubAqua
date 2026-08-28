@@ -76,12 +76,18 @@ function tamingMacro(): Macro {
  * taming regime every rustler/cowboy/cow is a waffle away from being the wild
  * seahorse. The re-rolled fight keeps running through THIS macro, and the
  * seahorse's own monster macro (compiled ahead of general macros) will not
- * re-run, so the tamer is inlined right behind the throw. One throw per
- * fight (three waffles a day), like the ash's `it11311` guard.
+ * re-run, so the tamer is inlined right behind the throw. The ash guards the
+ * throw with `!contains_text(_lastCombatActions, "it11311")` (CCS
+ * ab1105e:978-979); ours is `openerOnce`'s round guard, which also blocks a
+ * re-throw when BALLS `repeat` re-runs this macro from the top mid-fight.
+ * The ash additionally throws when the monster IS the seahorse the tamer
+ * just declined (an unready re-roll attempt); that branch is deliberately
+ * not ported here — an unready seahorse is handled by seahorseMacro()'s
+ * runaway, not by waffling it away.
  */
 function waffleMacro(): Macro {
   if (itemAmount(waffle) === 0) return new Macro();
-  return Macro.ifNot(seahorse, Macro.tryItem(waffle)).if_(seahorse, tamingMacro());
+  return openerOnce(Macro.ifNot(seahorse, Macro.tryItem(waffle))).if_(seahorse, tamingMacro());
 }
 
 /** The wild seahorse is a BOSS (upstream UnderTheSea cf01d4d, 2026-08-12):

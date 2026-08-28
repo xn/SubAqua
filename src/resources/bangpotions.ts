@@ -56,3 +56,17 @@ export function bangPotionMacro(): Macro {
   for (const item of throws) macro.step(Macro.ifNot("pastround 5", Macro.tryItem(item)));
   return macro;
 }
+
+/** Rounds the engine's bang-potion opener (engine.ts customize()) may spend
+ * at the top of a fight: one throw per round, pairs under Ambidextrous
+ * Funkslinging, capped by the opener's own `!pastround 5` (rounds 1-4). Task
+ * openers are round-guarded (openerOnce), so this slack is added to their
+ * threshold while potions are still unidentified — otherwise the volley
+ * would push an opener past its guard and drop it, not delay it (the ash's
+ * openers are unguarded and simply run late). */
+export function bangPotionRounds(): number {
+  const unidentified = unidentifiedBangPotions().length;
+  if (unidentified === 0) return 0;
+  const perRound = have($skill`Ambidextrous Funkslinging`) ? 2 : 1;
+  return Math.min(4, Math.ceil(unidentified / perRound));
+}

@@ -487,7 +487,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       if (source) {
         resources.provide("freeRun", {
           prepare: source.prepare,
-          do: () => Macro.step(source.do).step(fallbackMacro({ fish: true })),
+          // Already-free fight (habitat/backup golem copies, crayon
+          // wanderers, Kramco goblins, time cops — freeMonsters) never spends
+          // a run source, banishing or not; it falls to the kill ladder and
+          // keeps its drops.
+          do: () =>
+            Macro.ifNot(freeMonsters, Macro.step(source.do)).step(fallbackMacro({ fish: true })),
         });
       }
     }

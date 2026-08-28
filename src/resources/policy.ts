@@ -50,7 +50,12 @@ export type ResourcePolicy = {
    * (resources/backup.ts). High banks the copies for aftercore (UTS:761). */
   useBackupCamera: boolean;
   /** Cast Aug. 24th: Waffle Day! at init — the waffle throw is the corral's
-   * seahorse summon (ash UTS:481-482 skips it at high shiny). */
+   * seahorse re-roll. NOT an ash-parity gate: at ab1105e the cast is
+   * ungated, sitting plainly in the daily-skills loop (UTS:458-461). The
+   * August Scepter grants five daily casts total, shared with Aug. 2nd:
+   * Silver Clovers (helmet.ts, mine.ts) — high (the free-fight-conserving
+   * tier) keeps all five for the clovers; low/mid spend one of the five on
+   * the waffles. */
   castWaffleDay: boolean;
 };
 
