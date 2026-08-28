@@ -41,6 +41,7 @@ const habitatTargets = [$monster`slithering thing`, $monster`eye in the darkness
 const school = $monster`school of many`;
 const vhsTargets = [...habitatTargets, school];
 const monodent = $item`Monodent of the Sea`;
+const crystalBall = $item`miniature crystal ball`;
 
 /** The school of many gives no Mom progress. The ash keeps the Monodent on in
  * the Abyss until it is banished (UTS:381, 724, 1601) and, on meeting it,
@@ -145,7 +146,14 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // habitat monsters.
               name: "Banish Constructs",
               ready: () => cyberKit(),
-              completed: () => get("banishedPhyla").includes("construct"),
+              // Also done once the cyber lane has nothing left to use it for:
+              // the Screech's phylum banish expires, and live 2026-08-28 this
+              // re-fired at turn 120 (a paid Madness Bakery turn) with
+              // _cyberFreeFights already 10/10.
+              completed: () =>
+                momDone() ||
+                get("_cyberFreeFights", 0) >= 10 ||
+                get("banishedPhyla").includes("construct"),
               do: $location`Madness Bakery`,
               combat: new CombatStrategy()
                 .macro(openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)))
@@ -186,7 +194,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                   habitatTargets,
                 )
                 .kill(),
-              outfit: { modifier: "item", equip: [glass] },
+              // No crystal ball in the Abyss: its prediction overrides the
+              // school-of-many banish (live 2026-08-28, log:85696 — the school
+              // came back one turn after the Lightning Bolt).
+              outfit: { modifier: "item", equip: [glass], avoid: [crystalBall] },
               effects: itemDropEffects,
               prepare: (): void => {
                 recover();
@@ -260,6 +271,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
             ...$items`shark jumper, scale-mail underwear`,
             ...(schoolBanished() ? [] : [monodent]),
           ],
+          avoid: [crystalBall], // see Abyss Habitats
         }),
         effects: itemDropEffects,
         prepare: (): void => {
