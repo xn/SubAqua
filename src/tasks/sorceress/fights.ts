@@ -13,6 +13,8 @@ import {
   myLocation,
   myMaxhp,
   myMp,
+  haveEquipped,
+  Familiar,
 } from "kolmafia";
 import {
   $class,
@@ -32,6 +34,7 @@ import {
 import { killMacro } from "../../engine/combat";
 import { belowHpFloor, floorClearingHeal, stallSpare } from "../../lib";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
+import { selectFreeRun } from "../../resources/freerun";
 import { currentPolicy } from "../../resources/policy";
 
 export type CombatFilter = (round: number, monster: Monster, text: string) => string;
@@ -102,6 +105,58 @@ function stallAction(): string {
  * casts are only worth a round while the war is on (CCS:1067-1070); a filter
  * must never page-load per round, so the caller passes it in.
  */
+const gymnasium = $location`Mer-kin Gymnasium`;
+
+function equipItems(equip: unknown): Item[] {
+  if (equip instanceof Item) return [equip];
+  if (equip instanceof Familiar || equip === undefined) return [];
+  const specs = Array.isArray(equip) ? equip : [equip];
+  return specs.flatMap((spec) =>
+    Object.values(spec as Record<string, unknown>)
+      .flatMap((v) => (Array.isArray(v) ? v : [v]))
+      .filter((v): v is Item => v instanceof Item),
+  );
+}
+
+/**
+ * Ash gym case (CCS:1067-1073): `free_run(page_text, banish=true)` before
+ * anything else. The gym's fights drop nothing the route wants
+ * (monsters.txt:433,437,446 — juicer/poseur/trainer drop belts and juices),
+ * only the "Ators Gonna Ate" NC does, so every fight made free is a turn
+ * saved; UTS 08-26 paid for 3 gym turns (all NCs), live 2026-08-28 subaqua
+ * paid 14 with snokebomb 0/3, parasol 0/3 and the boots' runaways unspent.
+ * Familiar-slot sources are skipped (the gym fields the combat familiar); a
+ * gear-backed source only counts once its gear is actually worn — gym.ts
+ * wears `gymFreeRunGear()`'s pick, and the fight-time selection here
+ * re-walks the ladder past anything whose gear didn't land.
+ */
+export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
+  const exclude = new Set<string>();
+  for (;;) {
+    const source = selectFreeRun({ banish: true, location: gymnasium, target, exclude });
+    if (!source || exclude.has(source.name)) return undefined;
+    const worn =
+      source.equip === undefined ||
+      (!(source.equip instanceof Familiar) && equipItems(source.equip).every(haveEquipped));
+    if (worn) return source;
+    exclude.add(source.name);
+  }
+}
+
+/** The gear the first non-familiar free-run/banish source wants worn. */
+export function gymFreeRunGear(): Item[] {
+  const exclude = new Set<string>();
+  for (;;) {
+    const source = selectFreeRun({ banish: true, location: gymnasium, exclude });
+    if (!source || exclude.has(source.name)) return [];
+    if (source.equip instanceof Familiar) {
+      exclude.add(source.name);
+      continue;
+    }
+    return equipItems(source.equip);
+  }
+}
+
 export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {}): CombatFilter {
   let stallLeft = 0;
   let stalled = 0;
@@ -111,6 +166,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
   let weaksauceUsed = false;
   let mortarFired = false;
   let forcerBanked = false;
+  let runTried = false;
   let clubbed = false;
   let lastRound = -1;
   let lastHp = -1;
@@ -175,6 +231,14 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
       if (opts.warOpen === true && !forcerBanked && text.includes("McHugeLarge Avalanche")) {
         forcerBanked = true;
         return Macro.trySkill($skill`McHugeLarge Avalanche`).toString();
+      }
+      // Free run / banish before any damage (ash CCS:1067-1073): a gym fight
+      // is worth nothing but the turn it costs. Once per fight; if the source
+      // fails to end it, fall through to the kill ladder below.
+      if (!runTried) {
+        runTried = true;
+        const run = gymFreeRun(monster);
+        if (run) return run.do.toString();
       }
     }
 

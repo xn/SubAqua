@@ -21,7 +21,7 @@ import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { applyEffects, combatEffects, combineMoods, survivalEffects } from "../../lib/moods";
 
-import { gladiatorFilter } from "./fights";
+import { gladiatorFilter, gymFreeRunGear } from "./fights";
 import { skateWarOpen } from "./skatepark";
 
 const headguard = $item`Mer-kin headguard`;
@@ -75,6 +75,9 @@ export function gymnasiumTurn(): void {
   // refuse the zone (KoLAdventure.java:2867-2884).
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
+  // The free-run/banish source's gear (ash tempEquipment(... freeRun() ...),
+  // UTS:659) — see fights.ts gymFreeRun().
+  for (const it of gymFreeRunGear()) pieces.push(`+equip ${it.name}`);
   // Re-pin the lasso gear (audit item 4). `Guard Grind` is `underwater: true`
   // and non-`freeaction`, so engine customize() pins sea cowboy hat + sea chaps
   // and dress() wears them — and then this maximize, which runs afterwards,
