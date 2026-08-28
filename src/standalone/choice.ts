@@ -3,6 +3,8 @@ import {
   availableAmount,
   availableChoiceOptions,
   getProperty,
+  handlingChoice,
+  lastChoice,
   print,
   runChoice,
 } from "kolmafia";
@@ -200,10 +202,16 @@ export function main(choice: number, page: string) {
     const extra = `pro1=${bestGuess[0]}&pro2=${bestGuess[1]}&pro3=${bestGuess[2]}&pro4=${bestGuess[3]}&pro5=${bestGuess[4]}&pro6=${bestGuess[5]}&pro7=${bestGuess[6]}&pro8=${bestGuess[7]}`;
     runChoice(1, extra);
   } else if (choice === 310) {
-    if (have($item`rough fish scale`, 10)) {
-      runChoice(2);
-    } else {
-      runChoice(6);
+    // The Economist of Scales re-presents itself after every trade, and
+    // mafia invokes this script ONCE per choice number: when the page comes
+    // back as 310 again it falls through to the pref-based automation
+    // (ChoiceManager.java:268-290), and choiceAdventure310=0 means "Manual
+    // control requested" — live 2026-08-28, one pristine in, run aborted.
+    // So drain the trades here: 10 rough -> 1 pristine (option 2) while
+    // the rough scales last, then leave (option 6). Bounded so a trade that
+    // silently fails can't spin.
+    for (let trades = 0; handlingChoice() && lastChoice() === 310 && trades < 30; trades++) {
+      runChoice(have($item`rough fish scale`, 10) ? 2 : 6);
     }
   } else if (choice === 1599) {
     // Legendary Digestion (legendary pasta wand's Summon Legendary Noodles;
