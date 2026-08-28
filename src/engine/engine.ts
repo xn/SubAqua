@@ -902,12 +902,20 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // sites UTS:2265/2282/2290/3010/3017, folded into one list). Corral drops
     // always; outpost drops per policy. Daily uses = seaPoints
     // (dailylimits.txt:361). Spec §2 assigns the whistle fight to post().
+    // Only when the stolen item is the LAST one we had: the ash's monkeypaw()
+    // whistles inside `while (available_amount(it) == 0)` (UTS:838-842), and
+    // live 2026-08-27 the unconditional version spent a paid thief fight to
+    // recover a lasso while nine were in stock (session log:94927). mafia
+    // clears dolphinItem once the whistle is used (GenericRequest.java:2574),
+    // so a later count of 0 cannot re-fire on a stale theft.
     const stolen = get("dolphinItem", $item.none);
     const alwaysWhistle = $items`sea lasso, sea leather, sea cowbell`;
     const outpostWhistle = $items`Mer-kin prayerbeads, rusty rivet`;
     if (
       have($item`durable dolphin whistle`) &&
       get("_durableDolphinWhistleUsed", 0) < get("seaPoints", 0) &&
+      stolen !== $item.none &&
+      itemAmount(stolen) === 0 &&
       (alwaysWhistle.includes(stolen) ||
         (currentPolicy().whistleOutpostDrops && outpostWhistle.includes(stolen)))
     ) {
