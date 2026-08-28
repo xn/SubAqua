@@ -398,6 +398,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // (onceDaily: false), which keeps a run that found nothing from taking
       // down a whole ladder for the day — today the parka's yellow ray alone.
       const sneak = sneakFamiliar();
+      const banish = task.freeRunBanishes === true;
       // "The slot is ours to spend": nothing asked for, or the sneak pick that
       // this rule is explicitly allowed to trade away. $familiar.none is
       // deliberate (a task that wants NO familiar out) and so is anything else.
@@ -450,12 +451,13 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       let source = wantsSneak
         ? firstEquippable(outfit, (exclude) => {
             const candidate = selectFreeRun({
+              banish,
               location,
               exclude: new Set([...exclude, ...familiarRunSources]),
             });
             return candidate && isFreeRunSource(candidate) ? candidate : undefined;
           })
-        : firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+        : firstEquippable(outfit, (exclude) => selectFreeRun({ banish, location, exclude }));
       if (!source && wantsSneak) {
         // Last resort: hand the slot to the boots (when it is ours to hand
         // over and the ladder would take them), then walk unrestricted. The
@@ -467,7 +469,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         // this and gives the (non-aquatic) boots their breather — and
         // bootsRunAvailable() already refused the swap if no breather exists.
         if (bootsFieldable) fieldBoots("no other run source");
-        source = firstEquippable(outfit, (exclude) => selectFreeRun({ location, exclude }));
+        source = firstEquippable(outfit, (exclude) => selectFreeRun({ banish, location, exclude }));
       }
       if (source) {
         resources.provide("freeRun", {

@@ -241,6 +241,8 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
         ready: () => rivetHuntActive() && !hatchOpen(),
         completed: helmetDone,
         do: wreck,
+        // ash free_run(page_text, true) here, CCS:586-598 (same Wreck handler)
+        freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
         outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
         effects: sneakEffects,

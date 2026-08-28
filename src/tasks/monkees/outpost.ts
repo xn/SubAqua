@@ -128,6 +128,8 @@ export function outpostQuest(): Quest {
         ready: () => get("merkinLockkeyMonster") !== null,
         completed: () => stashboxDone(),
         do: outpost,
+        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
+        freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
         outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
         effects: sneakEffects,
@@ -160,6 +162,8 @@ export function outpostQuest(): Quest {
         completed: () => availableAmount(beads) >= 3,
         do: outpost,
         saberPurpose: "healer",
+        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
+        freeRunBanishes: true,
         combat: new CombatStrategy().forceItems($monster`Mer-kin healer`).freeRun(),
         outfit: () => ({ modifier: "-combat, item", familiar: sneakFamiliar() }),
         effects: sneakEffects,

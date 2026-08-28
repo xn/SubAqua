@@ -28,6 +28,8 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
         completed: () => monkeesStep() >= 5,
         do: () => grandpaZone(),
         underwater: true,
+        // ash free_run(page_text, true) here, CCS:646-654
+        freeRunBanishes: true,
         combat: new CombatStrategy()
           .kill($monsters`giant squid, Mer-kin miner, Mer-kin tippler`)
           .freeRun(),

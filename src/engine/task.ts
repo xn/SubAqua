@@ -23,4 +23,9 @@ export type Task = {
    * "free"). "diver"/"healer" also flip the resolution to saber-before-ray —
    * their Forces guarantee specific quest drops (iotm.ash:185-199, 247-261). */
   saberPurpose?: ForcePurpose;
+  /** freeRun may spend BANISHING rungs (Spring Kick, curveball, latte, Feel
+   * Hatred, Snokebomb, thrown banishes) — the ash's `free_run(page_text, true)`
+   * sites: pearl zones, the Wreck, the outpost's non-droppers. Default false
+   * = plain runs only (the guild tests, ash CCS:505-521). */
+  freeRunBanishes?: boolean;
 } & BaseTask<CombatActions>;

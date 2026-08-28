@@ -40,6 +40,8 @@ export function bigBrotherQuest(): Quest {
         ready: () => monkeesStep() === 1,
         completed: () => monkeesStep() >= 2,
         do: wreck,
+        // ash free_run(page_text, true) here, CCS:586-598
+        freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
         outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
         effects: sneakEffects,
