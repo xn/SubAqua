@@ -1,4 +1,4 @@
-import { availableAmount, retrieveItem } from "kolmafia";
+import { availableAmount, itemAmount, retrieveItem } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -33,6 +33,7 @@ const cow = $monster`sea cow`;
 const seahorse = $monster`wild seahorse`;
 const cowbell = $item`sea cowbell`;
 const lasso = $item`sea lasso`;
+const waffle = $item`waffle`;
 // eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
 // (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
 // eslint-disable-next-line libram/verify-constants
@@ -68,6 +69,19 @@ function tamingMacro(): Macro {
   return have($skill`Ambidextrous Funkslinging`)
     ? Macro.item([cowbell, cowbell]).item([cowbell, lasso]).abort()
     : Macro.item(cowbell).item(cowbell).item(cowbell).item(lasso).abort();
+}
+
+/**
+ * The waffle re-rolls the monster in front of us (ash CCS:829-843): in the
+ * taming regime every rustler/cowboy/cow is a waffle away from being the wild
+ * seahorse. The re-rolled fight keeps running through THIS macro, and the
+ * seahorse's own monster macro (compiled ahead of general macros) will not
+ * re-run, so the tamer is inlined right behind the throw. One throw per
+ * fight (three waffles a day), like the ash's `it11311` guard.
+ */
+function waffleMacro(): Macro {
+  if (itemAmount(waffle) === 0) return new Macro();
+  return Macro.ifNot(seahorse, Macro.tryItem(waffle)).if_(seahorse, tamingMacro());
 }
 
 /** The wild seahorse is a BOSS (upstream UnderTheSea cf01d4d, 2026-08-12):
@@ -319,8 +333,13 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // sits after Corral Leather and Corral Lassos, so the engine only
         // reaches it once leatherDone() and lassosDone() hold, and the
         // farming tasks above kill (never banish) both sources.
+        //
+        // Waffle first (general macro), banish second (action): after a
+        // re-roll the compiled monster actions re-evaluate against the new
+        // monster, so a cow that came out of the waffle is still banished.
         combat: new CombatStrategy()
           .macro(tamingMacro, seahorse)
+          .macro(waffleMacro)
           .banish($monsters`Mer-kin rustler, sea cowboy, sea cow`)
           .kill(),
         outfit: { modifier: "initiative" },

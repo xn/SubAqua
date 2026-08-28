@@ -49,6 +49,9 @@ export type ResourcePolicy = {
   /** Wear the backup camera and back up to worthwhile last-copyables
    * (resources/backup.ts). High banks the copies for aftercore (UTS:761). */
   useBackupCamera: boolean;
+  /** Cast Aug. 24th: Waffle Day! at init — the waffle throw is the corral's
+   * seahorse summon (ash UTS:481-482 skips it at high shiny). */
+  castWaffleDay: boolean;
 };
 
 /** Leprecondo priorities, ash UTS:1062-1067 (ids are KoL furniture ids;
@@ -70,6 +73,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     usePyec: true,
     shubInsurancePulls: true,
     useBackupCamera: true,
+    castWaffleDay: true,
   },
   mid: {
     freeKillMode: "full",
@@ -84,6 +88,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     usePyec: true,
     shubInsurancePulls: false,
     useBackupCamera: true,
+    castWaffleDay: true,
   },
   high: {
     freeKillMode: "dartsOnly",
@@ -98,6 +103,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     usePyec: false,
     shubInsurancePulls: false,
     useBackupCamera: false,
+    castWaffleDay: false,
   },
 };
 

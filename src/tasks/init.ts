@@ -10,6 +10,7 @@ import {
   storageAmount,
   turnsPlayed,
   use,
+  useSkill,
   visitUrl,
 } from "kolmafia";
 import {
@@ -17,6 +18,7 @@ import {
   $familiar,
   $item,
   $items,
+  $skill,
   AprilingBandHelmet,
   EternityCodpiece,
   get,
@@ -371,6 +373,24 @@ export function initQuest(): Quest {
           if (have(box)) use(box);
           set("_subaqua_bang_pulled", true);
         },
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
+        // Ash UTS:481-482: three waffles for the corral re-roll (CCS:829-843).
+        name: "Waffle Day",
+        ready: () =>
+          policy.castWaffleDay &&
+          have($skill`Aug. 24th: Waffle Day!`) &&
+          !get("_aug24Cast", false) &&
+          get("_augSkillsCast", 0) < 5,
+        // Complete OR not applicable (same shape as daily.ts's PYEC task).
+        completed: () =>
+          get("_aug24Cast", false) ||
+          !policy.castWaffleDay ||
+          !have($skill`Aug. 24th: Waffle Day!`) ||
+          get("_augSkillsCast", 0) >= 5,
+        do: () => void useSkill($skill`Aug. 24th: Waffle Day!`),
         freeaction: true,
         limit: { tries: 1 },
       },
