@@ -1,4 +1,4 @@
-import { availableAmount, itemAmount, retrieveItem } from "kolmafia";
+import { availableAmount, itemAmount, retrieveItem, visitUrl } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -12,7 +12,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, openerOnce } from "../../engine/combat";
+import { CombatStrategy, killMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { HP_FLOOR_PERCENT, recover, runawayHeal } from "../../lib";
 import {
@@ -60,6 +60,23 @@ function lassosDone(): boolean {
 
 function tamed(): boolean {
   return get("seahorseName") !== "";
+}
+
+/**
+ * Mafia learns the seahorse's name from the fight text only when the fight's
+ * ORIGINAL monster was the wild seahorse (FightRequest.java:5862 sets
+ * status.seahorse from the opening monster name; handleSeahorse :8759 bails
+ * otherwise). A waffled cowboy/cow that becomes the seahorse and gets tamed
+ * therefore leaves seahorseName "" — live 2026-08-29: tamed at turn 13, and
+ * with every other draw banished and the seahorse's own condition ("not yet
+ * tamed") no longer met, the corral served nothing but tumbleweeds for ~16
+ * paid turns until a manual resync. The Deepcity map names the seahorse and
+ * QuestManager.java:1540-1544 parses it — one turn-free page visit.
+ */
+function resyncSeahorse(): void {
+  if (tamed()) return;
+  if (!get("_lastCombatActions", "").includes(`it${lasso.id};`)) return;
+  visitUrl("place.php?whichplace=sea_merkin");
 }
 
 /** Cowbell,cowbell then cowbell,lasso (funkslinging); singles otherwise.
@@ -347,9 +364,25 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         combat: new CombatStrategy()
           .macro(tamingMacro, seahorse)
           .macro(waffleMacro)
+          // The cow is the ONLY cowbell source and every taming throw eats
+          // three cowbells whether it lands or not, so "leather done" is not
+          // a permanent state — live 2026-08-29: cow banished here (Feel
+          // Hatred, then Spring Kick = gone until rollover), the throw
+          // failed, cowbells 0, and Corral Leather woke up with nothing to
+          // farm. User rule: never banish the cow unless the cowbells for
+          // the throw are in hand; otherwise kill it for its cowbell drop.
+          // A monster macro compiles ahead of the action ladder, so a kill
+          // here ends the fight before the banish action can fire; the empty
+          // macro when stocked falls through to `.banish` below as before.
+          .macro(() => (availableAmount(cowbell) >= 3 ? new Macro() : killMacro()), cow)
           .banish($monsters`Mer-kin rustler, sea cowboy, sea cow`)
           .kill(),
-        outfit: { modifier: "initiative" },
+        // No crystal ball while taming: with the ball on, the next corral
+        // fight is LOCKED to its prediction (drawn from the zone's current
+        // pool, which the wild seahorse's 80% rejection all but excludes) —
+        // live 2026-08-29: six straight predicted tumbleweeds, then the
+        // 12-attempt soft limit. grimoire's `avoid` also strips it if worn.
+        outfit: { modifier: "initiative", avoid: [$item`miniature crystal ball`] },
         // The unready-seahorse branch of seahorseMacro() is Macro.runaway()
         // .repeat() against Atk 500 with Init 10000 — every failed run is a
         // free round of damage, and enough of them is a lost combat and a hard
@@ -363,6 +396,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },
+        post: resyncSeahorse,
         limit: { soft: 12, message: "The wild seahorse is not spawning; check banishes." },
       },
     ],

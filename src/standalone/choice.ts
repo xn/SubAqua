@@ -117,8 +117,32 @@ export function main(choice: number, page: string) {
   else if (choice === 1340) {
     runChoice(3);
   }
+  // Using the Force (saber). The engine registers choiceAdventure1387=3 for
+  // the whole run, but that pref path cannot be trusted when the Force ends a
+  // fight that was itself entered from a choice THIS script answered (the
+  // peridot's 1557 -> sea cow -> Force, live 2026-08-29): mafia submits the
+  // script's runChoice through its shared CHOICE_HANDLER, whose 302 to the
+  // fight leaves responseText="". FightRequest then follows the Force's 302
+  // to choice.php on its own — it only VISITS 1387 (sets lastResponseText,
+  // no automation) — and when control returns to the 1557 loop mafia
+  // continues with the new choice number but validates the stale, empty
+  // CHOICE_HANDLER text: "No choice adventure in response text."
+  // (ChoiceManager.java processChoiceAdventure's "different choice" continue
+  // never refreshes request.responseText.) runChoice from here builds a
+  // fresh request and skips that validation. Mirror the registered pref
+  // when it is a real option; 3 ("drop your things") is the route's
+  // invariant and the fallback — every branch must answer.
+  else if (choice === 1387) {
+    const pref = parseInt(getProperty("choiceAdventure1387"));
+    runChoice(pref >= 1 && pref <= 3 && options[pref] ? pref : 3);
+  }
   //Sea stuff
   else if (choice === 1565) {
+    runChoice(1);
+  } else if (choice === 1566) {
+    // Summon a Wave (Sea *dent cast): "Do it". Same answer the engine
+    // registers globally (engine.ts initPropertiesManager); here too so the
+    // cast is answered even when mafia's pref path is bypassed.
     runChoice(1);
   } else if (choice === 1497) {
     // Calling Rufus: option 2 = the artifact quest (ash CH:37-41 simple list).

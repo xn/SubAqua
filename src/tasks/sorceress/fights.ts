@@ -135,9 +135,13 @@ export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
   for (;;) {
     const source = selectFreeRun({ banish: true, location: gymnasium, target, exclude });
     if (!source || exclude.has(source.name)) return undefined;
+    // One-arg lambda, never the bare function: Array#every passes
+    // (item, index, array) and the JS bridge then hunts for a
+    // have_equipped(item, int, item[]) overload — live 2026-08-29 Gymnasium.
     const worn =
       source.equip === undefined ||
-      (!(source.equip instanceof Familiar) && equipItems(source.equip).every(haveEquipped));
+      (!(source.equip instanceof Familiar) &&
+        equipItems(source.equip).every((item) => haveEquipped(item)));
     if (worn) return source;
     exclude.add(source.name);
   }
