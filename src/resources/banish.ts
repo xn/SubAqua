@@ -260,6 +260,18 @@ export function assertBanishHeld(targets: Monster[], location: Location, taskNam
   const last = toMonster(get("lastEncounter"));
   if (!targets.includes(last)) return;
   if (banishActive(last)) return;
+  // A waffle re-roll (the task macros throw one first) replaces the drawn
+  // monster mid-fight, and mafia leaves lastEncounter on the ORIGINAL draw;
+  // the banish, if any, landed on the replacement. Judge that instead — live
+  // 2026-08-29 Tame Seahorse: cowboy drawn, waffled into a sea cow, cow
+  // banished by Feel Hatred, and this abort fired on the unbanished cowboy.
+  // lastCopyableMonster is mafia's post-transform monster (set at fight
+  // end); it is stale for a non-copyable replacement, so a replacement
+  // outside the target set also stands down rather than judging a guess.
+  if (get("_lastCombatActions", "").includes(`it${$item`waffle`.id};`)) {
+    const replacement = get("lastCopyableMonster");
+    if (!replacement || !targets.includes(replacement) || banishActive(replacement)) return;
+  }
   const source = pickBanishSource(location);
   if (!source) return;
   abort(

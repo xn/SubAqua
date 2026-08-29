@@ -1,5 +1,5 @@
-import { Monster, toMonster } from "kolmafia";
-import { $item, $monster, $monsters, $skill, get, have, Macro } from "libram";
+import { Monster } from "kolmafia";
+import { $item, $monsters, $skill, get, have, Macro } from "libram";
 
 import { currentPolicy } from "./policy";
 
@@ -32,10 +32,10 @@ export function backupUsesLeft(cap = 11): number {
 }
 
 export function lastCopyableMonster(): Monster | undefined {
-  const name = get("lastCopyableMonster", "");
-  if (name === "") return undefined;
-  const monster = toMonster(name);
-  return monster === $monster.none ? undefined : monster;
+  // libram types this pref as a Monster: get() already returns Monster | null
+  // ("" and $monster.none both map to null). Passing that Monster back through
+  // toMonster() hit the JS bridge as to_monster(monster), which doesn't exist.
+  return get("lastCopyableMonster") ?? undefined;
 }
 
 /** The monster a backup on this task would produce, or undefined when no

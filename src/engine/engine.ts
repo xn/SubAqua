@@ -1048,7 +1048,14 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // resolves the Phase-2 flagged collision: customize()'s forceItems branch
     // and summon()'s stranded-choice handler re-assert the same value, so no
     // site can fight another. Every saber Force in this route is a drop-force.
-    manager.setChoices({ 1387: 3 });
+    // Choice 1566 (Summon a Wave, opened by casting Sea *dent: Summon a Wave)
+    // is globally option 1 — "Do it". Mafia stamps _seadentWaveZone and
+    // _seadentWaveUsed only on decision 1 (ChoiceControl.java:6850-6858), and
+    // that stamp is the whole point of the cast (shadow.ts riftPost()). The
+    // task-scoped `choices` map that used to carry this died when the cast
+    // moved into `post` (d10190d); live 2026-08-29: "Unsupported choice
+    // adventure #1566" right after the Rufus Labyrinth.
+    manager.setChoices({ 1387: 3, 1566: 1 });
     const bannedRestorers = [
       "sleep on your clan sofa",
       "rest in your campaway tent",
