@@ -179,3 +179,8 @@ None live-verified. First checkpoints on the next run: turn ~2 fight throws bang
 `lassoTrainingCount` reaching 20 on free fights and shadow bricks in inventory; Tame Seahorse's
 first corral visit throws a waffle; no bat wings before the colosseum; the outpost's last habitat
 golem gets the eagle screech; no free-kill line on a Black Crayon Golem.
+
+Post-review additions to the checklist (final whole-branch review + live 08-28 fixes): no free-run or
+banish line on a Black Crayon Golem during the Stashbox/Wreck walks; exactly one `it11311` in
+`_lastCombatActions` per corral fight; Mom hits `questS02Monkees = finished` (the "Yo' Mama So
+Possessed By Evil" NC) before Shub, not just `momSeaMonkeeProgress` 40.
