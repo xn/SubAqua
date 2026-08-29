@@ -105,7 +105,7 @@ function seahorseMacro(): Macro {
   if (ready) return tamingMacro();
 
   // HP floor on the runaway loop (the garbo fork combat.ts:509-519 welds
-  // `!hppercentbelow 25` into every stall/stasis predicate). the garbo fork's floor
+  // `!hppercentbelow 25` into every stall/stasis predicate). The garbo fork's floor
   // SKIPS the stall round; here the round cannot be skipped — the Run Away
   // button is the only exit a boss allows — so the floor heals on the way
   // instead, and only when it is breached: above the floor the guard is false
@@ -134,7 +134,7 @@ function seahorseMacro(): Macro {
 /**
  * Peridot of Peril, one imperil per zone per day (`_perilLocations`,
  * ChoiceControl.java:8855-8867; the engine equips it and writes choice 1557 in
- * customize()/`do`). the garbo fork points it at the monster it means to BANISH
+ * customize()/`do`). The garbo fork points it at the monster it means to BANISH
  * (fishyPrep.ts:248-251) because it farms the zone all day and wants the trash
  * gone; in-run that is the wrong target. Our banish sources are turn-FREE
  * (BanishManager.java:77, :91, :116, :126-129, :137 — isTurnFree true), so the

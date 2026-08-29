@@ -762,7 +762,7 @@ export function moodWouldSpend(effect: Effect): boolean {
 
 /**
  * the garbo fork's shrugBadEffects() (mood.ts:345-358), narrowed to the one removal
- * that is free: the shrug. the garbo fork uneffect()s the whole list, which in ronin
+ * that is free: the shrug. The garbo fork uneffect()s the whole list, which in ronin
  * means spending a soft green echo eyedrop antidote / anti-anti-antidote / hot
  * dog on the effects that cannot be shrugged. Per the run's rule that only
  * shrugs are free, anything item-cured is left alone — and, at the one site
