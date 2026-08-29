@@ -90,7 +90,14 @@ export const ncForceSources: NCForceSource[] = [
     remaining: () =>
       have($item`Cincho de Mayo`) ? Math.floor(CinchoDeMayo.totalAvailableCinch() / 60) : 0,
     force: () => {
+      // Self-dressing: ladder entries are invoked from arbitrary call sites
+      // (skatepark.ts among them), so no task `outfit` can reach here. The
+      // equip is transient — the skill fires immediately and the caller's own
+      // maximize is free to drop the accessory again.
       if (!haveEquipped($item`Cincho de Mayo`)) equip($slot`acc3`, $item`Cincho de Mayo`);
+      // Not in conflict with initPropertiesManager()'s free-rest ban: that ban
+      // strips "free rest" from mafia's AUTOMATIC restore lists; this is a
+      // deliberate cinch charge, which is the only way to reach 60.
       while (CinchoDeMayo.currentCinch() < 60 && totalFreeRests() > get("timesRested")) {
         cliExecute("rest free");
       }

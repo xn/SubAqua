@@ -1,5 +1,7 @@
 import {
+  abort,
   appearanceRates,
+  getFuel,
   Item,
   Location,
   Monster,
@@ -9,7 +11,7 @@ import {
   Skill,
   toMonster,
 } from "kolmafia";
-import { $class, $effect, $item, $skill, get, have } from "libram";
+import { $class, $effect, $item, $skill, AsdonMartin, get, have } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
@@ -34,6 +36,13 @@ export const banishSources: BanishSource[] = [
     name: "Asdon Martin",
     skill: $skill`Asdon Martin: Spring-Loaded Front Bumper`,
     available: (): boolean => {
+      // The bumper only appears on the fight page with the Asdon installed
+      // and 50+ fuel (the skill costs 50). Live 2026-08-28, Tame Seahorse:
+      // the day's pie-man fuel had gone to Waterproofly (37) plus one bumper
+      // at the Outpost, so at turn 44 the ladder "chose" a bumper KoL never
+      // offered (`if hasskill 7288` skipped) and the banish-hold invariant
+      // aborted the run. Same gap as loopstar-gap-analysis item 3.
+      if (!AsdonMartin.installed() || getFuel() < 50) return false;
       const banishes = get("banishedMonsters").split(":");
       const bumperIndex = banishes
         .map((string) => string.toLowerCase())
@@ -43,6 +52,10 @@ export const banishSources: BanishSource[] = [
     },
   },
   {
+    // The Everything Looks Green gate is load-bearing: the spring shoes' kick
+    // is refused while ELG is up, so an ungated copy of this entry would hand
+    // the macro a banish step that does nothing. There used to be exactly such
+    // a duplicate further down the list; it is gone.
     name: "Spring Kick",
     skill: $skill`Spring Kick`,
     equip: $item`spring shoes`,
@@ -114,12 +127,17 @@ export const banishSources: BanishSource[] = [
     available: () => have($item`cursed monkey's paw`) && get("_monkeyPawWishesUsed", 0) === 0,
   },
   {
-    name: "Spring Kick",
-    skill: $skill`Spring Kick`,
-    equip: $item`spring shoes`,
-    available: () => have($item`spring shoes`),
-  },
-  {
+    // Last on purpose, and it stays last: the bolt is the ONE banish in this
+    // list that is not turn-free. BanishManager.java:118 records it as
+    // SEADENT_LIGHTNING("Sea *dent", -1, 1, false, ROLLOVER_RESET) — the 4th
+    // field is isTurnFree — while every source above it that the corral would
+    // otherwise reach IS turn-free: Bowl a Curveball (:77), Spring-Loaded Front
+    // Bumper (:129), Spring Kick (:128), Feel Hatred (:91), Reflex Hammer
+    // (:116), snokebomb (:126), Throw Latte (:137), KGB dart (:101). Its 11/day
+    // supply looks tempting for a long-lived zone banish (the garbo fork
+    // resources/banish.ts:68-74, seaDent.ts:19-22), but preferring it there
+    // would trade a free banish for a spent adventure — so it is a fallback for
+    // when nothing above is available, never a preference.
     name: "Sea *dent",
     skill: $skill`Sea *dent: Throw a Lightning Bolt`,
     equip: $item`Monodent of the Sea`,
@@ -167,13 +185,88 @@ export function banishActive(target: Monster): boolean {
  * task outfit). Picks the first available source whose existing banish is
  * irrelevant at `location` — its currently-banished monster does not appear
  * there, so re-pointing the source wastes nothing.
+ *
+ * `exclude` names sources the caller already rejected (see selectFreeRun's own
+ * note): the engine's provide is equip-gated, and a source whose gear cannot
+ * land in the task outfit must not sink the whole banish.
  */
-export function pickBanishSource(location?: Location): BanishSource | undefined {
+export function pickBanishSource(
+  location?: Location,
+  exclude?: ReadonlySet<string>,
+): BanishSource | undefined {
   return banishSources.find((source) => {
+    if (exclude?.has(source.name)) return false;
     if (!source.available()) return false;
     if (!location) return true;
     const current = banishedBy(source);
     if (!current) return true;
     return (appearanceRates(location)[current.name] ?? 0) === 0;
   });
+}
+
+/**
+ * Loud unbanished-monster invariant (the garbo fork tasks/farm/farmTurn.ts:124-130,
+ * "You encountered a banishable monster and didn't banish it, sort your life
+ * out!"). A task whose turn economy assumes a banish holds — the corral needs
+ * the rustler gone so cows/cowboys spawn, the outpost grind needs the
+ * non-dropping burglar/raider gone — otherwise bleeds turns silently until its
+ * `limit.soft` fires 12-30 turns later.
+ *
+ * The check is per-ENCOUNTER, not per-monster-list, because one banish source
+ * serves every `banish` monster in a task (engine customize() provides exactly
+ * one) and re-pointing it releases whatever it held: "all of `targets` are
+ * banished" is not an invariant this route ever maintains. "The one just met is
+ * banished now" is.
+ *
+ * Bounded four ways, so a normal turn can never trip it:
+ *  - RECENCY: the encounter must be the one this task produced since its last
+ *    prepare(), i.e. at most one turn has passed since the previous check of
+ *    the SAME task. `lastEncounter` outlives the script and is never cleared,
+ *    while banishes are turn-limited and rollover-reset (BanishManager.java:
+ *    stuffed yam stinkbomb 15 turns, snokebomb / Spring-Loaded Front Bumper 30,
+ *    and the whole pref is emptied at rollover) — so an older encounter may
+ *    have been banished perfectly well and simply expired since, and a run
+ *    resumed the day after its last corral fight would otherwise read a stale
+ *    rustler against an emptied banish list and abort on turn zero. Only a turn
+ *    this function watched happen tells it anything. That makes the first call
+ *    on each task a free pass, which is also the garbo fork's "a first-turn absence is
+ *    normal".
+ *  - `lastEncounter` must BE one of the task's banish targets.
+ *  - the banish must not currently hold (banishActive).
+ *  - a source must still be pickable at `location`. Charges only decrease
+ *    within a day, so a source available NOW was available on the turn just
+ *    fought; if none is, the `banish` action legitimately degraded to `kill`
+ *    (MyActionDefaults, spec §2's explicit degradations) and nothing is broken.
+ *    That case stays with the task's soft limit rather than aborting a run that
+ *    has merely spent its banishes.
+ *
+ * What is left is the real breakage: the banish fired and did not stick, or the
+ * engine never emitted one (e.g. its gear failed to land in the outfit, which
+ * customize() deliberately fails through instead of announcing).
+ */
+const lastCheckedTurn = new Map<string, number>();
+
+export function assertBanishHeld(targets: Monster[], location: Location, taskName: string): void {
+  // Stamped per task and lazily, never at module load: this file is imported
+  // before the first turn of the invocation, and a module-level myTurncount()
+  // is the same defect lib/index.ts grandpaZone() calls out.
+  const now = myTurncount();
+  const previous = lastCheckedTurn.get(taskName);
+  lastCheckedTurn.set(taskName, now);
+  // 0 covers a free fight (which still writes lastEncounter but spends no
+  // turn); anything past 1 means other tasks adventured in between and
+  // lastEncounter is not ours to judge.
+  if (previous === undefined || now - previous < 0 || now - previous > 1) return;
+  const last = toMonster(get("lastEncounter"));
+  if (!targets.includes(last)) return;
+  if (banishActive(last)) return;
+  const source = pickBanishSource(location);
+  if (!source) return;
+  abort(
+    `${taskName}: fought a ${last.name} in ${location.toString()} and it is not banished, ` +
+      `even though ${source.name} was available — the banish did not land (its gear may have ` +
+      "failed to equip, or the source misfired). Banish it by hand, or clear the stale " +
+      "banishedMonsters entry, then rerun; leaving it unbanished bleeds turns until this " +
+      "task's soft limit.",
+  );
 }

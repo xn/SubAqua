@@ -1,11 +1,11 @@
 import { availableAmount, cliExecute } from "kolmafia";
 import { $effect, $item, $items, $monster, $monsters, $skill, get, have, Macro } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
-import { resEffects, sneakEffects } from "../../lib/moods";
+import { combineMoods, resEffects, sneakEffects } from "../../lib/moods";
 import { discretionaryPull } from "../../resources/pulls";
 import { summon } from "../../resources/summon";
 
@@ -28,15 +28,21 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
         completed: () => monkeesStep() >= 5,
         do: () => grandpaZone(),
         underwater: true,
+        // ash free_run(page_text, true) here, CCS:646-654
+        freeRunBanishes: true,
         combat: new CombatStrategy()
           .kill($monsters`giant squid, Mer-kin miner, Mer-kin tippler`)
           .freeRun(),
+        // "item, -100 combat" like the ash (UTS:1262 `item drop, -100 combat`):
+        // at equal weight the maximizer traded -combat slots for +item gear —
+        // live 2026-08-27 it left the latte mug / McHugeLarge ski off and the
+        // NC hunt ran 3 combats in 6 turns (UTS 08-26: 3 NCs in 3 turns).
         outfit: () => ({
-          modifier: "-combat, item",
+          modifier: "item, -100 combat",
           familiar: sneakFamiliar(),
-          equip: $items`Mer-kin sneakmask`,
+          equip: $items`Mer-kin sneakmask, Monodent of the Sea`,
         }),
-        effects: () => [...sneakEffects(), ...resEffects()],
+        effects: () => combineMoods(sneakEffects(), resEffects()),
         choices: { 302: 1, 303: 1, 304: 2, 305: 2, 306: 1, 307: 1, 308: 1, 309: 2 },
         prepare: (): void => {
           recover();
@@ -77,9 +83,12 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
               do: () => summon(golem),
               combat: new CombatStrategy()
                 .macro(
-                  Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
-                    $skill`Club 'Em Into Next Week`,
-                  ),
+                  () =>
+                    openerOnce(
+                      Macro.trySkill($skill`Recall Facts: Monster Habitats`).trySkill(
+                        $skill`Club 'Em Into Next Week`,
+                      ),
+                    ),
                   golem,
                 )
                 .kill(),

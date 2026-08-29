@@ -1,8 +1,10 @@
 import {
   abort,
   availableAmount,
+  buy,
   chew,
   cliExecute,
+  create,
   drink,
   drinksilent,
   eatsilent,
@@ -12,8 +14,10 @@ import {
   Item,
   mallPrice,
   myAdventures,
+  myAscensions,
   myFullness,
   myInebriety,
+  myMeat,
   mySpleenUse,
   retrieveItem,
   spleenLimit,
@@ -45,7 +49,7 @@ const nigiris: [string, Item][] = [
 /** Ash eatSushi() (UTS:650-662): first nigiri whose fish meat is on hand.
  * Sushi is made-and-eaten in one step off the rolling mat; mafia's `eat`
  * command knows sushi names. Returns true if a sushi was eaten. */
-function eatSushi(): boolean {
+export function eatSushi(): boolean {
   if (!get("hasSushiMat")) return false;
   if (!have($item`white rice`)) {
     retrieveItem($item`white rice`, 1);
@@ -53,7 +57,14 @@ function eatSushi(): boolean {
   cliExecute("refresh inventory");
   for (const [sushi, meat] of nigiris) {
     if (availableAmount(meat) > 0 && availableAmount($item`white rice`) > 0) {
-      cliExecute(`eat 1 ${sushi}`);
+      // `make`, not `eat`: sushi are pseudo-items with no item id, and
+      // mafia's eat command refuses them outright ("For now, you must
+      // 'create <sushi>'", UseItemCommand.java:138-143 — live 2026-08-28 it
+      // printed "[beefy nigiri] cannot be eaten." and the run aborted at
+      // Teflon/Digpick). SushiRequest's create IS the eat (sushi.php roll +
+      // eat), which is why the ash's eatSushi() runs `make <sushi>`
+      // (Globals:635-647).
+      cliExecute(`make ${sushi}`);
       if (have(fishy)) return true;
     }
   }
@@ -65,26 +76,40 @@ type Fishysource = {
   available: () => boolean;
   turns: number;
   use?: () => void;
+  /** Overrides item.fullness in fishyOpportunityCost() — for a pseudo-item
+   * rung (e.g. nigiri) whose `item` is a priced stand-in with the wrong
+   * fullness stat for the real thing being consumed. */
+  fullness?: number;
 };
 
 const FISHY_SOURCES: Fishysource[] = [
+  // The nigiri themselves have no item id/mall price (see the pseudoitem
+  // note above), so `item` here is their real fish-meat ingredient instead
+  // — a real, priced stand-in for the opportunity cost of burning it as
+  // sushi rather than something else. `use` (not the `item` field) is what
+  // useFishySource() actually consumes. fullness overrides the fish meat's
+  // own fullness (1) with the nigiri's true fullness.txt value (2), since
+  // that term dominates fishyOpportunityCost().
   {
-    item: $item`beefy nigiri`,
+    item: $item`beefy fish meat`,
     available: () => have($item`beefy fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
-    item: $item`glistening nigiri`,
+    item: $item`glistening fish meat`,
     available: () => have($item`glistening fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
-    item: $item`slick nigiri`,
+    item: $item`slick fish meat`,
     available: () => have($item`slick fish meat`) && get("hasSushiMat"),
     turns: 20,
     use: () => eatSushi(),
+    fullness: 2,
   },
   {
     item: $item`concentrated fish broth`,
@@ -113,11 +138,6 @@ const FISHY_SOURCES: Fishysource[] = [
     item: $item`powdered candy sushi set`,
     available: () => have($item`powdered candy sushi set`),
     turns: 30,
-  },
-  {
-    item: $item`super-sweet fish goo`,
-    available: () => have($item`super-sweet fish goo`),
-    turns: 15,
   },
   {
     item: $item`Aldebaran sardines`,
@@ -194,6 +214,10 @@ const FISHY_SOURCES: Fishysource[] = [
     available: () => have($item`Herringtini`),
     turns: 15,
   },
+  // "super-sweet fish goo" (unspoiled) has no item id in items.txt — only
+  // "super-sweet fish goo (spoiled)" exists, and statuseffects.txt confirms
+  // chewing it grants Fishy. A duplicate rung under the unspoiled name was
+  // removed rather than renamed, since this rung already covers the item.
   {
     item: $item`super-sweet fish goo (spoiled)`,
     available: () => have($item`super-sweet fish goo (spoiled)`),
@@ -205,13 +229,18 @@ const FISHY_SOURCES: Fishysource[] = [
     turns: 10,
   },
   {
-    item: $item`Sea jelly`,
-    available: () => have($item`Sea jelly`),
+    // Stocked for free by the init "Sea Jelly" task (the garbo fork dailySea.ts:18-30):
+    // one place.php visit with the Space Jellyfish out, 0 turns, 1/day
+    // (_seaJellyHarvested). Nothing else in the run acquires one, so before
+    // that task this rung never fired; `available()` needs no change — the
+    // harvest is what puts the jelly in inventory.
+    item: $item`sea jelly`,
+    available: () => have($item`sea jelly`),
     turns: 10,
   },
   {
-    item: $item`Fish sauce`,
-    available: () => have($item`Fish sauce`),
+    item: $item`fish sauce`,
+    available: () => have($item`fish sauce`),
     turns: 30,
   },
   {
@@ -221,16 +250,31 @@ const FISHY_SOURCES: Fishysource[] = [
   },
 ];
 
-function fishyOpportunityCost(source: Item): number {
+/**
+ * Item.adventures is a string, not a number: a flat food/booze/spleen item
+ * reports a plain integer ("5"), but a ranged one reports "N-M" (e.g.
+ * "2-3", "4-8"). toInt() on a ranged string logs "The string ... is not an
+ * integer; returning 0" and silently returns 0 — which made the (7 -
+ * toInt(...)) term in fishyOpportunityCost() a no-op 7 for every ranged
+ * item. Average the range instead so the term reflects the real expected
+ * adventure yield.
+ */
+function averageAdventures(item: Item): number {
+  const raw = item.adventures;
+  if (!raw) return 0;
+  const [low, high] = raw.split("-").map((n) => toInt(n));
+  return high !== undefined ? (low + high) / 2 : low;
+}
+
+function fishyOpportunityCost(source: Item, fullnessOverride?: number): number {
   const cost = mallPrice(source);
-  if (source.fullness > 0) {
-    return (
-      get("valueOfAdventure") * (7 - toInt(source.adventures)) * source.fullness + 12_500 + cost
-    );
+  const fullness = fullnessOverride ?? source.fullness;
+  if (fullness > 0) {
+    return get("valueOfAdventure") * (7 - averageAdventures(source)) * fullness + 12_500 + cost;
   }
 
   if (source.inebriety > 0) {
-    return get("valueOfAdventure") * (7 - toInt(source.adventures)) * source.inebriety + cost;
+    return get("valueOfAdventure") * (7 - averageAdventures(source)) * source.inebriety + cost;
   }
 
   if (source.spleen > 0) {
@@ -241,12 +285,24 @@ function fishyOpportunityCost(source: Item): number {
 }
 
 function cheapestFishySource(): Fishysource | null {
-  const available = FISHY_SOURCES.filter((source) => source.available());
+  const available = FISHY_SOURCES.filter((source) => {
+    if (!source.available()) return false;
+    // Spleen rungs need the room, same guard rung 3 below already carries: a
+    // chew() with no spleen left fails, the ladder finds Fishy still missing,
+    // and — now that the daily harvest keeps a sea jelly reliably on hand — the
+    // optimizer would pick that same rung again on the next call.
+    const spleen = source.item.spleen;
+    if (spleen > 0 && mySpleenUse() + spleen > spleenLimit()) return false;
+    return true;
+  });
 
   if (available.length === 0) return null;
 
   return available.reduce((cheapest, source) =>
-    fishyOpportunityCost(source.item) < fishyOpportunityCost(cheapest.item) ? source : cheapest,
+    fishyOpportunityCost(source.item, source.fullness) <
+    fishyOpportunityCost(cheapest.item, cheapest.fullness)
+      ? source
+      : cheapest,
   );
 }
 
@@ -287,7 +343,15 @@ export function maintainFishy(): void {
     if (have(fishy)) return;
   }
 
-  // Rung 1.5: Do some automatic fishy optimization.
+  // Rung 1.5: Lutz the Ice Skate — free 30-turn Fishy once the skate war
+  // resolved for ice (statuseffects.txt:552; SkateParkRequest state2buff1).
+  // Ahead of the optimizer below: a free buff always beats consuming a source.
+  if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
+    cliExecute("skate lutz");
+    if (have(fishy)) return;
+  }
+
+  // Rung 1.6: Do some automatic fishy optimization.
   const source = cheapestFishySource();
   if (source) {
     useFishySource(source);
@@ -329,7 +393,8 @@ export function maintainFishy(): void {
  * Asdon Driving Waterproofly upkeep (ash post_adv UTS:799-809): effect-based
  * breathing that frees every gear slot. Only relevant when the Asdon is the
  * workshed. Fuel comes from the ash's dedicated pull ("pie man was not meant
- * to eat", one pull = ~100 fuel); we never mall-fuel in-run.
+ * to eat", one pull ≈ 150 fuel — a one-pull item), then the soda-bread
+ * route below once that is spent.
  */
 export function maintainWaterproofly(): void {
   if (!AsdonMartin.installed()) return;
@@ -339,7 +404,47 @@ export function maintainWaterproofly(): void {
     if (availableAmount(pie) === 0) pullSequence(pie);
     if (availableAmount(pie) > 0) AsdonMartin.insertFuel(pie, 1);
   }
+  if (getFuel() < 37) sodaBreadRefuel();
   if (getFuel() >= 37) cliExecute("asdonmartin drive Waterproofly");
+}
+
+const SODA_BREAD_MEAT_FLOOR = 15000;
+const SODA_BREAD_LOAVES = 23;
+
+/**
+ * Soda-bread refuel once the day's pie man is spent (user directive
+ * 2026-08-28; the same route as pearlo lib.ts fuelUp()): the pie is a
+ * one-pull item, so after Waterproofly + a bumper + Waterproofly (~150 fuel)
+ * the tank is dry for the rest of the run and every underwater slot goes
+ * back to breathing gear. Route: Desert Bus pass from the General Store
+ * (5,000, npcstores.txt ROW657) if neither it nor the bitchin' meatcar opens
+ * the Gift Shop; one all-purpose flower there (2,000) → wads of dough; soda
+ * water from the General Store (70 each); cook loaves (one adventure for
+ * the batch — session log 2026-08-27 `[71] Cook 42 wad of dough + 42 soda
+ * water`, or free under Holiday Multitasking); `asdonmartin fuel`. ~6 fuel a
+ * loaf, so 23 loaves ≈ 140 fuel ≈ four more drives. Only above a 15k meat
+ * floor so it never competes with the run's own purchases.
+ */
+function sodaBreadRefuel(): void {
+  if (myMeat() < SODA_BREAD_MEAT_FLOOR) return;
+  if (myAscensions() < 10) return;
+  const bread = $item`loaf of soda bread`;
+  const dough = $item`wad of dough`;
+  if (!have($item`bitchin' meatcar`) && !have($item`Desert Bus pass`)) {
+    buy(1, $item`Desert Bus pass`);
+    if (!have($item`Desert Bus pass`)) return;
+  }
+  if (availableAmount(dough) === 0) {
+    buy(1, $item`all-purpose flower`);
+    if (!have($item`all-purpose flower`)) return;
+    use(1, $item`all-purpose flower`);
+  }
+  const loaves = Math.min(SODA_BREAD_LOAVES, availableAmount(dough));
+  if (loaves === 0) return;
+  buy(Math.max(0, loaves - availableAmount($item`soda water`)), $item`soda water`);
+  create(loaves, bread);
+  if (availableAmount(bread) > 0)
+    cliExecute(`asdonmartin fuel ${availableAmount(bread)} loaf of soda bread`);
 }
 
 /**

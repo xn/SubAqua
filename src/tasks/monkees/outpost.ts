@@ -1,11 +1,23 @@
 import { availableAmount, cliExecute } from "kolmafia";
-import { $item, $location, $monster, $monsters, get, have } from "libram";
+import {
+  $familiar,
+  $item,
+  $items,
+  $location,
+  $monster,
+  $monsters,
+  $skill,
+  get,
+  have,
+  Macro,
+} from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { assertBanishHeld } from "../../resources/banish";
 import { pawWish } from "../../resources/paw";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
@@ -19,8 +31,66 @@ function stashboxDone(): boolean {
 /** Shared +item farm shape for the pre-stashbox outpost regimes (ash
  * UTS:1924-2003: itdrop + freeKill while the lockkey is unknown; the CCS
  * banishes burglar/raider as non-droppers, CCS:702-707). */
+/** The banished half of the roster, shared by farmCombat() and by the
+ * unbanished-monster invariant the two lanes that use it run in prepare().
+ * Both lanes pay for the banish in turn economy — burglar and raider drop
+ * nothing these grinds want — so a banish that quietly stops holding is a 25-30
+ * turn bleed (the garbo fork farmTurn.ts:124-130; see assertBanishHeld for the bounds). */
+const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
+
+const golem = $monster`Black Crayon Golem`;
+const eagle = $familiar`Patriotic Eagle`;
+
+/** Second habitat recall, on a Black Crayon Golem met at the Outpost (ash
+ * CCS:669-675): once the first recall's fights are spent and only one recall
+ * has been used, recall the golem again so the lockkey hunt keeps drawing
+ * free golem copies. UTS 08-26 recalled at [9] and again at [11]; the third
+ * recall stays for the Abyss habitat lane (Abyss Habitats completes at
+ * recalled >= 3). */
+/** The last habitat golem fight (fights left 1 BEFORE the fight; mafia
+ * decrements on encounter) once both outpost recalls are spent, on an
+ * account with the cyber kit and no construct banish yet: the ash fields the
+ * eagle for exactly that fight and screeches in it (UTS:1319-1322,
+ * CCS:676-678) — the construct banish costs no turn there, where the Madness
+ * Bakery lane costs one. */
+function screechTurn(): boolean {
+  return (
+    have(eagle) &&
+    have($item`server room key`) &&
+    !get("banishedPhyla").includes("construct") &&
+    get("_monsterHabitatsFightsLeft", 0) === 1 &&
+    get("_monsterHabitatsRecalled", 0) >= 2
+  );
+}
+
+function golemRecallMacro(): Macro {
+  const macro = new Macro();
+  if (
+    have($skill`Just the Facts`) &&
+    get("_monsterHabitatsFightsLeft", 0) === 0 &&
+    get("_monsterHabitatsRecalled", 0) < 2
+  ) {
+    macro.trySkill($skill`Recall Facts: Monster Habitats`);
+  }
+  if (screechTurn()) macro.trySkill($skill`%fn, Release the Patriotic Screech!`);
+  return macro.components.length > 0 ? openerOnce(macro) : macro;
+}
+
+/** Outpost backups (ash CCS:684-708), cap 7 (UTS:1338): golem copies once
+ * the habitat fights are spent and both recalls used; healer copies while the
+ * prayerbeads are short. */
+const farmBackup = () => ({
+  targets: [
+    ...(get("_monsterHabitatsFightsLeft", 0) === 0 && get("_monsterHabitatsRecalled", 0) >= 2
+      ? [golem]
+      : []),
+    ...(availableAmount(beads) < 2 ? [$monster`Mer-kin healer`] : []),
+  ],
+  cap: 7,
+});
+
 const farmCombat = () =>
-  new CombatStrategy().banish($monsters`Mer-kin burglar, Mer-kin raider`).kill();
+  new CombatStrategy().macro(monsterMacro(golemRecallMacro, golem)).banish(farmBanished).kill();
 
 export function outpostQuest(): Quest {
   return {
@@ -53,10 +123,14 @@ export function outpostQuest(): Quest {
         ready: () => monkeesStep() >= 6,
         completed: () => monkeesStep() >= 9,
         do: outpost,
+        backup: farmBackup,
         combat: farmCombat(),
-        outfit: { modifier: "item" },
+        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
         effects: itemDropEffects,
-        prepare: () => recover(),
+        prepare: (): void => {
+          assertBanishHeld(farmBanished, outpost, "Outpost Grandma");
+          recover();
+        },
         limit: { soft: 30, message: "Grandma's rescue is stalling; check the outpost drops." },
       },
       {
@@ -69,10 +143,14 @@ export function outpostQuest(): Quest {
         ready: () => monkeesStep() >= 9,
         completed: () => get("merkinLockkeyMonster") !== null || stashboxDone(),
         do: outpost,
+        backup: farmBackup,
         combat: farmCombat(),
-        outfit: { modifier: "item" },
+        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
         effects: itemDropEffects,
-        prepare: () => recover(),
+        prepare: (): void => {
+          assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");
+          recover();
+        },
         limit: { soft: 25, message: "No lockkey after a long grind; verify drops and rerun." },
       },
       {
@@ -83,8 +161,14 @@ export function outpostQuest(): Quest {
         ready: () => get("merkinLockkeyMonster") !== null,
         completed: () => stashboxDone(),
         do: outpost,
+        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
+        freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
-        outfit: () => ({ modifier: "-combat", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         prepare: (): void => {
           recover();
@@ -115,8 +199,14 @@ export function outpostQuest(): Quest {
         completed: () => availableAmount(beads) >= 3,
         do: outpost,
         saberPurpose: "healer",
+        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
+        freeRunBanishes: true,
         combat: new CombatStrategy().forceItems($monster`Mer-kin healer`).freeRun(),
-        outfit: () => ({ modifier: "-combat, item", familiar: sneakFamiliar() }),
+        outfit: () => ({
+          modifier: "-combat, item",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
         effects: sneakEffects,
         prepare: (): void => {
           recover();

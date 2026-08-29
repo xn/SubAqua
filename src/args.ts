@@ -33,6 +33,11 @@ export const args = Args.create(
       help: "Abort at ≤17 turns played if dreadscroll clue 7 is still unknown (top-turncount insurance).",
       default: false,
     }),
+    seedScan: Args.flag({
+      help: "Enable the dreadscroll seed-space scan (native seedfinder port). Disable if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
+      default: true,
+      setting: "",
+    }),
     list: Args.flag({
       help: "Print the selected runplan with per-task completed status, then exit.",
       default: false,

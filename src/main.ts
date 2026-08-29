@@ -7,11 +7,12 @@ import { SubAquaEngine } from "./engine/engine";
 import { currentTier } from "./lib/tier";
 import { printSimChecklist } from "./sim";
 import { buildRunplan } from "./tasks/runplans";
+import { routeComplete } from "./tasks/sorceress/finale";
 
 const seaPath = $path`11,037 Leagues Under the Sea`;
 
 export function main(command = ""): void {
-  sinceKolmafiaRevision(29057);
+  sinceKolmafiaRevision(29108);
 
   Args.fill(args, command);
   if (args.help) {
@@ -69,7 +70,12 @@ export function main(command = ""): void {
 
   const remaining = tasks.filter((task) => !task.completed());
   print(`Spent ${turnsPlayed() - startTurns} turns; ${remaining.length} tasks remaining.`, "blue");
-  if (remaining.length === 0 && args.postloopCommand !== "") {
+  // Trigger on the ROUTE's terminal condition, not on an empty remainder: a
+  // handful of tasks are legitimately not-applicable rather than complete on
+  // any given account (no PYEC, no Source Terminal, no Skate Park map, a prep
+  // whose stock the boss fight consumed), so `remaining.length === 0` could
+  // never hold and the hook was unreachable.
+  if (routeComplete() && args.postloopCommand !== "") {
     print(`Route complete — running: ${args.postloopCommand}`, "blue");
     cliExecute(args.postloopCommand);
   }

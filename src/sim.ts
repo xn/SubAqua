@@ -16,10 +16,10 @@ const supportedSkills = $skills`Just the Facts, Map the Monsters, Meteor Lore, F
 // eslint-disable-next-line libram/verify-constants
 const supportedFamiliars = $familiars`Grouper Groupie, Red-Nosed Snapper, Jill-of-All-Trades, Chest Mimic, Patriotic Eagle, Sword of S Words, Peace Turkey, Disgeist, Jumpsuited Hound Dog, Glover, Foul Ball, Space Jellyfish, Pocket Professor, Tiny Plastic Santa Claus Skeleton`;
 
-// No FLUDA: it only serves the shadow-rift subsystem SubAqua dropped (see
-// tasks/init.ts seaGearPulls). The antidote is Yog-Urt's Gummiheart escape
-// (upstream YogHpCheck, 6b7cd80).
-const routePulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Congressional Medal of Insanity, Mer-kin digpick, lodestone, comb jelly, Elf Guard SCUBA tank, rusty rivet, sea cowbell, Mer-kin prayerbeads, Mer-kin healscroll, Mer-kin killscroll, Mer-kin worktea, Mer-kin knucklebone, Mer-kin cheatsheet, Mer-kin hallpass, Mer-kin hidepaint, pro skateboard, software glitch, pulled yellow taffy, stuffed yam stinkbomb, waffle, skate blade, null-day exploit, New Age healing crystal, soggy used band-aid, soft green echo eyedrop antidote, damp old wallet, fish sauce, Aldebaran sardines, pie man was not meant to eat, handheld Allied radio, Clara's bell, stench jelly, peppermint parasol, ink bladder, Mer-kin pinkslip, Louder Than Bomb, anchor bomb`;
+// No FLUDA: the shadow-rift lane (tasks/monkees/shadow.ts) does not port the
+// Douse Foe rider. The antidote is Yog-Urt's Gummiheart escape (upstream
+// YogHpCheck, 6b7cd80).
+const routePulls = $items`Mer-kin sneakmask, sea lasso, ten-leaf clover, large box, shark jumper, scale-mail underwear, Congressional Medal of Insanity, Mer-kin digpick, lodestone, comb jelly, Elf Guard SCUBA tank, rusty rivet, sea cowbell, Mer-kin prayerbeads, Mer-kin healscroll, Mer-kin killscroll, Mer-kin worktea, Mer-kin knucklebone, Mer-kin cheatsheet, Mer-kin hallpass, Mer-kin hidepaint, pro skateboard, software glitch, pulled yellow taffy, stuffed yam stinkbomb, waffle, skate blade, null-day exploit, New Age healing crystal, soggy used band-aid, soft green echo eyedrop antidote, damp old wallet, fish sauce, Aldebaran sardines, pie man was not meant to eat, handheld Allied radio, Clara's bell, stench jelly, peppermint parasol, ink bladder, Mer-kin pinkslip, Louder Than Bomb, anchor bomb`;
 
 const catalogCovered = $items`pro skateboard, software glitch`;
 

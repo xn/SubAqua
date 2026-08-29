@@ -1,5 +1,15 @@
-import { availableAmount, availableChoiceOptions, getProperty, print, runChoice } from "kolmafia";
-import { $item, get, have, set, ValueOf } from "libram";
+import {
+  availableAmount,
+  availableChoiceOptions,
+  getProperty,
+  handlingChoice,
+  lastChoice,
+  print,
+  runChoice,
+} from "kolmafia";
+import { $effect, $item, get, have, set, ValueOf } from "libram";
+
+import { peridotTargetId } from "../resources/peridot";
 
 /**
  * Ash stashboxCheck (CH:9-20): walk the per-lockkey-monster search order,
@@ -22,7 +32,7 @@ function stashboxCheck(order: number[]): void {
   runChoice(order[0]);
 }
 
-export function main(choice: number, _page: string) {
+export function main(choice: number, page: string) {
   const options: { [key: number]: string } = availableChoiceOptions();
 
   if (choice === 923 && options[5]) {
@@ -110,6 +120,19 @@ export function main(choice: number, _page: string) {
   //Sea stuff
   else if (choice === 1565) {
     runChoice(1);
+  } else if (choice === 1497) {
+    // Calling Rufus: option 2 = the artifact quest (ash CH:37-41 simple list).
+    runChoice(2);
+  } else if (choice === 1498) {
+    // Calling Rufus Back: hand the artifact in, else hang up (mafia's own
+    // RufusManager decision, mirrored so the script always answers).
+    runChoice(get("questRufus") === "step1" ? 1 : 6);
+  } else if (choice === 1500) {
+    // Like a Loded Stone (ash CH:257-265): the fountain's Shadow Waters
+    // first; the forest loot once the waters are up and it is unlooted.
+    if (!have($effect`Shadow Waters`)) runChoice(2);
+    else if (!get("_shadowForestLooted", false)) runChoice(3);
+    else runChoice(2);
   } else if (choice === 312) {
     // Post-currents the outpost hut becomes a shop; option 3 opens the healer
     // stock (ash CH:55-59). Otherwise mafia auto-writes choiceAdventure312
@@ -138,6 +161,43 @@ export function main(choice: number, _page: string) {
     } else {
       stashboxCheck([3, 1, 2]); // healer (CH:63-79)
     }
+  } else if (choice === 396) {
+    // Woolly Scaly Bully: option 3 unlocks the janitor's closet (monitor
+    // fights, ChoiceControl.java:5084-5089); other options just lose HP.
+    runChoice(3);
+  } else if (choice === 397) {
+    // Bored of Education: option 2 unlocks the bathrooms (wordquiz NC 401,
+    // ChoiceControl.java:5091-5096).
+    runChoice(2);
+  } else if (choice === 398) {
+    // A Mer-kin Graffiti: option 1 unlocks the teacher's lounge — the
+    // merkinElementaryTeacherUnlock the library route needs
+    // (ChoiceControl.java:5098-5103).
+    runChoice(1);
+  } else if (choice === 399) {
+    // The Case of the Closet: fight the Mer-kin monitor (cheatsheet source);
+    // ash CH:126-131 takes option 1 too.
+    runChoice(1);
+  } else if (choice === 400) {
+    // No Rest for the Room: fight the Mer-kin teacher (ash CH:126-131).
+    runChoice(1);
+  } else if (choice === 401) {
+    // Raising Cane: option 2 takes a Mer-kin wordquiz (ash CH:134-140).
+    runChoice(2);
+  } else if (choice === 403) {
+    // Picking Sides (Skate Park): option 1 takes the skate blade, siding with
+    // the ice skaters — the lutz Fishy buff lives on the ice state. The ash's
+    // simple run_choice(1) list (CH:43); mafia's ChoiceAdventures.java 403.
+    // Live 2026-08-28: unhandled → "Manual control requested" mid-war.
+    runChoice(1);
+  } else if (choice === 701) {
+    // Ators Gonna Ate (Gymnasium): option 1 takes the item
+    // (ChoiceAdventures.java:3612-3619; ash simple-case list CH:44,55).
+    runChoice(1);
+  } else if (choice === 705) {
+    // Halls Passing in the Night: option 4 takes a wordquiz; mafia already
+    // deducted the hallpass on visit (ChoiceControl.java:7290-7291).
+    runChoice(4);
   } else if (choice === 1562) {
     const getPriority = (option: string): number => MOBIUS_PRIORITIES[option as MobiusOption];
     const bestChoice = Object.entries(options).reduce((a, b) =>
@@ -160,15 +220,124 @@ export function main(choice: number, _page: string) {
     const extra = `pro1=${bestGuess[0]}&pro2=${bestGuess[1]}&pro3=${bestGuess[2]}&pro4=${bestGuess[3]}&pro5=${bestGuess[4]}&pro6=${bestGuess[5]}&pro7=${bestGuess[6]}&pro8=${bestGuess[7]}`;
     runChoice(1, extra);
   } else if (choice === 310) {
-    if (have($item`rough fish scale`, 10)) {
-      runChoice(2);
+    // The Economist of Scales re-presents itself after every trade, and
+    // mafia invokes this script ONCE per choice number: when the page comes
+    // back as 310 again it falls through to the pref-based automation
+    // (ChoiceManager.java:268-290), and choiceAdventure310=0 means "Manual
+    // control requested" — live 2026-08-28, one pristine in, run aborted.
+    // So drain the trades here: 10 rough -> 1 pristine (option 2) while
+    // the rough scales last, then leave (option 6). Bounded so a trade that
+    // silently fails can't spin.
+    for (let trades = 0; handlingChoice() && lastChoice() === 310 && trades < 30; trades++) {
+      runChoice(have($item`rough fish scale`, 10) ? 2 : 6);
+    }
+  } else if (choice === 1599) {
+    // Legendary Digestion (legendary pasta wand's Summon Legendary Noodles;
+    // ChoiceControl.java:6884-6894 case 1599 — options 1-5 are Spleen /
+    // Amygdala / Skin / Heart / Stomach). Option 1 sets
+    // _legendaryNoodlesSpleen and banks a free spleen point; user rule: it
+    // should always be that.
+    runChoice(1);
+  } else if (choice === 1557) {
+    // Peering Through Your Peridot. This handler is the ONLY thing that may
+    // answer 1557, and it only ever submits an id the page is offering (one
+    // `<input type="hidden" name="bandersnatch" value="ID">` per monster,
+    // ChoiceAdventures.java:6717). It never defers to choiceAdventure1557:
+    // mafia falls back to that pref whenever the script leaves the same
+    // choice up, and a pref pointing at an unlisted monster resubmits
+    // forever (live 2026-08-27 Wreck: 2,531 loops; 2026-08-28 school: 2,937
+    // — the engine had registered no answer that time, so the user's stale
+    // 758 went out). Preference order: the engine's target for this task,
+    // then the registered pref's id, then decline (option 2, "I choose
+    // peace") with a red line — a wasted peridot beats a hung session.
+    const offered: number[] = [];
+    const re = /name="bandersnatch" value="(\d+)"/g;
+    for (let m = re.exec(page); m !== null; m = re.exec(page)) offered.push(Number(m[1]));
+    const prefMatch = /bandersnatch=(\d+)/.exec(getProperty("choiceAdventure1557"));
+    const candidates = [peridotTargetId(), prefMatch ? Number(prefMatch[1]) : undefined];
+    const pick = candidates.find((id) => id !== undefined && offered.includes(id));
+    if (pick !== undefined) {
+      runChoice(1, `bandersnatch=${pick}`);
     } else {
-      runChoice(6);
+      const wanted = candidates.filter((c) => c !== undefined).join(", ") || "none registered";
+      print(
+        `Peridot of Peril: none of the wanted monsters (${wanted}) is in the menu [${offered.join(", ")}]; declining the peril.`,
+        "red",
+      );
+      runChoice(2);
     }
   }
 }
 
+/**
+ * dreadScrollGuesses is mafia's guess log: comma-joined
+ * `<8-digit-guess>:<wrong-count>` entries. Pull out just the codes we've
+ * already submitted, so fallback guesses can avoid repeating one.
+ */
+function parseGuessedCodes(): Set<string> {
+  const guessed = new Set<string>();
+  const pastGuesses = get("dreadScrollGuesses");
+  if (pastGuesses) {
+    for (const guess of pastGuesses.split(",")) {
+      const [code] = guess.split(":");
+      if (code) guessed.add(code);
+    }
+  }
+  return guessed;
+}
+
+/**
+ * Build a guess from the known clues (unknown positions default to "1"),
+ * then — if that guess was already submitted per dreadScrollGuesses —
+ * perturb the unknown positions like a base-4 odometer (digits 1->2->3->4,
+ * carrying into the next-lowest-index unknown on overflow) until we find a
+ * guess not yet tried. Used when there are too many unknowns to enumerate
+ * (F10) and when guess history is contradictory, so neither fallback path
+ * submits the identical wrong guess on every attempt and burns Deep-Tainted
+ * Mind cycles for nothing. If every combination has already been guessed,
+ * fall through and return the last one anyway — a branch must still always
+ * answer.
+ */
+function fallbackGuess(unknowns: number[]): string {
+  const digits = Array.from({ length: 8 }, (_, i) => get(`dreadScroll${i + 1}`, 0) || 1);
+  const guessed = parseGuessedCodes();
+  let candidate = digits.join("");
+  if (unknowns.length === 0 || !guessed.has(candidate)) return candidate;
+
+  const totalCombos = Math.pow(4, unknowns.length);
+  for (let attempt = 1; attempt < totalCombos; attempt++) {
+    let carry = 1;
+    for (const pos of unknowns) {
+      if (carry === 0) break;
+      const idx = pos - 1;
+      digits[idx] += carry;
+      carry = 0;
+      if (digits[idx] > 4) {
+        digits[idx] = 1;
+        carry = 1;
+      }
+    }
+    candidate = digits.join("");
+    if (!guessed.has(candidate)) return candidate;
+  }
+  return candidate;
+}
+
 function getDreadscrollGuess(): string {
+  const unknowns: number[] = [];
+  for (let i = 1; i <= 8; i++) {
+    if (get(`dreadScroll${i}`, 0) === 0) unknowns.push(i);
+  }
+  if (unknowns.length > 5) {
+    // Too blind to enumerate: 4^n candidates explodes past n=5 (4^6=4096
+    // is fine, but the scoring loop below is O(n^2) over the candidate
+    // pool and 4^7-4^8 hangs Rhino). The route never uses the scroll this
+    // blind (clues 1/6/8 gate acquisition), but a manual `use` shouldn't
+    // hang. Answer the known clues plus a guess-history-aware fallback
+    // (F10) instead of enumerating.
+    return fallbackGuess(unknowns);
+  }
+
   let possibleCodes: string[] = [""];
   for (let i = 1; i <= 8; i++) {
     const currentClue = get(`dreadScroll${i}`, 0);
@@ -205,6 +374,13 @@ function getDreadscrollGuess(): string {
         return differences === incorrectCount;
       });
     }
+  }
+  if (possibleCodes.length === 0) {
+    // Contradictory guess history (e.g. a pref was hand-edited by hand);
+    // bestCode would be undefined below. Fall back to known clues plus a
+    // guess-history-aware perturbation (F10) rather than submitting
+    // "undefined".
+    return fallbackGuess(unknowns);
   }
   // Choose the code that minimizes expected errors among possible codes
   let bestCode = possibleCodes[0];

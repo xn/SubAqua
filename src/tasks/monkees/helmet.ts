@@ -1,9 +1,11 @@
 import {
+  abort,
   adv1,
   buy,
   itemAmount,
   pullsRemaining,
   retrieveItem,
+  turnsPlayed,
   use,
   useSkill,
   visitUrl,
@@ -13,6 +15,7 @@ import {
   $effect,
   $familiar,
   $item,
+  $items,
   $location,
   $monster,
   $skill,
@@ -21,19 +24,42 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
+import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
-import { itemDropEffects } from "../../lib/moods";
+import {
+  applyEffects,
+  combineMoods,
+  itemDropEffects,
+  sneakEffects,
+  squintEffects,
+  superItemDropEffects,
+} from "../../lib/moods";
 import { pawWish, pawWishesLeft } from "../../resources/paw";
 import { pulledToday, pullSequence } from "../../resources/pulls";
-import { diverHuntActive } from "../../resources/saber";
+import { forceGranted, hatBreatherOwned, rivetHuntActive } from "../../resources/saber";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const outpost = $location`The Mer-Kin Outpost`;
 const wreck = $location`The Wreck of the Edgar Fitzsimmons`;
 const diver = $monster`unholy diver`;
 const mimic = $familiar`Chest Mimic`;
+
+/**
+ * Mafia's Wreck-hatch rule (AreaCombatData.java:1950-1961,
+ * adjustConditionalWeighting()): once choice 299 option 1 sets
+ * _lastFitzsimmonsHatch (ChoiceControl.java:5019-5027, which only fires
+ * post-bigBrotherRescued), mine crab/unholy diver are the ONLY non-scavenger
+ * monsters on the table for the next 20 turns; cargo crab/drowned sailor are
+ * the only ones OFF the table during that window (Mer-kin scavenger is
+ * always present either way). Outside the window the diver simply cannot be
+ * fought — a peridot or forceItems aimed at it there is aimed at nothing.
+ */
+function hatchOpen(): boolean {
+  const hatchTurn = get("_lastFitzsimmonsHatch", -1);
+  return hatchTurn >= 0 && turnsPlayed() - hatchTurn < 20;
+}
 
 function rivetsDone(): boolean {
   return (
@@ -44,7 +70,7 @@ function rivetsDone(): boolean {
 }
 
 function helmetDone(): boolean {
-  return !diverHuntActive() || rivetsDone();
+  return !rivetHuntActive() || rivetsDone();
 }
 
 const rivet = $item`rusty rivet`;
@@ -82,6 +108,10 @@ function gainSandDollars(): void {
     } else if (have($item`11-leaf clover`) || pullSequence($item`11-leaf clover`)) {
       use($item`11-leaf clover`);
     }
+    // The empty filter is deliberate, unlike every other adv1 in this repo:
+    // "" makes mafia fall through to grimoire's compiled CCS, i.e. this task's
+    // own `combat: new CombatStrategy().kill()` below. A dynamic filter here
+    // would silently discard customize()'s combat work.
     if (have($effect`Lucky!`)) adv1(outpost, -1, "");
   }
 }
@@ -159,44 +189,126 @@ export function helmetQuest(opts: { summonLane: boolean }): Quest {
               // egg first so diver #2 is free. diverTries < 4 in the ash;
               // tries 5 covers the first summon.
               name: "Diver Summon",
-              ready: () => summonsAvailable() >= 1 && diverHuntActive(),
+              ready: () => summonsAvailable() >= 1 && rivetHuntActive(),
               completed: helmetDone,
               do: () => summon(diver),
               saberPurpose: "diver" as const,
               combat: new CombatStrategy()
-                .macro(Macro.trySkill($skill`%fn, lay an egg`), diver)
+                .macro(() => openerOnce(Macro.trySkill($skill`%fn, lay an egg`)), diver)
                 .forceItems(diver),
               outfit: () => ({
                 modifier: "item",
                 familiar: have(mimic) && mimic.experience >= 100 ? mimic : undefined,
               }),
-              effects: itemDropEffects,
-              prepare: () => recover(),
+              // Ash mood("superitdrop") on the summon lane (UTS:1402, 1433):
+              // the once-a-day squint only earns its keep on a probabilistic
+              // roll, and the ash's switch case falls through into "itdrop".
+              effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
+              // The squint doubles whatever +item is ON at cast time, so it
+              // waits for prepare() — the only hook that runs after dress()
+              // (grimoire engine.js:101 vs :108), matching the ash's order
+              // after tempEquipment at UTS:1402.
+              //
+              // And only when no Force covers this fight: "Forced and
+              // yellow-rayed drops ignore item bonuses, so the once-a-day
+              // squint only fires when neither covers this fight"
+              // (UTS:1395-1402, `if (!diverForceReady())`). forceGranted() is
+              // the same predicate the engine's provideSaber() uses to decide
+              // whether this task gets a Force at all (engine.ts:196-204);
+              // this task's `do` is a function, so it has no location, exactly
+              // as the engine sees it.
+              prepare: (): void => {
+                recover();
+                if (!forceGranted("diver")) applyEffects(squintEffects(), "Diver Summon");
+              },
               limit: { tries: 5 },
             },
           ]
         : []),
       {
-        // Plan B (ash UTS:2106-2147): grind the Wreck for divers. Peridot
-        // forces the diver; forceItems (ray or saber) forces the drops.
+        // Plan B, hatch closed (ash UTS:1424-1430): mine crab/unholy diver
+        // are OFF the table outside the ~20-turn hatch window (hatchOpen()
+        // above; AreaCombatData.java:1950-1961), so fighting here can never
+        // land a diver — only cargo crab/drowned sailor/Mer-kin scavenger are
+        // offered. The ash's own closed branch just hunts the hatch faster
+        // (tempEquipment("-combat", "Monodent of the Sea", ...) +
+        // mood("-combat")); this mirrors Big Brother's identical NC hunt for
+        // the same choice 299 in the same zone ("Wreck Rescue (sneak)",
+        // bigbrother.ts) rather than inventing a second mechanism. grimoire
+        // freezes a task's `combat` at build time (library.ts's two-lane
+        // comment), so this has to be a sibling task, not a delayed field on
+        // the open-hatch lane below.
+        name: "Wreck Rivets (hatch closed)",
+        ready: () => rivetHuntActive() && !hatchOpen(),
+        completed: helmetDone,
+        do: wreck,
+        // ash free_run(page_text, true) here, CCS:586-598 (same Wreck handler)
+        freeRunBanishes: true,
+        combat: new CombatStrategy().freeRun(),
+        outfit: () => ({
+          modifier: "-combat",
+          familiar: sneakFamiliar(),
+          equip: $items`Monodent of the Sea`,
+        }),
+        effects: sneakEffects,
+        choices: { 299: 1 },
+        prepare: () => recover(),
+        limit: {
+          soft: 20,
+          message:
+            "Down at the Hatch is hiding, so the hatch never reopens (it stays open ~20 turns once it does); check -combat sources.",
+        },
+      },
+      {
+        // Plan B, hatch open (ash UTS:2106-2147): grind the Wreck for divers
+        // while mine crab/unholy diver are the only non-scavenger monsters on
+        // the table (hatchOpen() above). Peridot forces the diver; forceItems
+        // (ray or saber) forces the drops. Never targets the peridot/1387
+        // Force outside this window — see the sibling closed-hatch task and
+        // engine.ts's appearanceRates() equip gate.
         name: "Wreck Rivets",
-        ready: () => diverHuntActive(),
+        ready: () => rivetHuntActive() && hatchOpen(),
         completed: helmetDone,
         do: wreck,
         peridot: diver,
         saberPurpose: "diver" as const,
         combat: new CombatStrategy().forceItems(diver).banish(),
         outfit: { modifier: "item" },
-        effects: itemDropEffects,
+        // Same diver table as the summon lane above, same ash mood.
+        effects: () => combineMoods(superItemDropEffects(), itemDropEffects()),
         choices: { 299: 1 },
-        prepare: () => recover(),
+        // Squint after dress() and only behind a Force-less fight, as above
+        // (ash UTS:1430-1434). This lane DOES have a location, so it is passed
+        // — the engine's provideSaber() reads forceGranted(purpose, location)
+        // the same way (engine.ts:198). Only reached while the hatch is open,
+        // so it's never a Force-less probabilistic diver fight with no diver
+        // even on the table.
+        prepare: (): void => {
+          recover();
+          if (!forceGranted("diver", wreck)) applyEffects(squintEffects(), "Wreck Rivets");
+        },
         limit: { soft: 30, message: "Diver parts are not dropping; check item-drop gear." },
       },
       {
         name: "Craft Helmet",
         ready: rivetsDone,
-        completed: () => !diverHuntActive(),
-        do: () => void retrieveItem($item`aerated diving helmet`),
+        // Not `!rivetHuntActive()`: that reads true the instant the parts are
+        // all collected (nothing "missing" any more), which would mark this
+        // task complete before the craft ever ran. Done means a hat breather
+        // exists.
+        completed: hatBreatherOwned,
+        do: (): void => {
+          // aerated diving helmet = COMBINE bubblin' stone + rusty diving
+          // helmet; rusty diving helmet = SUSE rusty broken diving helmet +
+          // rusty porthole + 8 rusty rivet (concoctions.txt). rivetsDone()
+          // above already confirms the three hunt parts; a false return here
+          // means the bubblin' stone (or the combine itself) is the blocker.
+          if (!retrieveItem($item`aerated diving helmet`)) {
+            abort(
+              "Rivet hunt parts are in hand but crafting the aerated diving helmet failed; check the bubblin' stone (and any other COMBINE/SUSE input), then rerun.",
+            );
+          }
+        },
         freeaction: true,
         limit: { tries: 1 },
       },
