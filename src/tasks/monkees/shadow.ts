@@ -1,5 +1,5 @@
 import { adv1, haveEffect, itemAmount, use, useSkill } from "kolmafia";
-import { $effect, $item, $items, $location, $skill, get, have, Macro } from "libram";
+import { $effect, $item, $items, $location, $monster, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, fishMacro, openerOnce } from "../../engine/combat";
 import { Quest } from "../../engine/task";
@@ -31,11 +31,35 @@ function trainingGearReady(): boolean {
   return have($item`sea cowboy hat`) && have($item`sea chaps`);
 }
 
+const slab = $monster`shadow slab`;
+
+/** Slab yoink (ash CCS:538-547, gold-trace #3): Septapus charm → Swoop like
+ * a Bat → Perpetrate Mild Evil → Douse Foe until one lands (3/day). Each
+ * rider multiplies the slab's brick yield: gold banked ~12 bricks off 5
+ * slabs (G:5285-6184) and spent 10 as School/Abyss free kills; the 08-30
+ * run farmed 0. Swoop needs the bat wings worn (task.batWings + outfit),
+ * Mild Evil the vampyric cloake, Douse the FLUDA — every trySkill is
+ * hasskill-gated, so unworn gear just skips its rung. Douse casts are
+ * emitted at build time from the daily counter (the ash's consult loop
+ * re-reads _douseFoeSuccess per round, which a compiled macro cannot);
+ * a success mid-fight costs at most the leftover casts' rounds. */
+function slabMacro(): Macro {
+  const macro = new Macro();
+  if (itemAmount($item`Septapus summoning charm`) > 0) {
+    macro.tryItem($item`Septapus summoning charm`);
+  }
+  macro.trySkill($skill`Swoop like a Bat`);
+  macro.trySkill($skill`Perpetrate Mild Evil`);
+  if (!get("_douseFoeSuccess", false)) {
+    const douses = Math.max(0, 3 - get("_douseFoeUses", 0));
+    for (let i = 0; i < douses; i++) macro.trySkill($skill`Douse Foe`);
+  }
+  return macro;
+}
+
 /** Rift fight (ash CCS:532-554, mid tier): lasso on round 1 once the wave is
- * up, Talk to Some Fish while scales are short, then the kill ladder (darts
- * included). Septapus charms, bat-wing swoops, Mild Evil and FLUDA dousing
- * are deliberately not ported (no censer/cloake support; bat wings are
- * banked, plan Task 4; the FLUDA pull slot went to the bang potions). */
+ * up, the slab yoink riders on a shadow slab, Talk to Some Fish while scales
+ * are short, then the kill ladder (darts included). */
 function riftCombat(): CombatStrategy {
   const strategy = new CombatStrategy();
   strategy.startingMacro(() =>
@@ -43,6 +67,7 @@ function riftCombat(): CombatStrategy {
       ? openerOnce(Macro.tryItem(lasso), 1)
       : new Macro(),
   );
+  strategy.macro(slabMacro, slab);
   strategy.macro(fishMacro);
   return strategy.kill();
 }
@@ -50,7 +75,14 @@ function riftCombat(): CombatStrategy {
 function riftOutfit() {
   return {
     modifier: "item",
-    equip: [monodent, ...(training() < 20 ? $items`sea cowboy hat, sea chaps` : [])],
+    // FLUDA (Douse Foe) / cloake (Mild Evil) / bat wings (Swoop, needs
+    // task.batWings) are the slab-yoink riders; unowned gear is stripped by
+    // createOutfit and gold's rift item% ran 863-928% with them on (B F2).
+    equip: [
+      monodent,
+      ...$items`Flash Liquidizer Ultra Dousing Accessory, vampyric cloake, bat wings`,
+      ...(training() < 20 ? $items`sea cowboy hat, sea chaps` : []),
+    ],
   };
 }
 
@@ -134,6 +166,7 @@ export function shadowRiftQuest(): Quest {
         },
         do: rift,
         post: riftPost,
+        batWings: true, // Swoop like a Bat rider on the slab (slabMacro)
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,
@@ -162,6 +195,7 @@ export function shadowRiftQuest(): Quest {
         prepare: riftPrepare,
         do: () => void adv1(rift, -1, ""),
         post: riftPost,
+        batWings: true, // Swoop like a Bat rider on the slab (slabMacro)
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,
@@ -179,6 +213,7 @@ export function shadowRiftQuest(): Quest {
         prepare: riftPrepare,
         do: rift,
         post: riftPost,
+        batWings: true, // Swoop like a Bat rider on the slab (slabMacro)
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,

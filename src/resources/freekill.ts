@@ -41,6 +41,10 @@ export type FreeKillSource = CombatResource & {
    * than choosing to spend one here, pass `onceDaily: false` to skip these.
    */
   onceDaily?: boolean;
+  /** Zones this source must never be spent in — the shadow bricks are banked
+   * for the School/Abyss (gold spent zero before the School, F ledger #1;
+   * the 08-30 run threw all three at corral tumbleweeds). */
+  avoidAt?: Location[];
 };
 
 /** Ash BCZcost (iotm.ash:1182-1198): substat price of the NEXT cast of a BCZ
@@ -166,6 +170,7 @@ export const freeKillSources: FreeKillSource[] = [
     do: Macro.tryItem($item`shadow brick`),
     colosseumSafe: false,
     dropSafe: true,
+    avoidAt: [$location`The Coral Corral`],
   },
   {
     name: "groveling gravel",
@@ -233,6 +238,7 @@ export function selectFreeKill(
     }
     if (dropsMatter && !source.dropSafe) return false;
     if (!onceDaily && source.onceDaily) return false;
+    if (location && source.avoidAt?.includes(location)) return false;
     return source.available();
   });
 }

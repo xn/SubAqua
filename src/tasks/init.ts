@@ -5,6 +5,7 @@ import {
   cliExecute,
   getWorkshed,
   handlingChoice,
+  itemAmount,
   retrieveItem,
   runChoice,
   storageAmount,
@@ -305,6 +306,30 @@ export function initQuest(): Quest {
             buy(store, 1, $item`pro skateboard`);
           }
           while (get("availableMrStore2002Credits", 0) > 0) buy(store, 1, vhs);
+        },
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
+        // Sept-Ember Censer: claim the day's embers, spend them on Septapus
+        // summoning charms (2 embers each, want 3) for the shadow-slab yoink
+        // (Globals:1929-1943; gold farmed ~12 bricks off slabs, F ledger #1).
+        name: "Septapus Charms",
+        ready: () => have($item`Sept-Ember Censer`),
+        completed: () =>
+          !have($item`Sept-Ember Censer`) ||
+          itemAmount($item`Septapus summoning charm`) >= 3 ||
+          get("_subaqua_censer_done", false),
+        do: (): void => {
+          if (!get("_septEmberBalanceChecked", false)) visitUrl("shop.php?whichshop=september");
+          const wanted = Math.min(
+            3 - itemAmount($item`Septapus summoning charm`),
+            Math.floor(get("availableSeptEmbers", 0) / 2),
+          );
+          if (wanted > 0) {
+            buy($coinmaster`Sept-Ember Censer`, wanted, $item`Septapus summoning charm`);
+          }
+          set("_subaqua_censer_done", true);
         },
         freeaction: true,
         limit: { tries: 1 },
