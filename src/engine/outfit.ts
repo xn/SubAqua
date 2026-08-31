@@ -203,9 +203,7 @@ export function chooseItemFamiliar(): Familiar {
   const candidates = Familiar.all()
     .filter(
       (fam) =>
-        have(fam) &&
-        findFairyMultiplier(fam) > 0 &&
-        (fam.underwater || haveUnderwaterFamEquipment),
+        have(fam) && findFairyMultiplier(fam) > 0 && (fam.underwater || haveUnderwaterFamEquipment),
     )
     .map((familiar) => ({
       familiar,
