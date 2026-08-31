@@ -494,10 +494,28 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           // pants only when every draw is already banished — carried-over
           // banishes, since drawBanishable() never produces that state — the
           // ash's own gate (UTS:2499-2504).
-          const equip: Item[] = [];
+          //
+          // Sea cowboy hat + chaps STAY PINNED (user + wiki, 2026-08-31): the
+          // wild seahorse is only in the corral's draw pool while the cowboy
+          // gear is worn. Live [46]: training done unpinned them, cow+rustler
+          // banished left the cowboy as the zone's ONLY monster, and the
+          // waffle refused ("You don't want to waste a waffle right now") — a
+          // refused `use` inside a BALLS macro is a macro abort, which kills
+          // the whole automated fight. Every natural seahorse encounter in
+          // the logs came while the gear was pinned. Pants slot taken means
+          // the breather must be a SCUBA tank; the engine's enforcement
+          // handles that. Tearaway pants would evict the chaps, so they are
+          // only offered when the gear rule is already moot (all draws
+          // banished = tumbleweed farm).
+          const allBanished = draws.every(banishActive);
+          const equip: Item[] = [
+            $item`sea cowboy hat`,
+            // One forced pants item, never both (Outfit.from throws on an
+            // unsatisfiable forced spec — the cloake/bat-wings lesson).
+            allBanished && have(tearaway) ? tearaway : $item`sea chaps`,
+          ];
           const top = pickBanishSource(corral);
           if (top?.equip) equip.push(top.equip);
-          if (draws.every(banishActive) && have(tearaway)) equip.push(tearaway);
           return { modifier: "initiative", equip, avoid: [$item`miniature crystal ball`] };
         },
         // The unready-seahorse branch of seahorseMacro() is Macro.runaway()
