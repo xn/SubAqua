@@ -29,7 +29,7 @@ import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
-import { combatEffects, combineMoods, itemDropEffects, sneakEffects } from "../../lib/moods";
+import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 import { sourceEnhanceItems } from "./daily";
@@ -184,13 +184,29 @@ export function schoolQuest(): Quest {
         limit: { soft: 30, message: "School farming is not producing cheatsheets/wordquizzes." },
       },
       {
-        // Both routes: the facecowl/waistrope pair for scholar gear
-        // (+item; ash UTS:2600-2614 incl. the hallpass top-up pull).
+        // Both routes: the facecowl/waistrope pair for scholar gear (ash
+        // UTS:2600-2614 incl. the hallpass top-up pull).
+        //
+        // The pair is NOT a combat drop — no school monster drops either
+        // piece (monsters.txt:435-444). Each piece rides a teacher's-lounge
+        // NC result ("On your way out..."): Raising Cane option 2, or, with
+        // a hallpass in inventory, Halls Passing in the Night option 4 —
+        // both already the choice script's picks. Halls Passing is a
+        // SUPERLIKELY (wiki, live 2026-08-30): it fires through any ±combat
+        // and consumes the pass, which is why the ash's +combat cowl loop
+        // (UTS:2694-2703) works only while hallpasses are stocked — its
+        // -combat unlock grinds usually deliver the pair before that loop
+        // runs at all. Porting the loop's "+combat, NCs are pure delay"
+        // moods as the PRIMARY source stalled live 2026-08-30: zero
+        // hallpasses, 20 straight combats, zero NCs, zero pieces. So hunt
+        // -combat like Unlock Teacher (hallpasses, when held, are consumed
+        // by the superlikely regardless; +item converts the residual fights'
+        // 5% hallpass drops into more 705s), and keep sneak effects up
+        // instead of shrugging them.
         name: "Cowl and Rope",
         completed: cowlAndRope,
         prepare: (): void => {
           takeCloset(closetAmount(hallpass), hallpass);
-          dropSneakEffects();
           sourceEnhanceItems();
           if (
             (availableAmount(facecowl) > 0 || availableAmount(waistrope) > 0) &&
@@ -203,10 +219,12 @@ export function schoolQuest(): Quest {
         },
         do: school,
         combat: new CombatStrategy().kill(),
-        outfit: { modifier: "item", equip: crappyPieces },
-        // Ash UTS:2698-2699 runs mood("combat") AND mood("itdrop") on this
-        // cowl/waistrope grind: the zone's NCs are pure delay here.
-        effects: () => combineMoods(combatEffects(), itemDropEffects()),
+        outfit: () => ({
+          modifier: "-combat, item",
+          equip: crappyPieces,
+          familiar: sneakFamiliar(),
+        }),
+        effects: sneakEffects,
         limit: { soft: 20, message: "The facecowl/waistrope pair is not dropping." },
       },
       {

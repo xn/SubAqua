@@ -7,6 +7,7 @@ import {
   equip,
   itemAmount,
   maximize,
+  useFamiliar,
   visitUrl,
 } from "kolmafia";
 import { $coinmaster, $item, $location, $slot, get, have } from "libram";
@@ -69,15 +70,20 @@ export function gymnasiumTurn(): void {
       pieces.push("+equip Jurassic Parka");
     }
   }
+  // The free-run/banish source's gear (ash tempEquipment(... freeRun() ...),
+  // UTS:659) — see fights.ts gymFreeRun(). A familiar pick (the Stomping
+  // Boots once the geared sources dry up, ash freeRun() G:487-494) is
+  // fielded HERE, before the breather below prices against the fielded
+  // familiar.
+  const runGear = gymFreeRunGear();
+  if (runGear.familiar) useFamiliar(runGear.familiar);
   // Familiar breathing: this wrapper task declares no `outfit`, so the engine's
   // enforcement (engine.ts:240-246, which needs outfit.familiar) never runs and
   // whatever non-aquatic familiar an earlier task left up would make mafia
   // refuse the zone (KoLAdventure.java:2867-2884).
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
-  // The free-run/banish source's gear (ash tempEquipment(... freeRun() ...),
-  // UTS:659) — see fights.ts gymFreeRun().
-  for (const it of gymFreeRunGear()) pieces.push(`+equip ${it.name}`);
+  for (const it of runGear.items) pieces.push(`+equip ${it.name}`);
   // Re-pin the lasso gear (audit item 4). `Guard Grind` is `underwater: true`
   // and non-`freeaction`, so engine customize() pins sea cowboy hat + sea chaps
   // and dress() wears them — and then this maximize, which runs afterwards,
@@ -183,8 +189,21 @@ export function gearQuest(): Quest {
         completed: () => availableAmount(gladMask) > 0 && availableAmount(gladTail) > 0,
         do: gladiatorGearStep,
         underwater: true,
+        // The guards come ONLY from the "Ators Gonna Ate" NC (choice 701) —
+        // no gym monster drops them (monsters.txt:427-446) — and its locker
+        // pays ONE uniform draw from the unowned uniques (both guards + the
+        // three colosseum weapons) plus a repeatable fastjuice: ~4-7 NC hits
+        // for both guards, at ~1 NC in 6 encounters under +combat (live
+        // 2026-08-30: 3 NCs in 18). The ash runs this loop UNBOUNDED
+        // (UTS:2793-2795) because its ENCOUNTERS ARE NEARLY FREE: every gym
+        // combat is a free run (kick+away, then the boots' banked runaways),
+        // so ~30-40 encounters cost only the ~5-7 NC turns. This limit
+        // therefore bounds encounters, not turns — 40 attempts ≈ single-digit
+        // real turns with the run ladder healthy, and still stops a genuinely
+        // dead grind (NC precondition unmet, forcer leak, ladder dry) inside
+        // one bad day.
         limit: {
-          soft: 18,
+          soft: 40,
           message: "Gladiator guards are not dropping; check the gymnasium grind.",
         },
       },

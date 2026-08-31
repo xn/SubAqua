@@ -113,6 +113,12 @@ export function shadowRiftQuest(): Quest {
         // counter both start at 11 after Loded Stone #1 and drain together).
         // The task adventures only when the fight is free, the NC is owed
         // now, or a forcer is already armed.
+        // The soft limit spans BOTH quests' Labyrinths: grimoire counts
+        // attempts per task name for the whole run, so quest #1's forced NC
+        // (1 attempt) and quest #2's natural arrival (11 free fights + the
+        // NC at counter 0 = 12) share one budget — 13 on the happy path.
+        // Live 2026-08-30: soft 12 aborted on the fight that took the
+        // counter to 0, one visit short of the artifact NC.
         name: "Rufus Labyrinth",
         ready: () =>
           have(phone) &&
@@ -131,7 +137,7 @@ export function shadowRiftQuest(): Quest {
         combat: riftCombat(),
         outfit: riftOutfit,
         effects: itemDropEffects,
-        limit: { soft: 12, message: "The Labyrinth of Shadows is not producing the artifact." },
+        limit: { soft: 16, message: "The Labyrinth of Shadows is not producing the artifact." },
       },
       {
         // Ash UTS:856, 2545: hand the artifact in (choice 1498 -> 1) for the

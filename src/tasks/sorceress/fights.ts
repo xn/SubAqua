@@ -11,6 +11,7 @@ import {
   myClass,
   myHp,
   myLocation,
+  myFamiliar,
   myMaxhp,
   myMp,
   haveEquipped,
@@ -138,27 +139,33 @@ export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
     // One-arg lambda, never the bare function: Array#every passes
     // (item, index, array) and the JS bridge then hunts for a
     // have_equipped(item, int, item[]) overload — live 2026-08-29 Gymnasium.
+    // A familiar source (Release the Boots) counts as worn while that
+    // familiar is FIELDED — gymnasiumTurn() fields the ladder's familiar
+    // pick, ash freeRun() parity (G:487-494).
     const worn =
       source.equip === undefined ||
-      (!(source.equip instanceof Familiar) &&
-        equipItems(source.equip).every((item) => haveEquipped(item)));
+      (source.equip instanceof Familiar
+        ? myFamiliar() === source.equip
+        : equipItems(source.equip).every((item) => haveEquipped(item)));
     if (worn) return source;
     exclude.add(source.name);
   }
 }
 
-/** The gear the first non-familiar free-run/banish source wants worn. */
-export function gymFreeRunGear(): Item[] {
-  const exclude = new Set<string>();
-  for (;;) {
-    const source = selectFreeRun({ banish: true, location: gymnasium, exclude });
-    if (!source || exclude.has(source.name)) return [];
-    if (source.equip instanceof Familiar) {
-      exclude.add(source.name);
-      continue;
-    }
-    return equipItems(source.equip);
-  }
+/** What the first free-run/banish source needs: gear to pin, or a familiar
+ * to field. The ash's freeRun() SWITCHES THE FAMILIAR ITSELF when the walk
+ * reaches the Stomping Boots (G:487-494) — 20+ banked runaways are the gym
+ * ladder's workhorse once the daily sources dry up — and the gym is a
+ * +combat context, where the boots take the slot up front (user rule
+ * 2026-08-27, freerun.ts's settled design call). The old familiar-skipping
+ * walk here left every gym fight past the dailies to the kill ladder: live
+ * 2026-08-28 paid 14 gym turns, 2026-08-30 paid 15, with the boots'
+ * runaways unspent both days. */
+export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
+  const source = selectFreeRun({ banish: true, location: gymnasium });
+  if (!source) return { items: [] };
+  if (source.equip instanceof Familiar) return { items: [], familiar: source.equip };
+  return { items: equipItems(source.equip) };
 }
 
 export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {}): CombatFilter {
