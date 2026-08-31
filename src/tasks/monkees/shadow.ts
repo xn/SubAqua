@@ -39,8 +39,9 @@ const slab = $monster`shadow slab`;
  * rider multiplies the slab's brick yield: gold banked ~12 bricks off 5
  * slabs (G:5285-6184) and spent 10 as School/Abyss free kills; the 08-30
  * run farmed 0. Swoop needs the bat wings worn (task.batWings + outfit),
- * Mild Evil the vampyric cloake, Douse the FLUDA — every trySkill is
- * hasskill-gated, so unworn gear just skips its rung. Douse casts are
+ * Douse the FLUDA; Mild Evil is a plain class skill (classskills.txt:254,
+ * no gear). Every trySkill is hasskill-gated, so unworn gear just skips
+ * its rung. Douse casts are
  * emitted at build time from the daily counter (the ash's consult loop
  * re-reads _douseFoeSuccess per round, which a compiled macro cannot);
  * a success mid-fight costs at most the leftover casts' rounds. */
@@ -76,12 +77,16 @@ function riftCombat(): CombatStrategy {
 function riftOutfit() {
   return {
     modifier: "item",
-    // FLUDA (Douse Foe) / cloake (Mild Evil) / bat wings (Swoop, needs
-    // task.batWings) are the slab-yoink riders; unowned gear is stripped by
-    // createOutfit and gold's rift item% ran 863-928% with them on (B F2).
+    // FLUDA (Douse Foe) / bat wings (Swoop, needs task.batWings) are the
+    // slab-yoink riders — the ash's rift list exactly (UTS:866/882-886);
+    // unowned gear is stripped by createOutfit and gold's rift item% ran
+    // 863-928% with them on (B F2). NO vampyric cloake here: it shares the
+    // back slot with the wings and force-equipping both made Outfit.from
+    // throw "Failed to build outfit" (live 2026-08-31, Rufus Labyrinth) —
+    // and Mild Evil never needed it (class skill).
     equip: [
       monodent,
-      ...$items`Flash Liquidizer Ultra Dousing Accessory, vampyric cloake, bat wings`,
+      ...$items`Flash Liquidizer Ultra Dousing Accessory, bat wings`,
       ...kramcoIfDue(),
       ...(training() < 20 ? $items`sea cowboy hat, sea chaps` : []),
     ],
