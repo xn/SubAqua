@@ -1,5 +1,5 @@
 import { use } from "kolmafia";
-import { $item, get, have, SourceTerminal } from "libram";
+import { $effect, $item, get, have, SourceTerminal } from "libram";
 
 import { Quest } from "../../engine/task";
 import { haveAnywhere } from "../../lib";
@@ -24,8 +24,21 @@ export function sorceressDailies(): Quest {
       {
         // PYEC (ash UTS:2323-2330, !highShiny gate -> usePyec policy). The
         // storage take is a real ronin pull — pullSequence keeps the books.
+        // Affinity gate (B F2): the card EXTENDS running effects, so it must
+        // fire while Shadow Affinity is up — gold used it mid-rift (G:4801,
+        // after the Labyrinth at G:3427) and got 16 free rift fights to the
+        // 08-30 run's 11 (PYEC after the rift, runplans order). This quest
+        // now sits ahead of shadowRiftQuest in the plan, so grimoire picks
+        // this task the moment the first rift entry raises the affinity.
+        // No deadlock on riftless tiers: usePyec is false for high shiny.
+        // Missed-window fallback: if the affinity is already spent (claimed
+        // today, effect gone), fire anyway — a late PYEC still extends the
+        // day's other effects, and an unready-forever task stalls the plan.
         name: "PYEC",
-        ready: () => currentPolicy().usePyec && haveAnywhere(pyec),
+        ready: () =>
+          currentPolicy().usePyec &&
+          haveAnywhere(pyec) &&
+          (have($effect`Shadow Affinity`) || get("_shadowAffinityToday", false)),
         // Complete OR not applicable: an account with no PYEC anywhere (and a
         // tier whose policy declines it) would otherwise sit
         // incomplete-but-unavailable for the whole run.

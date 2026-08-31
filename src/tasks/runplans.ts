@@ -69,11 +69,13 @@ export function buildRunplan(tier: Tier): Task[] {
     currentsQuest(),
     helmetQuest({ summonLane: !high }),
     momQuest({ cyber: !high }),
+    // Sorceress dailies BEFORE the rift (all free actions): the PYEC extends
+    // Shadow Affinity, so it must land before the rift spends it — gold's
+    // PYEC at G:4801 made 16 free rift fights vs the 08-30 run's 11 (B F2).
+    sorceressDailies(),
     ...(high ? [] : [shadowRiftQuest()]),
     corralQuest({ opener: !high, swordLane: high }),
-    // Sorceress endgame. Dailies first (they are free actions), then the mine:
-    // the crappy disguise it builds gates every deepcity zone.
-    sorceressDailies(),
+    // The mine next: the crappy disguise it builds gates every deepcity zone.
     mineQuest(),
     // School before Library: libraryQuest's farm lanes are `ready`-gated on
     // scholarGearReady(), which schoolQuest's "Buy Scholar Gear" supplies.
