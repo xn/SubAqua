@@ -74,6 +74,16 @@ function dropSneakEffects(): void {
   if (have($effect`The Sonata of Sneakiness`)) uneffect($effect`The Sonata of Sneakiness`);
 }
 
+/** The Elementary School sits in the Mer-kin Deepcity, reachable only on a
+ * tamed seahorse — without one every adventure is "That area is not
+ * available" and a zone task no-ops to its attempt limit (live 2026-08-31:
+ * School Unlocks burned all 15 tries while Tame Seahorse was deadlocked).
+ * Gate the zone tasks so a stalled tame reads as "no tasks available" at
+ * the corral, not a school failure. */
+function deepcityOpen(): boolean {
+  return get("seahorseName", "") !== "";
+}
+
 function vocabularyDone(): boolean {
   return get("merkinVocabularyMastery", 0) >= 90 || isKnucklebonesAndSushiEnough();
 }
@@ -134,6 +144,7 @@ export function schoolQuest(): Quest {
         // 2582-2598). Choice handlers 396-398 take every unlock. The short
         // route escapes as soon as the cowl+rope pair lands.
         name: "School Unlocks",
+        ready: deepcityOpen,
         // The cowl+rope escape belongs to the SHORT route only: the ash's
         // long branch loops `while (teacherUnlock == false && !libraryReady())`
         // with no break (UTS:2509), and the break exists solely in the short
@@ -187,7 +198,7 @@ export function schoolQuest(): Quest {
         // re-issuing it — `hasskill` only asks whether the skill is on the
         // page, not whether its use is spent).
         name: "Farm School",
-        ready: () => !isKnucklebonesAndSushiEnough(),
+        ready: () => deepcityOpen() && !isKnucklebonesAndSushiEnough(),
         completed: () =>
           vocabularyDone() ||
           (itemAmount(wordquiz) > 0 && (itemAmount(cheatsheet) > 0 || cheatsheetPullable())),
@@ -233,6 +244,7 @@ export function schoolQuest(): Quest {
         // 5% hallpass drops into more 705s), and keep sneak effects up
         // instead of shrugging them.
         name: "Cowl and Rope",
+        ready: deepcityOpen,
         completed: cowlAndRope,
         prepare: (): void => {
           takeCloset(closetAmount(hallpass), hallpass);

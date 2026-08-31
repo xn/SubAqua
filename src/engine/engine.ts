@@ -301,8 +301,14 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // (see openerOnce()'s comment, combat.ts) — the old `pastround 1` guard
     // never fired, and lassoTrainingCount sat at 0 for the whole 2026-08-27
     // run. openerOnce(…, 1) is that exact guard.
+    // Never at the wild seahorse: Tame Seahorse can now start while training
+    // is still short (its reserve-math ready, corral.ts), and a lone lasso
+    // thrown ahead of the cowbell protocol is the reserved tame lasso wasted
+    // on a boss that shrugs it off.
     if (!undelay(task.freeaction) && isTrainingLasso() && isUnderwaterTask(task)) {
-      combat.startingMacro(openerOnce(Macro.tryItem($item`sea lasso`), 1));
+      combat.startingMacro(
+        openerOnce(Macro.ifNot($monster`wild seahorse`, Macro.tryItem($item`sea lasso`)), 1),
+      );
       outfit.equip($item`sea cowboy hat`);
       outfit.equip($item`sea chaps`);
     }

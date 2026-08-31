@@ -449,10 +449,20 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // maximized so the throws land before the 1M-HP seahorse acts
         // (monsters.txt: Phys+Elem 100 — the lasso is the only win).
         name: "Tame Seahorse",
+        // Reserve math, NOT a hard `training >= 20`: lassosDone() retires the
+        // lasso grind at `training + 3·lassos >= 23` (a 20-point finish plus
+        // one banked lasso for the tame), so the run legitimately arrives
+        // here at training 19 with 2 lassos — live 2026-08-31 the hard gate
+        // deadlocked exactly there (no corral task would fight, the engine
+        // fell through to an unreachable School and burned its 15-try
+        // limit). The regime's own fights finish the training: the engine's
+        // round-1 lasso injection (customize, ash CCS:534) throws while
+        // training < 20 and stops the moment it caps, leaving the reserved
+        // lasso for the tame throw.
         ready: () =>
-          get("lassoTrainingCount", 0) >= 20 &&
           availableAmount(cowbell) >= 3 &&
-          availableAmount(lasso) >= 1,
+          availableAmount(lasso) >= 1 &&
+          get("lassoTrainingCount", 0) + 3 * (availableAmount(lasso) - 1) >= 20,
         completed: tamed,
         do: corral,
         // Upstream 611a915's guard — never banish the cowboy/cow while its
