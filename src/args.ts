@@ -33,8 +33,11 @@ export const args = Args.create(
       help: "Abort at ≤17 turns played if dreadscroll clue 7 is still unknown (top-turncount insurance).",
       default: false,
     }),
-    seedScan: Args.flag({
-      help: "Enable the dreadscroll seed-space scan (native seedfinder port). Disable if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
+    // Args.boolean, NOT Args.flag: a flag can only be SET (grimoire throws
+    // "Flag X cannot be assigned a value"), so a default-true flag could
+    // never be turned off — live 2026-08-31, `subaqua gold=false`.
+    seedScan: Args.boolean({
+      help: "Enable the dreadscroll seed-space scan (native seedfinder port). seedScan=false if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
       default: true,
       setting: "",
     }),
@@ -47,7 +50,7 @@ export const args = Args.create(
       help: "Run at most this many tasks, then stop (incremental testing).",
       setting: "",
     }),
-    gold: Args.flag({
+    gold: Args.boolean({
       help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference UTS 2026-08-21, 41 turns). gold=false disables.",
       default: true,
       setting: "",
