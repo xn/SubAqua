@@ -1,4 +1,13 @@
-import { appearanceRates, itemAmount, Location, Monster } from "kolmafia";
+import {
+  appearanceRates,
+  Familiar,
+  haveEquipped,
+  Item,
+  itemAmount,
+  Location,
+  Monster,
+  myFamiliar,
+} from "kolmafia";
 import {
   $effect,
   $familiar,
@@ -66,11 +75,20 @@ export function bootsRunAvailable(location?: Location): boolean {
  * cooldown. */
 export const freeRunSources: FreeRunSource[] = [
   {
+    // Kick THEN away, matching the CCS exactly (UnderTheSeaCCS.ash:90-93:
+    // `if (banish && freeskill == spring away) use_skill(spring kick);
+    // use_skill(freeskill)`) — the kick BANISHES WITHOUT ENDING THE FIGHT
+    // (FightRequest.java:10185-10187 just records the banish), so it is an
+    // add-on before the escape, not a replacement for it. Porting it as an
+    // upgrade was the live 2026-08-30 gym bleed: kick alone, fight fell to
+    // the kill ladder (turn paid every time), and the kick's single banish
+    // slot churned across juicer/poseur/trainer, releasing the previous
+    // monster each fight for zero net roster effect.
     name: "Spring Kick",
     available: () => have($item`spring shoes`) && !have($effect`Everything Looks Green`),
     remaining: () => (have($item`spring shoes`) && !have($effect`Everything Looks Green`) ? 1 : 0),
     equip: $item`spring shoes`,
-    do: Macro.trySkill($skill`Spring Kick`),
+    do: Macro.trySkill($skill`Spring Kick`).trySkill($skill`Spring Away`),
     banishes: true,
   },
   {
@@ -332,4 +350,30 @@ export function selectFreeRun(
   const selected = run ?? selectFreeKill({ location, target, onceDaily: false });
   if (selected && exclude?.has(selected.name)) return undefined;
   return selected;
+}
+
+/**
+ * Every free-run source the ladder would take right now, chained in ladder
+ * order (the ash's free_run() walks its whole list, UnderTheSeaCCS.ash:74-107;
+ * selectFreeRun() picks one). Sources needing gear count only when that gear
+ * is on — this is meant for delayed task macros built after dress(). Each
+ * step is hasskill/hascombatitem-guarded, so the first one KoL offers ends the
+ * fight and the rest are inert. `banish` opts the banishing rungs in.
+ */
+export function freeRunChainMacro(
+  options: { banish?: boolean; location?: Location; target?: Monster } = {},
+): Macro {
+  const macro = new Macro();
+  const exclude = new Set<string>();
+  for (;;) {
+    const source = selectFreeRun({ ...options, exclude });
+    if (!source) break;
+    exclude.add(source.name);
+    const equip = source.equip;
+    if (equip instanceof Item && !haveEquipped(equip)) continue;
+    if (equip instanceof Familiar && myFamiliar() !== equip) continue;
+    if (equip !== undefined && !(equip instanceof Item) && !(equip instanceof Familiar)) continue;
+    macro.step(source.do);
+  }
+  return macro;
 }

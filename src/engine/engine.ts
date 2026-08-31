@@ -29,7 +29,6 @@ import {
   myTurncount,
   print,
   runCombat,
-  Skill,
   toMonster,
   toSkill,
   toSlot,
@@ -72,7 +71,7 @@ import {
   bangPotionNever,
   unidentifiedBangPotions,
 } from "../resources/bangpotions";
-import { pickBanishSource } from "../resources/banish";
+import { banishChainMacro, pickBanishSource, sourceMacro } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
   freeKillNever,
@@ -356,15 +355,21 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // banish — but keep walking rather than dropping the action entirely.
       const banisher = firstEquippable(outfit, (exclude) => pickBanishSource(location, exclude));
       if (banisher) {
-        const banish =
-          banisher.skill instanceof Skill
-            ? Macro.trySkill(banisher.skill)
-            : Macro.tryItem(banisher.skill);
-        // Macro.step() copies rather than appending to `banish` in place, so
-        // a re-compile cannot double the fallback onto it.
+        // The whole castable ladder, not just `banisher`: one compiled source
+        // served every banish target of the task, and a second target in the
+        // same fight (a waffle re-roll) or a source already out on another
+        // monster left an inert `if hasskill` and a paid kill (gold-trace B
+        // F1). banishChainMacro() is evaluated at compile time, after dress(),
+        // so it sees exactly the gear that landed; `banisher` is what made
+        // that gear land. If nothing is castable after all, fire the single
+        // pick so the macro is never a bodyless `if`.
+        const fallback = fallbackMacro({ fish: true });
         resources.provide("banish", {
-          do: () =>
-            Macro.ifNot(freeMonsters, Macro.step(banish)).step(fallbackMacro({ fish: true })),
+          do: () => {
+            const chain = banishChainMacro(location, { paid: true });
+            const banish = chain.components.length > 0 ? chain : sourceMacro(banisher);
+            return Macro.ifNot(freeMonsters, banish).step(fallback);
+          },
         });
       }
     }

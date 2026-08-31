@@ -1,4 +1,5 @@
-import { availableAmount, itemAmount, retrieveItem, visitUrl } from "kolmafia";
+import { OutfitSpec } from "grimoire-kolmafia";
+import { availableAmount, Item, itemAmount, Monster, retrieveItem, visitUrl } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -12,7 +13,7 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, killMacro, openerOnce } from "../../engine/combat";
+import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { HP_FLOOR_PERCENT, recover, runawayHeal } from "../../lib";
 import {
@@ -23,7 +24,13 @@ import {
   superItemDropEffects,
   survivalEffects,
 } from "../../lib/moods";
-import { assertBanishHeld } from "../../resources/banish";
+import {
+  assertBanishHeld,
+  banishActive,
+  banishChainMacro,
+  pickBanishSource,
+} from "../../resources/banish";
+import { freeRunChainMacro } from "../../resources/freerun";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
@@ -34,6 +41,10 @@ const seahorse = $monster`wild seahorse`;
 const cowbell = $item`sea cowbell`;
 const lasso = $item`sea lasso`;
 const waffle = $item`waffle`;
+const tumbleweed = $monster`tumbleweed`;
+const tearaway = $item`tearaway pants`;
+/** The three non-seahorse corral draws, in the ash's order. */
+const draws = [rustler, cowboy, cow];
 // eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
 // (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
 // eslint-disable-next-line libram/verify-constants
@@ -60,6 +71,67 @@ function lassosDone(): boolean {
 
 function tamed(): boolean {
   return get("seahorseName") !== "";
+}
+
+/** Which draws the Tame Seahorse macro armed a banish for, stamped at macro
+ * compile — the same evaluation that decides the lane. Grimoire compiles
+ * combat BEFORE task.prepare() (engine execute(): setCombat, then prepare), so
+ * by assert time the current attempt's compile has already restamped: the
+ * assert must read the PREVIOUS compile's list, kept in armedPrev by the shift
+ * inside tamingRegimeMacro(). A draw deliberately left unbanished (the last
+ * one standing, ash CCS:804-811; a cow while cowbells are short) is a designed
+ * outcome, never a failed banish. undefined until enough compiles have run,
+ * which assertBanishHeld's first-call free pass covers. */
+let armedNow: Monster[] | undefined;
+let armedPrev: Monster[] | undefined;
+
+/**
+ * Ash CCS:804-811 (taming regime): banish a draw only while at least one OTHER
+ * draw is still unbanished — never the last one standing, or the corral serves
+ * nothing but tumbleweeds (live 2026-08-29/30: three paid tumbleweed kills at
+ * Y:6368-6452 after all three were banished). And never a cow while the three
+ * cowbells for the throw are not in hand (the cow is the only cowbell source;
+ * user rule 2026-08-29) nor a cowboy while lassoless (the only lasso source).
+ */
+function drawBanishable(target: Monster): boolean {
+  if (!draws.some((other) => other !== target && !banishActive(other))) return false;
+  if (target === cow && availableAmount(cowbell) < 3) return false;
+  if (target === cowboy && availableAmount(lasso) < 1) return false;
+  return true;
+}
+
+/**
+ * The ash corral handler in taming mode (UnderTheSeaCCS.ash:792-859), as one
+ * delayed general macro built per fight after dress(): plants get the pants
+ * (+15% item, FightRequest.java:11101-11106) → banish block → waffle (tamer
+ * inlined behind the throw) → banish block AGAIN for the re-rolled draw (the
+ * ash consult re-runs every round; a BALLS macro does not, so the block is
+ * emitted twice) → plain free runs on whatever is left → the engine's kill
+ * default. The banish block chains EVERY castable source (banishChainMacro;
+ * gold used Curveball, Feel Hatred and two ink-bladder runs across five free
+ * corral visits, G:5406-6069), paid kill-banishes last — the ash's own
+ * Heartstone / Lightning Bolt fallbacks at CCS:818-826.
+ */
+function tamingRegimeMacro(): Macro {
+  armedPrev = armedNow;
+  armedNow = draws.filter(drawBanishable);
+  const armed = armedNow;
+  const banishBlock = (): Macro => {
+    const chain = banishChainMacro(corral, { paid: true });
+    const block = new Macro();
+    if (chain.components.length === 0) return block;
+    for (const target of armed) block.if_(target, chain);
+    return block;
+  };
+  const supplied = availableAmount(cowbell) >= 3 && availableAmount(lasso) >= 1;
+  const runs = freeRunChainMacro({ location: corral });
+  const macro = new Macro()
+    .if_(tumbleweed, Macro.trySkill($skill`Tear Away your Pants!`))
+    .step(banishBlock())
+    .step(supplied ? waffleMacro() : new Macro())
+    .step(banishBlock());
+  if (runs.components.length > 0) macro.ifNot(seahorse, runs);
+  return macro;
 }
 
 /**
@@ -363,26 +435,30 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // monster, so a cow that came out of the waffle is still banished.
         combat: new CombatStrategy()
           .macro(tamingMacro, seahorse)
-          .macro(waffleMacro)
-          // The cow is the ONLY cowbell source and every taming throw eats
-          // three cowbells whether it lands or not, so "leather done" is not
-          // a permanent state — live 2026-08-29: cow banished here (Feel
-          // Hatred, then Spring Kick = gone until rollover), the throw
-          // failed, cowbells 0, and Corral Leather woke up with nothing to
-          // farm. User rule: never banish the cow unless the cowbells for
-          // the throw are in hand; otherwise kill it for its cowbell drop.
-          // A monster macro compiles ahead of the action ladder, so a kill
-          // here ends the fight before the banish action can fire; the empty
-          // macro when stocked falls through to `.banish` below as before.
-          .macro(() => (availableAmount(cowbell) >= 3 ? new Macro() : killMacro()), cow)
-          .banish($monsters`Mer-kin rustler, sea cowboy, sea cow`)
+          // Everything else the ash does in this regime, in its order — see
+          // tamingRegimeMacro(). No `.banish` action: the block inside picks
+          // its own targets per fight (never the last draw standing), which a
+          // static action list cannot express.
+          .macro(tamingRegimeMacro)
           .kill(),
         // No crystal ball while taming: with the ball on, the next corral
         // fight is LOCKED to its prediction (drawn from the zone's current
         // pool, which the wild seahorse's 80% rejection all but excludes) —
         // live 2026-08-29: six straight predicted tumbleweeds, then the
         // 12-attempt soft limit. grimoire's `avoid` also strips it if worn.
-        outfit: { modifier: "initiative", avoid: [$item`miniature crystal ball`] },
+        outfit: (): OutfitSpec => {
+          // With no `.banish` action the engine equips no banish gear here, so
+          // the top-ranked source's gear is asked for directly (ash UTS:2487-
+          // 2500 does the same with its conditional equip list). Tearaway
+          // pants only when every draw is already banished — carried-over
+          // banishes, since drawBanishable() never produces that state — the
+          // ash's own gate (UTS:2499-2504).
+          const equip: Item[] = [];
+          const top = pickBanishSource(corral);
+          if (top?.equip) equip.push(top.equip);
+          if (draws.every(banishActive) && have(tearaway)) equip.push(tearaway);
+          return { modifier: "initiative", equip, avoid: [$item`miniature crystal ball`] };
+        },
         // The unready-seahorse branch of seahorseMacro() is Macro.runaway()
         // .repeat() against Atk 500 with Init 10000 — every failed run is a
         // free round of damage, and enough of them is a lost combat and a hard
@@ -391,8 +467,11 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         prepare: (): void => {
           // "The wild seahorse is not spawning; check banishes" is exactly the
           // failure this makes immediate: the seahorse only shows once the
-          // other three draws are out of the way.
-          assertBanishHeld([rustler, cowboy, cow], corral, "Tame Seahorse");
+          // other draws are out of the way. Only the draws the PREVIOUS
+          // fight's compile armed are judged (armedPrev — this attempt's
+          // compile has already restamped armedNow by now); a draw left
+          // unbanished on purpose is a designed outcome, not a failed banish.
+          assertBanishHeld(armedPrev ?? [], corral, "Tame Seahorse");
           recover();
           if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },

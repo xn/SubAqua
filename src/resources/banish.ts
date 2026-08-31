@@ -2,6 +2,7 @@ import {
   abort,
   appearanceRates,
   getFuel,
+  haveEquipped,
   Item,
   Location,
   Monster,
@@ -11,7 +12,7 @@ import {
   Skill,
   toMonster,
 } from "kolmafia";
-import { $class, $effect, $item, $skill, AsdonMartin, get, have } from "libram";
+import { $class, $effect, $item, $skill, AsdonMartin, get, have, Macro } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
@@ -20,6 +21,13 @@ export type BanishSource = {
   /** Gear that must be worn to cast it (snokebomb needs none). */
   equip?: Item;
   available: () => boolean;
+  /** Full macro when a bare trySkill/tryItem of `skill` is not enough (the
+   * spring shoes' kick banishes without ending the fight and must be followed
+   * by Spring Away). Engine customize() prefers this over `skill`. */
+  macro?: () => Macro;
+  /** Kills the monster and costs the turn (BanishManager isTurnFree=false).
+   * Chained only as a tail fallback, never preferred over a free source. */
+  paid?: boolean;
 };
 
 /** Ash banMap (iotm.ash:1073-1085) plus snokebomb, which the ash kept outside
@@ -56,15 +64,16 @@ export const banishSources: BanishSource[] = [
     // is refused while ELG is up, so an ungated copy of this entry would hand
     // the macro a banish step that does nothing. There used to be exactly such
     // a duplicate further down the list; it is gone.
+    // Kick then Spring Away: the kick only RECORDS the banish and the fight
+    // goes on (FightRequest.java:10185-10187; wiki Banishing table: "Does not
+    // end combat!"). Live 2026-08-30 the bare kick paid 15 gym fights while
+    // its one banish slot churned across the roster. Same pairing as
+    // freerun.ts's Spring Kick rung.
     name: "Spring Kick",
     skill: $skill`Spring Kick`,
     equip: $item`spring shoes`,
     available: () => have($item`spring shoes`) && !have($effect`Everything Looks Green`),
-  },
-  {
-    name: "System Sweep",
-    skill: $skill`System Sweep`,
-    available: () => have($skill`System Sweep`),
+    macro: () => Macro.trySkill($skill`Spring Kick`).trySkill($skill`Spring Away`),
   },
   {
     name: "Feel Hatred",
@@ -75,9 +84,14 @@ export const banishSources: BanishSource[] = [
     name: "Latte",
     skill: $skill`Throw Latte on Opponent`,
     equip: $item`latte lovers member's mug`,
-    available: () =>
-      (!get("_latteBanishUsed") || (get("_latteRefillsUsed") < 2 && myTurncount() < 1000)) &&
-      have($item`latte lovers member's mug`),
+    // Spent-fill only, like the ash (UnderTheSeaGlobals.ash:485): KoL grants
+    // Throw Latte only while the current fill's banish is UNSPENT, and no
+    // code path here refills the mug — counting remaining refills as
+    // availability (`_latteRefillsUsed < 2`) nominated a skill the character
+    // did not have. Live 2026-08-30 Tame Seahorse: mug worn, _latteBanishUsed
+    // true, `hasskill Throw Latte` false every fight, every "banish" degraded
+    // to a kill, and assertBanishHeld (correctly) aborted.
+    available: () => !get("_latteBanishUsed") && have($item`latte lovers member's mug`),
   },
   {
     name: "Reflex Hammer",
@@ -108,42 +122,98 @@ export const banishSources: BanishSource[] = [
     equip: $item`mafia middle finger ring`,
     available: () => !get("_mafiaMiddleFingerRingUsed") && have($item`mafia middle finger ring`),
   },
+  // ---- Everything above this line is turn-free (BanishManager.java isTurnFree
+  // = true: Bowl a Curveball :77, Spring-Loaded Front Bumper :129, Spring Kick
+  // :128, Feel Hatred :91, Throw Latte :137, Reflex Hammer :116, snokebomb
+  // :126, KGB dart :101, stuffed yam stinkbomb :120, mafia middle finger ring
+  // :105). Everything below KILLS the monster and costs the turn (isTurnFree =
+  // false: Sea *dent :118, Heartstone %banish :96, Monkey Slap :106, Batter
+  // Up! :73). They stay LAST as fallbacks, never preferences: when no free
+  // banish is left, a `banish` action would degrade to a paid kill anyway, and
+  // a paid kill that also banishes is strictly better than one that does not
+  // (the wiki's Banishing table calls these Turntaking/Kill; none keeps drops,
+  // which is fine for a monster the task wants gone). Path-only sources
+  // (System Sweep — Grey You; Banishing Shout — Boris) were removed: nothing
+  // in the Avail. = Path rows of that table can fire in this path.
   {
-    name: "Banishing Shout",
-    skill: $skill`Banishing Shout`,
-    available: () => have($skill`Banishing Shout`),
+    // 11/day, rollover-long; preferred over the Heartstone for supply.
+    name: "Sea *dent",
+    paid: true,
+    skill: $skill`Sea *dent: Throw a Lightning Bolt`,
+    equip: $item`Monodent of the Sea`,
+    available: () => have($item`Monodent of the Sea`) && get("_seadentLightningUsed", 0) < 11,
   },
   {
-    name: "Batter Up",
-    skill: $skill`Batter Up!`,
-    equip: $item`seal-clubbing club`,
+    // Heartstone: GONE — 5/day, 50 turns, castable underwater (user-verified
+    // 2026-08-31). mafia records the banisher as "Heartstone %banish"
+    // (BanishManager.java:96), so the literal-prefix match below is on
+    // "Heartstone". The attunement must have unlocked the banish word
+    // (heartstoneBanishUnlocked) and the stone must be worn (accessory).
+    name: "Heartstone",
+    paid: true,
+    skill: $skill`Heartstone: %banish`,
+    equip: $item`Heartstone`,
     available: () =>
-      have($skill`Batter Up!`) && myClass() === $class`Seal Clubber` && myFury() >= 5,
+      have($item`Heartstone`) &&
+      get("heartstoneBanishUnlocked", false) &&
+      get("_heartstoneBanishUsed", 0) < 5,
   },
   {
+    // Practically never: every in-run paw wish (lassos) disables it.
     name: "Monkey Paw",
+    paid: true,
     skill: $skill`Monkey Slap`,
     equip: $item`cursed monkey's paw`,
     available: () => have($item`cursed monkey's paw`) && get("_monkeyPawWishesUsed", 0) === 0,
   },
   {
-    // Last on purpose, and it stays last: the bolt is the ONE banish in this
-    // list that is not turn-free. BanishManager.java:118 records it as
-    // SEADENT_LIGHTNING("Sea *dent", -1, 1, false, ROLLOVER_RESET) — the 4th
-    // field is isTurnFree — while every source above it that the corral would
-    // otherwise reach IS turn-free: Bowl a Curveball (:77), Spring-Loaded Front
-    // Bumper (:129), Spring Kick (:128), Feel Hatred (:91), Reflex Hammer
-    // (:116), snokebomb (:126), Throw Latte (:137), KGB dart (:101). Its 11/day
-    // supply looks tempting for a long-lived zone banish (the garbo fork
-    // resources/banish.ts:68-74, seaDent.ts:19-22), but preferring it there
-    // would trade a free banish for a spent adventure — so it is a fallback for
-    // when nothing above is available, never a preference.
-    name: "Sea *dent",
-    skill: $skill`Sea *dent: Throw a Lightning Bolt`,
-    equip: $item`Monodent of the Sea`,
-    available: () => have($item`Monodent of the Sea`) && get("_seadentLightningUsed", 0) < 11,
+    // Seal Clubber only.
+    name: "Batter Up",
+    paid: true,
+    skill: $skill`Batter Up!`,
+    equip: $item`seal-clubbing club`,
+    available: () =>
+      have($skill`Batter Up!`) && myClass() === $class`Seal Clubber` && myFury() >= 5,
   },
 ];
+
+/** The macro that fires one source: its override, else a guarded skill/item. */
+export function sourceMacro(source: BanishSource): Macro {
+  return (
+    source.macro?.() ??
+    (source.skill instanceof Skill ? Macro.trySkill(source.skill) : Macro.tryItem(source.skill))
+  );
+}
+
+/**
+ * EVERY source castable right now at `location`, chained in ladder order —
+ * available, not already holding a monster the zone still serves, and with
+ * its gear worn (or none needed). Each step is hasskill/hascombatitem-guarded
+ * by trySkill/tryItem, so the first one KoL offers ends the fight and the
+ * rest are inert. Built at compile time (after dress()), the same point
+ * grimoire undelays resource macros.
+ *
+ * Why a chain and not one pick: live 2026-08-30 Tame Seahorse compiled a
+ * single `Bowl a Curveball` while Reflex Hammer 0/3, Snokebomb 0/3 and Feel
+ * Hatred 1/3 sat unused — the ball was already out on the cow, so the
+ * waffled rustler's "banish" was an empty `if hasskill` and the fight fell to
+ * a paid kill (gold-trace B F1). The ash's free_run(page_text, true) walks
+ * its whole list every round (UnderTheSeaCCS.ash:74-107).
+ */
+export function banishChainMacro(location?: Location, opts: { paid?: boolean } = {}): Macro {
+  const macro = new Macro();
+  for (const source of banishSources) {
+    if (source.paid && !opts.paid) continue;
+    if (source.equip && !haveEquipped(source.equip)) continue;
+    if (!source.available()) continue;
+    if (location) {
+      const current = banishedBy(source);
+      if (current && (appearanceRates(location)[current.name] ?? 0) > 0) continue;
+    }
+    macro.step(sourceMacro(source));
+  }
+  return macro;
+}
 
 type BanishRecord = { monster: Monster; banisher: string };
 
@@ -260,15 +330,24 @@ export function assertBanishHeld(targets: Monster[], location: Location, taskNam
   const last = toMonster(get("lastEncounter"));
   if (!targets.includes(last)) return;
   if (banishActive(last)) return;
-  // A waffle re-roll (the task macros throw one first) replaces the drawn
-  // monster mid-fight, and mafia leaves lastEncounter on the ORIGINAL draw;
-  // the banish, if any, landed on the replacement. Judge that instead — live
-  // 2026-08-29 Tame Seahorse: cowboy drawn, waffled into a sea cow, cow
-  // banished by Feel Hatred, and this abort fired on the unbanished cowboy.
+  // A waffle re-roll (the task macros throw one first) or a backup-camera
+  // copy (engine customize() prepends the back-up step ahead of every task
+  // macro, so the copy is what the banish branch then sees) replaces the
+  // drawn monster mid-fight, and mafia leaves lastEncounter on the ORIGINAL
+  // draw; the banish, if any, was owed to the replacement. Judge that
+  // instead — live 2026-08-29 Tame Seahorse: cowboy drawn, waffled into a
+  // sea cow, cow banished by Feel Hatred, and this abort fired on the
+  // unbanished cowboy; live 2026-08-30 Outpost Lockkey: burglar drawn,
+  // backed up into a free healer copy, and this abort fired on the burglar
+  // the fight never contained past round 1.
   // lastCopyableMonster is mafia's post-transform monster (set at fight
   // end); it is stale for a non-copyable replacement, so a replacement
   // outside the target set also stands down rather than judging a guess.
-  if (get("_lastCombatActions", "").includes(`it${$item`waffle`.id};`)) {
+  const actions = get("_lastCombatActions", "");
+  if (
+    actions.includes(`it${$item`waffle`.id};`) ||
+    actions.includes(`sk${$skill`Back-Up to your Last Enemy`.id};`)
+  ) {
     const replacement = get("lastCopyableMonster");
     if (!replacement || !targets.includes(replacement) || banishActive(replacement)) return;
   }
