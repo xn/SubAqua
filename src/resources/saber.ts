@@ -91,6 +91,12 @@ export function prayerbeadsShort(): boolean {
 }
 
 export function seaCowNeeded(): boolean {
+  // Once the seahorse is tamed the corral is over — leather/cowbell counts
+  // no longer bind a Force, and the researcher's bank must see the charge
+  // released (F ledger #3: two cow Forces on 08-30 left
+  // forceGranted("researcher") false and the library researcher was farmed
+  // at paid turns; gold Forced it at G:7507 for both scrolls).
+  if (get("seahorseName", "") !== "") return false;
   return (
     availableAmount($item`sea leather`) +
       availableAmount($item`sea chaps`) +

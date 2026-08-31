@@ -30,6 +30,7 @@ import {
   banishChainMacro,
   pickBanishSource,
 } from "../../resources/banish";
+import { bczAffordable } from "../../resources/freekill";
 import { freeRunChainMacro } from "../../resources/freerun";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
@@ -325,13 +326,37 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                       allowPaid: true,
                     }
                   : undefined,
+              // Ash CCS:763-766: after the Back-Up lands (the engine PREPENDS
+              // its starting macro in customize, so it runs first), Refracted
+              // Gaze + McTwist run on the COPY, whatever it is. B F4: the
+              // 08-30 copy (slithering thing) fell to the paid kill ladder
+              // because McTwist was scoped to the sea cow only. Guarded off
+              // the rustler (the banish handles him when no backup armed) and
+              // the seahorse (boss; skills fail). Gaze gated on affordability
+              // (submysticality over a 40k floor, freekill.ts bczAffordable).
               combat: new CombatStrategy()
-                .macro(() => openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
+                .startingMacro(() =>
+                  openerOnce(
+                    Macro.ifNot(
+                      $monsters`Mer-kin rustler, wild seahorse`,
+                      (bczAffordable("_bczRefractedGazeCasts", "submysticality", 40000)
+                        ? Macro.trySkill($skill`BCZ: Refracted Gaze`)
+                        : new Macro()
+                      ).trySkill($skill`Do an epic McTwist!`),
+                    ),
+                  ),
+                )
                 .kill($monsters`sea cow, sea cowboy`)
                 .banish(rustler)
                 .macro(seahorseMacro, seahorse)
                 .kill(),
-              outfit: { modifier: "item", equip: $items`pro skateboard` },
+              // BCZ gem worn so the gaze is castable — gold socketed it into
+              // the codpiece for exactly this fight (G:4529-4534); same equip
+              // pattern as freekill.ts's Sweat Bullets source.
+              outfit: {
+                modifier: "item",
+                equip: $items`pro skateboard, blood cubic zirconia`,
+              },
               // Ash UTS:1650-1651 spends the once-a-day squint on this
               // one-turn corral opener when it is still unused.
               effects: () =>
