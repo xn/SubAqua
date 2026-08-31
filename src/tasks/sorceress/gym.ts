@@ -10,7 +10,7 @@ import {
   useFamiliar,
   visitUrl,
 } from "kolmafia";
-import { $coinmaster, $item, $location, $slot, get, have } from "libram";
+import { $coinmaster, $item, $items, $location, $slot, get, have } from "libram";
 
 import {
   ensureHelperBreathing,
@@ -84,6 +84,16 @@ export function gymnasiumTurn(): void {
   const famBreather = requiredFamiliarBreather();
   if (famBreather !== $item.none) pieces.push(`+equip ${famBreather.name}`);
   for (const it of runGear.items) pieces.push(`+equip ${it.name}`);
+  // Ash freeKill() wears the Sheriff set in the gym (G:659) so Assert your
+  // Authority is castable when the run ladder dries up — D F4. The gym is a
+  // sheriffZone (freekill.ts) and gymFreeRun()'s worn-check refuses unworn
+  // sources, so an unworn set means the charges silently never fire. Pistol
+  // is a 1-handed weapon, badge/moustache accessories (equipment.txt) — no
+  // slot fight with the hat/chaps training pins above.
+  const sheriffSet = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
+  if (get("_assertYourAuthorityCast", 0) < 3 && sheriffSet.every((it) => have(it))) {
+    for (const it of sheriffSet) pieces.push(`+equip ${it.name}`);
+  }
   // Re-pin the lasso gear (audit item 4). `Guard Grind` is `underwater: true`
   // and non-`freeaction`, so engine customize() pins sea cowboy hat + sea chaps
   // and dress() wears them — and then this maximize, which runs afterwards,
