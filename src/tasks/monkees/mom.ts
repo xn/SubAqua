@@ -249,7 +249,21 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // equip through the unforced/acc1-3 path) and createOutfit
               // throws on that failure.
               name: "Abyss Habitats",
-              ready: () => cyberKit() && have($skill`Just the Facts`) && have(glass),
+              // fightsLeft gate: KoL does not offer Recall Facts: Monster
+              // Habitats while a habitat chain is still active — live
+              // 2026-08-31 the run entered the Abyss with 3 of the Outpost's
+              // golem-chain fights stranded (golems cannot materialize
+              // underwater), `hasskill 7485` was false on five straight
+              // slithering/eye fights, and the task spun to its 8-try limit.
+              // Not ready hands the engine to Cyber Mom (ready: fightsLeft >
+              // 0), which burns the stranded fights inside CyberRealm's free
+              // fights; this task then wakes and recalls. completed() already
+              // covers the post-recall state (habitat is an abyss monster).
+              ready: () =>
+                cyberKit() &&
+                have($skill`Just the Facts`) &&
+                have(glass) &&
+                get("_monsterHabitatsFightsLeft", 0) === 0,
               completed: () => {
                 const habitat = get("_monsterHabitatsMonster");
                 return (
