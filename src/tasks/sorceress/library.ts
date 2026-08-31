@@ -12,7 +12,7 @@ import {
 import { $effect, $item, $location, $monster, get, have, Macro } from "libram";
 
 import { CombatStrategy } from "../../engine/combat";
-import { sneakFamiliar } from "../../engine/outfit";
+import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import { godRunGuardCheck } from "../../lib/dreadscroll";
@@ -135,7 +135,13 @@ function farmOutfit(): OutfitSpec {
   const accessory = bczWanted() ? [zirconia] : [];
   const avoid = bczWanted() ? [] : [zirconia];
   if (availableAmount(dreadscroll) === 0) {
-    return { modifier: "item", equip: [...scholarPieces, ...weapon, ...accessory], avoid };
+    // Kramco when the goblin is due: gold's library farm was carried by the
+    // sausage goblin + Back-Up chain (G:7414-7582, C F3).
+    return {
+      modifier: "item",
+      equip: [...scholarPieces, ...weapon, ...accessory, ...kramcoIfDue()],
+      avoid,
+    };
   }
   return {
     modifier: "-combat",

@@ -19,6 +19,7 @@ import {
   findFairyMultiplier,
   findLeprechaunMultiplier,
   get,
+  getKramcoWandererChance,
   have,
   maxBy,
   totalFamiliarWeight,
@@ -176,6 +177,17 @@ export function chooseFamiliar(): Familiar {
   const best = maxBy(candidates, "meat").familiar;
   print(`Best meat familiar underwater: ${best}`, "blue");
   return best;
+}
+
+/** Kramco rides the off-hand on +item farm fights when a sausage goblin is
+ * GUARANTEED (ash delay() pattern, G:497) — the goblin is a free fight AND
+ * the free lastCopyableMonster that seeds backup:{targets:"free"} chains
+ * (C F3: 08-30's backup charges sat at 8/11 all day with no goblin to
+ * copy). Guaranteed-only so ordinary fights keep their +item off-hand. */
+export function kramcoIfDue(): Item[] {
+  return have($item`Kramco Sausage-o-Matic™`) && getKramcoWandererChance() >= 1
+    ? $items`Kramco Sausage-o-Matic™`
+    : [];
 }
 
 /** Default item familiar for +item tasks that name none (B F2: the whole

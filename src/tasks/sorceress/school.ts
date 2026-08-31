@@ -25,7 +25,7 @@ import {
 } from "libram";
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
-import { sneakFamiliar } from "../../engine/outfit";
+import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
@@ -206,7 +206,8 @@ export function schoolQuest(): Quest {
           .kill(),
         outfit: () => ({
           modifier: availableAmount(bunwig) > 0 ? "item" : "item, hat drop",
-          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
+          // kramcoIfDue: the goblin seeds this task's backup chain (C F3).
+          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`, ...kramcoIfDue()],
         }),
         effects: itemDropEffects,
         limit: { soft: 30, message: "School farming is not producing cheatsheets/wordquizzes." },
