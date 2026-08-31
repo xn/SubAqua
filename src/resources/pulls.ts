@@ -116,6 +116,29 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`comb jelly`),
   },
   {
+    // C F1: the hallpass supply IS the cowl/rope hunt — each "Halls Passing
+    // in the Night" superlikely consumes one pass for one piece. Reserve one
+    // whenever the lounge is open, a piece is missing, and passes are short
+    // of the missing count, so the pull at school.ts's prepare clears
+    // pullBudgetAllows' `>=` self-branch (the strict `>` discretionary
+    // branch refused it all of 08-30: 16 pulls used, 5 reservations idle).
+    name: "Mer-kin hallpass",
+    item: $item`Mer-kin hallpass`,
+    needed: () =>
+      get("merkinElementaryTeacherUnlock", false) &&
+      // A scholar piece fills a slot too (school.ts cowlAndRope()).
+      availableAmount($item`Mer-kin hallpass`) <
+        Number(
+          availableAmount($item`Mer-kin facecowl`) === 0 &&
+            availableAmount($item`Mer-kin scholar mask`) === 0,
+        ) +
+          Number(
+            availableAmount($item`Mer-kin waistrope`) === 0 &&
+              availableAmount($item`Mer-kin scholar tailpiece`) === 0,
+          ) &&
+      !pulledToday($item`Mer-kin hallpass`),
+  },
+  {
     // Skate-war Fishy: hold the blade while the war is live and Holey Rollers
     // hasn't been queued (ash also gated on path 55 — always true here).
     // The map gate is skateWarOpen()'s (skatepark.ts): skateParkStatus keeps

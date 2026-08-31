@@ -30,6 +30,8 @@ import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { freeMonsters } from "../../resources/backup";
+import { bczAffordable } from "../../resources/freekill";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 import { sourceEnhanceItems } from "./daily";
@@ -74,6 +76,29 @@ function dropSneakEffects(): void {
 
 function vocabularyDone(): boolean {
   return get("merkinVocabularyMastery", 0) >= 90 || isKnucklebonesAndSushiEnough();
+}
+
+const monodent = $item`Monodent of the Sea`;
+
+/** Ash school case (CCS:990-1011): Talk to Some Fish converts the draw,
+ * then BCZ: Refracted Gaze yoinks ~5 Mer-kin items — hallpasses included.
+ * Gold banked 10 passes in 11 free school fights this way (C F4/F1);
+ * 08-30's plain kill ladder averaged ~1 item per fight. Gaze gated on
+ * affordability (submysticality over a 40k floor, CCS:113); the fish-table
+ * yield is UNVERIFIED (BRIEF flag) but the gaze's 5%-hallpass stack alone
+ * justifies the rounds. Never on free monsters (a converted copy loses
+ * lastCopyableMonster — see fishMacro) and never on the monitor (the
+ * cheatsheet/Duplicate fight). Round 3, past the backup/lasso openers. */
+function schoolLootMacro(): Macro {
+  const steps = new Macro();
+  if (have($skill`Sea *dent: Talk to Some Fish`)) {
+    steps.trySkill($skill`Sea *dent: Talk to Some Fish`);
+  }
+  if (bczAffordable("_bczRefractedGazeCasts", "submysticality", 40000)) {
+    steps.trySkill($skill`BCZ: Refracted Gaze`);
+  }
+  if (steps.components.length === 0) return new Macro();
+  return Macro.ifNot([...freeMonsters, monitor], openerOnce(steps, 3));
 }
 
 export function schoolQuest(): Quest {
@@ -127,10 +152,12 @@ export function schoolQuest(): Quest {
         },
         do: school,
         backup: { targets: "free" }, // ash CCS:969-971
-        combat: new CombatStrategy().kill(),
+        combat: new CombatStrategy().macro(schoolLootMacro).kill(),
         outfit: () => ({
           modifier: "-combat",
-          equip: crappyPieces,
+          // Monodent (Some Fish) + BCZ gem (Refracted Gaze) pinned for the
+          // loot macro (C F4).
+          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
@@ -175,10 +202,11 @@ export function schoolQuest(): Quest {
         peridot: monitor,
         combat: new CombatStrategy()
           .macro(() => openerOnce(Macro.trySkill($skill`Duplicate`)), monitor)
+          .macro(schoolLootMacro)
           .kill(),
         outfit: () => ({
           modifier: availableAmount(bunwig) > 0 ? "item" : "item, hat drop",
-          equip: crappyPieces,
+          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
         }),
         effects: itemDropEffects,
         limit: { soft: 30, message: "School farming is not producing cheatsheets/wordquizzes." },
@@ -208,20 +236,23 @@ export function schoolQuest(): Quest {
         prepare: (): void => {
           takeCloset(closetAmount(hallpass), hallpass);
           sourceEnhanceItems();
-          if (
-            (availableAmount(facecowl) > 0 || availableAmount(waistrope) > 0) &&
-            availableAmount(hallpass) === 0 &&
-            pullBudgetAllows(hallpass)
-          ) {
+          // C F1: pull whenever passes are short and the budget clears — the
+          // old first-piece gate meant the pull could never seed the FIRST
+          // superlikely (a reservation in pulls.ts now backs this pull).
+          if (availableAmount(hallpass) === 0 && pullBudgetAllows(hallpass)) {
             pullSequence(hallpass);
           }
           recover();
         },
         do: school,
-        combat: new CombatStrategy().kill(),
+        backup: { targets: "free" }, // same lane as School Unlocks (C F2)
+        combat: new CombatStrategy().macro(schoolLootMacro).kill(),
         outfit: () => ({
-          modifier: "-combat, item",
-          equip: crappyPieces,
+          // Pure -combat (ash UTS:2679 "-combat,sea"): mafia weights comma
+          // objectives equally, so "+item" gear was outbidding -combat gear
+          // on the NC hunt (C F1/F5); +item rides the effects instead.
+          modifier: "-combat",
+          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,

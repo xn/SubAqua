@@ -9,6 +9,7 @@ import {
 } from "grimoire-kolmafia";
 import {
   autosell,
+  availableAmount,
   booleanModifier,
   canEquip,
   cliExecute,
@@ -1039,7 +1040,19 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     const stolen = get("dolphinItem", $item.none);
     // Library clue items too: live 2026-08-28 a knucklebone and two
     // killscrolls were stolen un-whistled, each re-farmed at a paid turn.
-    const alwaysWhistle = $items`sea lasso, sea leather, sea cowbell, Mer-kin knucklebone, Mer-kin killscroll, Mer-kin healscroll, Mer-kin worktea`;
+    const alwaysWhistle = [
+      ...$items`sea lasso, sea leather, sea cowbell, Mer-kin knucklebone, Mer-kin killscroll, Mer-kin healscroll, Mer-kin worktea`,
+      // Hallpasses feed the cowl/rope superlikely while a piece is missing
+      // (C F1: two stolen passes went un-whistled with a whistle in hand,
+      // Y:8013/9427, each re-farmed the slow way). Scholar pieces satisfy a
+      // slot the same way school.ts cowlAndRope() counts them.
+      ...((availableAmount($item`Mer-kin facecowl`) === 0 &&
+        availableAmount($item`Mer-kin scholar mask`) === 0) ||
+      (availableAmount($item`Mer-kin waistrope`) === 0 &&
+        availableAmount($item`Mer-kin scholar tailpiece`) === 0)
+        ? $items`Mer-kin hallpass`
+        : []),
+    ];
     const outpostWhistle = $items`Mer-kin prayerbeads, rusty rivet`;
     if (
       have($item`durable dolphin whistle`) &&
