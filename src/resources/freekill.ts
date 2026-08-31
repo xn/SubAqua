@@ -1,4 +1,4 @@
-import { getProperty, itemAmount, Location, Monster, myBasestat, Stat } from "kolmafia";
+import { itemAmount, Location, Monster, Skill } from "kolmafia";
 import {
   $effect,
   $item,
@@ -7,6 +7,7 @@ import {
   $locations,
   $monster,
   $skill,
+  BloodCubicZirconia,
   get,
   have,
   Macro,
@@ -47,35 +48,24 @@ export type FreeKillSource = CombatResource & {
   avoidAt?: Location[];
 };
 
-/** Ash BCZcost (iotm.ash:1182-1198): substat price of the NEXT cast of a BCZ
- * skill. Sequence 11, 23, 37, 110, 230, 370, …; the 13th cast is a flat 420k.
- * Ported statement-for-statement, including the in-place decrement. */
-export function bczCost(counterPref: string): number {
-  let cast = Number(getProperty(counterPref) || "0");
-  if (cast === 12) return 420000;
-  if (cast > 12) cast -= 1;
-  const tier = Math.floor(cast / 3);
-  const mod = cast % 3;
-  const base = [11, 23, 37][mod];
-  return base * 10 ** (cast < 12 || (cast > 12 && mod === 0) ? tier : tier + 1);
-}
-
 /**
- * Can the next cast of a BCZ skill be paid for out of `substat`, leaving
- * `floor` substats behind? Stat.get("submoxie") and friends: mafia's runtime
- * accepts substat names even though the typings' StatType union lists only the
- * three mainstats; MafiaClass.get takes any string.
+ * Can the next cast of a BCZ skill be paid for while keeping `mainstatFloor`
+ * base mainstat? Delegates to libram's BloodCubicZirconia (user directive
+ * 2026-08-31: stop reinventing libram) — its `availableCasts` knows each
+ * skill's substat and cast-count pref and squares the mainstat floor.
  *
- * The ash spells this out per skill: Sweat Bullets is submoxie over a 150-moxie
- * floor (150² = 22500, G freeKill():473 and CCS:41), Refracted Gaze is
- * submysticality over a 200 floor (40000, CCS:113).
+ * The ash floors, in mainstat points: Sweat Bullets over 150 moxie
+ * (150² = 22500 substats, G freeKill():473 and CCS:41), Refracted Gaze over
+ * 200 mysticality (40000, CCS:113). libram's cost table matches the ash
+ * BCZcost sequence (11, 23, 37, 110, … / 420k at cast 12) everywhere a run
+ * can reach; they diverge only from cast 13 on, past the 420k wall.
  */
-export function bczAffordable(counterPref: string, substat: string, floor: number): boolean {
-  return myBasestat(Stat.get(substat)) - floor > bczCost(counterPref);
+export function bczAffordable(skill: Skill, mainstatFloor: number): boolean {
+  return BloodCubicZirconia.availableCasts(skill, mainstatFloor) > 0;
 }
 
 function bczSweatBulletsAffordable(): boolean {
-  return bczAffordable("_bczSweatBulletsCasts", "submoxie", 22500);
+  return bczAffordable($skill`BCZ: Sweat Bullets`, 150);
 }
 
 const sheriffZones = $locations`An Octopus's Garden, Mer-kin Gymnasium, The Caliginous Abyss`;

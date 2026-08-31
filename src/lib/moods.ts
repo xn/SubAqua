@@ -510,17 +510,14 @@ export function combatEffects(): Effect[] {
   if (have($skill`Attract Snakes`)) effects.push($effect`Attracting Snakes`);
   // BCZ: Blood Bath is an equipment-granted skill, so have() is already an
   // "is it castable right now" test. Skipped at low shiny per the ash — and
-  // gated on the substat price the ash models for its OTHER BCZ casts
-  // (bczCost(), resources/freekill.ts), which the ash itself omits here: a BCZ
-  // skill you cannot pay for simply fails, and ensureEffect turns that into an
-  // abort. mafia does not record which substat each BCZ skill drains; the
-  // family split in the ash's own gates is Sweat -> submoxie (G:473, CCS:41)
-  // and Refracted Gaze -> submysticality (CCS:113), so Blood Bath is read as
-  // submuscle, over the same 150-stat floor the ash uses for Sweat Bullets.
+  // gated on affordability (libram BloodCubicZirconia knows the per-skill
+  // substat: Blood Bath drains submuscle), which the ash itself omits here:
+  // a BCZ skill you cannot pay for simply fails, and ensureEffect turns that
+  // into an abort. Same 150-mainstat floor the ash uses for Sweat Bullets.
   if (
     have($skill`BCZ: Blood Bath`) &&
     currentTier() !== "low" &&
-    bczAffordable("_bczBloodBathCasts", "submuscle", 22500)
+    bczAffordable($skill`BCZ: Blood Bath`, 150)
   ) {
     effects.push($effect`Bloodbathed`);
   }

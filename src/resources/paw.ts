@@ -1,22 +1,30 @@
-import { cliExecute, Item, itemAmount } from "kolmafia";
-import { $item, get, have } from "libram";
+import { Item } from "kolmafia";
+import { CursedMonkeyPaw } from "libram";
 
-const paw = $item`cursed monkey's paw`;
+/** Thin veneer over libram's CursedMonkeyPaw (user directive 2026-08-31:
+ * don't reinvent what libram already ships). Kept as a module so the ash
+ * call-site mapping stays in one place: rivets UTS:1457-1463, prayerbeads
+ * UTS:1013-1014, sea lasso UTS:2516 at HEAD 89982f5. */
 
-/** Five item wishes a day (mafia `_monkeyPawWishesUsed`). */
+/** Five item wishes a day (mafia `_monkeyPawWishesUsed`). CAVEAT (live
+ * 2026-08-31): the pref can lie — an aftercore garbo session before the
+ * ascension spends the rollover-day's 5 while mafia resets the counter to 0
+ * at ascension detection, so a nonzero return here does not guarantee KoL
+ * will honor the wish. pawWish() reports the actual outcome; callers must
+ * handle false. */
 export function pawWishesLeft(): number {
-  return have(paw) ? Math.max(0, 5 - get("_monkeyPawWishesUsed", 0)) : 0;
+  return CursedMonkeyPaw.have() ? CursedMonkeyPaw.wishes() : 0;
 }
 
 /**
- * One `monkeypaw wish <item>` (ash `monkeypaw()` call sites: rivets
- * UTS:1457-1463, prayerbeads UTS:1013-1014, sea lasso UTS:2516 at
- * HEAD 89982f5). Returns whether the item count actually rose — mafia's
- * command prints but does not throw on a refused wish.
+ * One paw item wish via libram's wishFor, which (unlike the bare
+ * `monkeypaw wish` CLI this used to issue) first `prepareForAdventure`s at a
+ * location whose copyable monsters drop the item — item wishes can fail
+ * without that context — and restores the checkpointed outfit after.
+ *
+ * @returns whether KoL actually granted the wish.
  */
 export function pawWish(item: Item): boolean {
-  if (pawWishesLeft() === 0) return false;
-  const before = itemAmount(item);
-  cliExecute(`monkeypaw wish ${item.name}`);
-  return itemAmount(item) > before;
+  if (!CursedMonkeyPaw.have()) return false;
+  return CursedMonkeyPaw.wishFor(item);
 }

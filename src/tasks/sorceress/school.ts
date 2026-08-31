@@ -94,7 +94,7 @@ function schoolLootMacro(): Macro {
   if (have($skill`Sea *dent: Talk to Some Fish`)) {
     steps.trySkill($skill`Sea *dent: Talk to Some Fish`);
   }
-  if (bczAffordable("_bczRefractedGazeCasts", "submysticality", 40000)) {
+  if (bczAffordable($skill`BCZ: Refracted Gaze`, 200)) {
     steps.trySkill($skill`BCZ: Refracted Gaze`);
   }
   if (steps.components.length === 0) return new Macro();

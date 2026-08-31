@@ -339,7 +339,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
                   openerOnce(
                     Macro.ifNot(
                       $monsters`Mer-kin rustler, wild seahorse`,
-                      (bczAffordable("_bczRefractedGazeCasts", "submysticality", 40000)
+                      (bczAffordable($skill`BCZ: Refracted Gaze`, 200)
                         ? Macro.trySkill($skill`BCZ: Refracted Gaze`)
                         : new Macro()
                       ).trySkill($skill`Do an epic McTwist!`),
