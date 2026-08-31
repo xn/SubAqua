@@ -1,4 +1,4 @@
-import { availableAmount, cliExecute } from "kolmafia";
+import { availableAmount, cliExecute, itemAmount } from "kolmafia";
 import { $effect, $item, $items, $monster, $monsters, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
@@ -28,8 +28,13 @@ export function grandpaQuest(opts: { golem: boolean }): Quest {
         completed: () => monkeesStep() >= 5,
         do: () => grandpaZone(),
         underwater: true,
-        // ash free_run(page_text, true) here, CCS:646-654
-        freeRunBanishes: true,
+        // ash free_run(page_text, true) here, CCS:646-654 — but only with
+        // the cosmic bowling ball IN HAND does the ash walk straight into
+        // the banish ladder; ball out, it tries fish/darts first. Live
+        // 2026-08-30 the latte went on a t3 diving belle while the ball
+        // rolled back (F ledger #2, banish record `Throw Latte on
+        // Opponent:3`) and the gym then had no latte for its grind.
+        freeRunBanishes: () => itemAmount($item`cosmic bowling ball`) > 0,
         combat: new CombatStrategy()
           .kill($monsters`giant squid, Mer-kin miner, Mer-kin tippler`)
           .freeRun(),

@@ -26,8 +26,9 @@ export type Task = {
   /** freeRun may spend BANISHING rungs (Spring Kick, curveball, latte, Feel
    * Hatred, Snokebomb, thrown banishes) — the ash's `free_run(page_text, true)`
    * sites: pearl zones, the Wreck, the outpost's non-droppers. Default false
-   * = plain runs only (the guild tests, ash CCS:505-521). */
-  freeRunBanishes?: boolean;
+   * = plain runs only (the guild tests, ash CCS:505-521). Thunk form is
+   * re-evaluated at compile — the Trench's bowling-ball gate (CCS:646-654). */
+  freeRunBanishes?: boolean | (() => boolean);
   /** This task may wear bat wings. Everywhere else the engine avoids them so
    * the five daily free fights are banked for the colosseum and the
    * Seaceress (ash if_equip(bat wings) sites: rift, Yog-Urt, colosseum, NS). */

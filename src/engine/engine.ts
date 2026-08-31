@@ -431,7 +431,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // (onceDaily: false), which keeps a run that found nothing from taking
       // down a whole ladder for the day — today the parka's yellow ray alone.
       const sneak = sneakFamiliar();
-      const banish = task.freeRunBanishes === true;
+      const banish = undelay(task.freeRunBanishes) === true;
       // "The slot is ours to spend": nothing asked for, or the sneak pick that
       // this rule is explicitly allowed to trade away. $familiar.none is
       // deliberate (a task that wants NO familiar out) and so is anything else.
