@@ -67,7 +67,16 @@ function leatherDone(): boolean {
  * must stay in reserve — 21 scores 7 lassos from scratch as "done" even though
  * training to 20 eats all 7, stranding the seahorse as a fight with no ending. */
 function lassosDone(): boolean {
-  return get("lassoTrainingCount", 0) + 3 * availableAmount(lasso) >= 23;
+  // Training FIRST, then one banked lasso for the tame. The old 23-point
+  // reserve credit (training + 3·lassos >= 23, ash Glob:649) let the grind
+  // retire at training 19 with lassos banked — but a banked lasso only
+  // becomes training when thrown WITH the hat+chaps worn, and the taming
+  // phase doesn't wear them (user correction 2026-08-31: the tame-phase
+  // throws flew gearless and the skill sat below 20, which is why the tame
+  // could never land — the ash tames only at exactly 20, CCS:747). The
+  // grind's own fights pin the gear (engine round-1 injection), so finishing
+  // to 20 here is the cheap, guaranteed place to do it.
+  return get("lassoTrainingCount", 0) >= 20 && availableAmount(lasso) >= 1;
 }
 
 function tamed(): boolean {
@@ -177,7 +186,18 @@ function tamingMacro(): Macro {
  */
 function waffleMacro(): Macro {
   if (itemAmount(waffle) === 0) return new Macro();
-  return openerOnce(Macro.ifNot(seahorse, Macro.tryItem(waffle))).if_(seahorse, tamingMacro());
+  // Refusal guard (live 2026-08-31 [46]): with two of the three draws
+  // banished, the monster in front of us can be the zone's ONLY available
+  // monster, and KoL refuses the throw ("You don't want to waste a waffle
+  // right now") — a refused `use` inside a BALLS macro is a macro abort,
+  // which kills the whole automated fight (mafia: "You're on your own,
+  // partner"; the ash's consult-level throws shrug refusals off, ours
+  // cannot). Only throw while at least two draws are unbanished, so
+  // whatever we face, another monster can wander in.
+  if (draws.filter((draw) => !banishActive(draw)).length < 2) return new Macro();
+  // Post-throw seahorse branch through the ready check (runaway fallback),
+  // never the bare tamer: a failed tame protocol is that same macro abort.
+  return openerOnce(Macro.ifNot(seahorse, Macro.tryItem(waffle))).if_(seahorse, seahorseMacro());
 }
 
 /** The wild seahorse is a BOSS (upstream UnderTheSea cf01d4d, 2026-08-12):
@@ -449,20 +469,15 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // maximized so the throws land before the 1M-HP seahorse acts
         // (monsters.txt: Phys+Elem 100 — the lasso is the only win).
         name: "Tame Seahorse",
-        // Reserve math, NOT a hard `training >= 20`: lassosDone() retires the
-        // lasso grind at `training + 3·lassos >= 23` (a 20-point finish plus
-        // one banked lasso for the tame), so the run legitimately arrives
-        // here at training 19 with 2 lassos — live 2026-08-31 the hard gate
-        // deadlocked exactly there (no corral task would fight, the engine
-        // fell through to an unreachable School and burned its 15-try
-        // limit). The regime's own fights finish the training: the engine's
-        // round-1 lasso injection (customize, ash CCS:534) throws while
-        // training < 20 and stops the moment it caps, leaving the reserved
-        // lasso for the tame throw.
+        // Hard training gate, like the ash (CCS:747 tames only at exactly
+        // 20). The 2026-08-31 deadlock at training 19 is fixed at the
+        // SOURCE: lassosDone() no longer retires the grind below 20, so
+        // Corral Lassos keeps fighting (gear pinned, throws counting) until
+        // the skill is finished — this task never has to train, only tame.
         ready: () =>
+          get("lassoTrainingCount", 0) >= 20 &&
           availableAmount(cowbell) >= 3 &&
-          availableAmount(lasso) >= 1 &&
-          get("lassoTrainingCount", 0) + 3 * (availableAmount(lasso) - 1) >= 20,
+          availableAmount(lasso) >= 1,
         completed: tamed,
         do: corral,
         // Upstream 611a915's guard — never banish the cowboy/cow while its
@@ -475,7 +490,10 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         // re-roll the compiled monster actions re-evaluate against the new
         // monster, so a cow that came out of the waffle is still banished.
         combat: new CombatStrategy()
-          .macro(tamingMacro, seahorse)
+          // seahorseMacro, not the bare tamer: it re-checks training/supplies
+          // at compile and falls back to the runaway if anything slipped —
+          // a tame protocol fired under-trained is a macro abort mid-fight.
+          .macro(seahorseMacro, seahorse)
           // Everything else the ash does in this regime, in its order — see
           // tamingRegimeMacro(). No `.banish` action: the block inside picks
           // its own targets per fight (never the last draw standing), which a
@@ -494,28 +512,16 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           // pants only when every draw is already banished — carried-over
           // banishes, since drawBanishable() never produces that state — the
           // ash's own gate (UTS:2499-2504).
-          //
-          // Sea cowboy hat + chaps STAY PINNED (user + wiki, 2026-08-31): the
-          // wild seahorse is only in the corral's draw pool while the cowboy
-          // gear is worn. Live [46]: training done unpinned them, cow+rustler
-          // banished left the cowboy as the zone's ONLY monster, and the
-          // waffle refused ("You don't want to waste a waffle right now") — a
-          // refused `use` inside a BALLS macro is a macro abort, which kills
-          // the whole automated fight. Every natural seahorse encounter in
-          // the logs came while the gear was pinned. Pants slot taken means
-          // the breather must be a SCUBA tank; the engine's enforcement
-          // handles that. Tearaway pants would evict the chaps, so they are
-          // only offered when the gear rule is already moot (all draws
-          // banished = tumbleweed farm).
-          const allBanished = draws.every(banishActive);
-          const equip: Item[] = [
-            $item`sea cowboy hat`,
-            // One forced pants item, never both (Outfit.from throws on an
-            // unsatisfiable forced spec — the cloake/bat-wings lesson).
-            allBanished && have(tearaway) ? tearaway : $item`sea chaps`,
-          ];
+          // No hat/chaps pin here: the cowboy gear is TRAINING gear (+3 per
+          // throw only while worn — user correction 2026-08-31), and this
+          // task only runs at training 20 (ready above). While training is
+          // short the engine's round-1 injection pins the pair on whatever
+          // task is fighting; the ash's taming tempEquipment carries neither
+          // (UTS:2506).
+          const equip: Item[] = [];
           const top = pickBanishSource(corral);
           if (top?.equip) equip.push(top.equip);
+          if (draws.every(banishActive) && have(tearaway)) equip.push(tearaway);
           return { modifier: "initiative", equip, avoid: [$item`miniature crystal ball`] };
         },
         // The unready-seahorse branch of seahorseMacro() is Macro.runaway()
