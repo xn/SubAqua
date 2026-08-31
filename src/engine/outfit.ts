@@ -16,6 +16,7 @@ import {
   $item,
   $items,
   $slot,
+  findFairyMultiplier,
   findLeprechaunMultiplier,
   get,
   have,
@@ -174,6 +175,38 @@ export function chooseFamiliar(): Familiar {
   if (candidates.length === 0) return $familiar.none;
   const best = maxBy(candidates, "meat").familiar;
   print(`Best meat familiar underwater: ${best}`, "blue");
+  return best;
+}
+
+/** Default item familiar for +item tasks that name none (B F2: the whole
+ * 08-30 B slice ran on the Patriotic Eagle because nothing picked an item
+ * familiar — 2/11 pristine scales vs gold's 16/16). Ash UTS:878-879:
+ * Jill-of-All-Trades first, else mafia's "itdrop" pick; here the fallback
+ * ranks fairy-family familiars by their Item Drop at underwater-viable
+ * weight, mirroring chooseFamiliar() above. */
+export function chooseItemFamiliar(): Familiar {
+  const jill = $familiar`Jill-of-All-Trades`;
+  const haveUnderwaterFamEquipment = familiarWaterBreathingEquipment.some((item) => have(item));
+  if (have(jill) && (jill.underwater || haveUnderwaterFamEquipment)) return jill;
+  const candidates = Familiar.all()
+    .filter(
+      (fam) =>
+        have(fam) &&
+        findFairyMultiplier(fam) > 0 &&
+        (fam.underwater || haveUnderwaterFamEquipment),
+    )
+    .map((familiar) => ({
+      familiar,
+      item: numericModifier(
+        familiar,
+        "Item Drop",
+        equipmentlessFamiliarWeight(familiar),
+        bestFamUnderwaterGear(familiar),
+      ),
+    }));
+  if (candidates.length === 0) return $familiar.none;
+  const best = maxBy(candidates, "item").familiar;
+  print(`Best item familiar underwater: ${best}`, "blue");
   return best;
 }
 

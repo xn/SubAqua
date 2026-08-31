@@ -98,6 +98,7 @@ import {
   openerOnce,
 } from "./combat";
 import {
+  chooseItemFamiliar,
   familiarWaterBreathingEquipment,
   hasBreathingEffect,
   preferredBreathingGear,
@@ -318,6 +319,22 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       unidentifiedBangPotions().length > 0
     ) {
       combat.startingMacro(Macro.ifNot(bangPotionNever, bangPotionMacro()));
+    }
+
+    // Default item familiar on +item tasks that left the familiar slot open
+    // (B F2): without this the PREVIOUS task's familiar rides along — the
+    // whole 08-30 B slice fought on the Patriotic Eagle and the rift gave
+    // 2/11 pristine scales vs gold's 16/16. Placed before the underwater
+    // enforcement below so the breather is fitted to the new familiar.
+    // sneakFamiliar()/eagle/sword declarations all still win ($familiar.none
+    // included — that is a task asking for NO familiar).
+    if (
+      outfit.familiar === undefined &&
+      !undelay(task.freeaction) &&
+      outfit.modifier.some((mod) => mod.includes("item"))
+    ) {
+      const itemFam = chooseItemFamiliar();
+      if (itemFam !== $familiar.none) outfit.equip(itemFam);
     }
 
     super.customize(task, outfit, combat, resources);
