@@ -116,6 +116,25 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`comb jelly`),
   },
   {
+    // B F3/D: gold pulled the digpick (G:4751, 14th pull); the 08-30 run
+    // farmed it at 2 paid Anemone Mine turns because idle reservations kept
+    // pullBudgetAllows' strict `>` branch refusing the discretionary pull.
+    // Needed-condition mirrors mine.ts oreSecured() (ore/fins/tailpiece),
+    // inlined so needed() stays a pure item/pref read.
+    name: "Mer-kin digpick",
+    item: $item`Mer-kin digpick`,
+    needed: () =>
+      availableAmount($item`Mer-kin digpick`) === 0 &&
+      itemAmount($item`teflon ore`) === 0 &&
+      availableAmount($item`teflon swim fins`) === 0 &&
+      ![
+        $item`Mer-kin gladiator tailpiece`,
+        $item`Mer-kin scholar tailpiece`,
+        $item`crappy Mer-kin tailpiece`,
+      ].some((it) => availableAmount(it) > 0) &&
+      !pulledToday($item`Mer-kin digpick`),
+  },
+  {
     // C F1: the hallpass supply IS the cowl/rope hunt — each "Halls Passing
     // in the Night" superlikely consumes one pass for one piece. Reserve one
     // whenever the lounge is open, a piece is missing, and passes are short

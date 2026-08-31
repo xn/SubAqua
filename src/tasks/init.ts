@@ -47,9 +47,15 @@ const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, mo
 // Elf Guard SCUBA tank is pullable in-path (not on InventoryManager.pullableInSeaPath's
 // blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
 // spec §3/§4's softcore exceptions list confirms it.
-// The FLUDA is not pulled: its only site is the rift's Douse Foe rider,
-// which the shadow-rift port (tasks/monkees/shadow.ts) does not carry.
-const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Elf Guard SCUBA tank`;
+// The sea lasso is NOT pulled (ash parity restored, UTS:600): the rift
+// trains the throws in free fights (shadowRiftQuest is in the plan) and the
+// corral opener bundle supplies lassos — B F3: the 08-30 init lasso pull
+// bought exactly +1 training (Y:1540) and its slack blocked the digpick
+// pull via the reservation math.
+// The FLUDA rides along now that the slab yoink carries its Douse Foe rider
+// (shadow.ts slabMacro, gold-trace #3); discretionaryPull still refuses it
+// at low shiny.
+const seaGearPulls = $items`Mer-kin sneakmask, shark jumper, scale-mail underwear, Elf Guard SCUBA tank, Flash Liquidizer Ultra Dousing Accessory`;
 
 export function initQuest(): Quest {
   const policy = currentPolicy();
@@ -361,13 +367,6 @@ export function initQuest(): Quest {
             if (have(it)) continue;
             if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
               continue;
-            // The sea lasso is ALWAYS pulled (deviation from the ash's
-            // Sword-lane skip, UTS:600): the ash trains its seven throws in
-            // shadow-rift free fights, which this route dropped, so the
-            // throws ride the paid Grandpa/Outpost/Abyss fights instead —
-            // and that only works with a lasso in hand from turn 3. Live
-            // 2026-08-28 the first lasso arrived at turn 30 and training ran
-            // on ~12 paid corral fights.
             discretionaryPull(it);
           }
           const cmoi = $item`Congressional Medal of Insanity`;
