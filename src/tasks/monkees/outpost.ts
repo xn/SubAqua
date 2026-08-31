@@ -63,29 +63,50 @@ function screechTurn(): boolean {
   );
 }
 
+/** True while golemRecallMacro() still has a recall to land. Shared by the
+ * macro and farmBackup(): the engine prepends the backup ahead of every task
+ * macro (engine.ts customize), so a backup that converts the last habitat
+ * golem would eat the recall (F ledger #4: "emit the recall when fightsLeft
+ * <= 1, and suppress the backup on that fight"). */
+function recallPending(): boolean {
+  return (
+    have($skill`Just the Facts`) &&
+    // <= 1, not === 0: mafia decrements _monsterHabitatsFightsLeft at
+    // ENCOUNTER (FightRequest.java:2307), so the last habitat golem is met
+    // with a build-time value of 1 — the same fact screechTurn() above
+    // encodes with === 1. Gold recalled inside that fight (G:2531-2549);
+    // live 2026-08-30 the recall clause first compiled after the 5th
+    // habitat fight (Y:2634) and no golem followed (A F2).
+    get("_monsterHabitatsFightsLeft", 0) <= 1 &&
+    get("_monsterHabitatsRecalled", 0) < 2
+  );
+}
+
 function golemRecallMacro(): Macro {
   const macro = new Macro();
-  if (
-    have($skill`Just the Facts`) &&
-    get("_monsterHabitatsFightsLeft", 0) === 0 &&
-    get("_monsterHabitatsRecalled", 0) < 2
-  ) {
+  if (recallPending()) {
     macro.trySkill($skill`Recall Facts: Monster Habitats`);
   }
   if (screechTurn()) macro.trySkill($skill`%fn, Release the Patriotic Screech!`);
   return macro.components.length > 0 ? openerOnce(macro) : macro;
 }
 
-/** Outpost backups (ash CCS:684-708), cap 7 (UTS:1338): golem copies once
- * the habitat fights are spent and both recalls used; healer copies while the
- * prayerbeads are short. */
+/** Outpost backups (ash CCS:684-690), cap 7 (UTS:1338): golem copies once
+ * the habitat fights are spent and both recalls used — and never while a
+ * recall is still pending (see recallPending). The Mer-kin healer is GONE
+ * from the target list (A F1): a copy of a non-free monster costs its turn
+ * and each 08-30 healer copy burned a free-kill charge — five golem-fight
+ * healer copies drained the ladder and four healers were then killed at
+ * paid turns (Y:2792-3013). The ash only backs up INTO a healer from a
+ * healer fight it could not free-kill (CCS:698-707), a shape the round-1
+ * macro cannot express. */
 const farmBackup = () => ({
-  targets: [
-    ...(get("_monsterHabitatsFightsLeft", 0) === 0 && get("_monsterHabitatsRecalled", 0) >= 2
+  targets:
+    !recallPending() &&
+    get("_monsterHabitatsFightsLeft", 0) === 0 &&
+    get("_monsterHabitatsRecalled", 0) >= 2
       ? [golem]
-      : []),
-    ...(availableAmount(beads) < 2 ? [$monster`Mer-kin healer`] : []),
-  ],
+      : [],
   cap: 7,
 });
 
