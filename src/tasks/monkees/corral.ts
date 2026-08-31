@@ -317,7 +317,13 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
               // turn backs up to it — Mom progress on a refunded turn.
               backup: () =>
                 get("momSeaMonkeeProgress", 0) < 40
-                  ? { targets: $monsters`eye in the darkness, slithering thing` }
+                  ? // allowPaid (backup.ts): the eye/slithering copy costs its
+                    // turn unless the free kill in the opener macro lands —
+                    // exactly the ash's trade (UTS:1659-1662).
+                    {
+                      targets: $monsters`eye in the darkness, slithering thing`,
+                      allowPaid: true,
+                    }
                   : undefined,
               combat: new CombatStrategy()
                 .macro(() => openerOnce(Macro.trySkill($skill`Do an epic McTwist!`)), cow)
