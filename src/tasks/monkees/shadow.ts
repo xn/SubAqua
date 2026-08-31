@@ -1,4 +1,4 @@
-import { adv1, haveEffect, itemAmount, use, useSkill } from "kolmafia";
+import { adv1, haveEffect, itemAmount, print, use, useSkill } from "kolmafia";
 import { $effect, $item, $items, $location, $monster, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, fishMacro, openerOnce } from "../../engine/combat";
@@ -8,6 +8,7 @@ import { recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
 import { forceNextNoncombat } from "../../resources/ncforce";
 import { pawWish } from "../../resources/paw";
+import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const rift = $location`Shadow Rift (The Misspelled Cemetary)`;
 const phone = $item`closed-circuit pay phone`;
@@ -96,10 +97,25 @@ function riftOutfit() {
 /** Shared "Rufus Labyrinth"/"Rift Fights" prep: heal up, and wish for a
  * lasso when the stock is dry mid-training (UTS:864-868) — both tasks can be
  * the one spending the day's free rift fights, depending on whether a
- * forcer landed the Labyrinth NC or the fights ran out naturally first. */
+ * forcer landed the Labyrinth NC or the fights ran out naturally first.
+ *
+ * The wish can FAIL SILENTLY: KoL's paw limit is 5 per rollover-day, and an
+ * aftercore garbo session before the ascension spends them all while mafia's
+ * `_monkeyPawWishesUsed` resets to 0 at ascension detection — live
+ * 2026-08-31, two `wish=sea+lasso` submissions produced nothing and all 16
+ * free rift fights then trained ZERO (no lasso in inventory), pushing the
+ * training onto 8 paid corral fights. pawWish() reports the failure; fall
+ * back to a budgeted pull (the "sea lasso (training)" reservation in
+ * pulls.ts holds the slot in exactly this broken state). */
 function riftPrepare(): void {
   recover();
-  if (training() < 20 && itemAmount(lasso) === 0) pawWish(lasso);
+  if (training() < 20 && itemAmount(lasso) === 0 && !pawWish(lasso)) {
+    print(
+      "Paw wish for a sea lasso produced nothing (wishes spent pre-run?); pulling instead.",
+      "red",
+    );
+    if (pullBudgetAllows(lasso)) pullSequence(lasso);
+  }
 }
 
 /** Cast Summon a Wave right after ANY rift adventure (ash UTS:853-855): mafia

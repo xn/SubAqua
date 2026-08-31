@@ -116,6 +116,24 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`comb jelly`),
   },
   {
+    // Training-lasso safety net (live 2026-08-31): the rift's free-fight
+    // training needs a lasso IN HAND, and both normal suppliers can be gone
+    // at once — the corral opener bundle (missed on a resumed run) and the
+    // paw wishes (spent by aftercore garbo before the ascension, invisible
+    // to mafia's reset `_monkeyPawWishesUsed`). Live whenever the training
+    // gear exists, training is short, and no lasso is anywhere; releases at
+    // training 20 or on the first lasso. The init-time ALWAYS-pull this
+    // replaces was dropped per B F3.
+    name: "sea lasso (training)",
+    item: $item`sea lasso`,
+    needed: () =>
+      have($item`sea cowboy hat`) &&
+      have($item`sea chaps`) &&
+      get("lassoTrainingCount", 0) < 20 &&
+      availableAmount($item`sea lasso`) === 0 &&
+      !pulledToday($item`sea lasso`),
+  },
+  {
     // B F3/D: gold pulled the digpick (G:4751, 14th pull); the 08-30 run
     // farmed it at 2 paid Anemone Mine turns because idle reservations kept
     // pullBudgetAllows' strict `>` branch refusing the discretionary pull.
