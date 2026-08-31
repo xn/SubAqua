@@ -272,7 +272,14 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 );
               },
               do: abyss,
+              // Peridot on the eye (B F5): gold's habitat entry was a forced
+              // eye with no Peanut in sight (G:3665-3667, `_perilLocations
+              // +337`); the 08-30 run met a Peanut on fight 1 and paid it.
+              peridot: abyssPeridot,
               combat: new CombatStrategy()
+                // VHS window first (E F2 / #4(iii)): the tape sat unredeemed
+                // turns 17→108 because vhsMacro rode only abyssCombat().
+                .macro(monsterMacro(vhsMacro, vhsTargets))
                 .macro(
                   () => openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
                   habitatTargets,
@@ -281,7 +288,14 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // No crystal ball in the Abyss: its prediction overrides the
               // school-of-many banish (live 2026-08-28, log:85696 — the school
               // came back one turn after the Lightning Bolt).
-              outfit: { modifier: "item", equip: [glass], avoid: [crystalBall] },
+              // Shark jumper: +1 Mom progress per abyss kill, same as the
+              // Abyss Mom/Finish outfits (E F2's "shark jumper in those
+              // outfits").
+              outfit: {
+                modifier: "item",
+                equip: [glass, $item`shark jumper`],
+                avoid: [crystalBall],
+              },
               effects: itemDropEffects,
               prepare: (): void => {
                 recover();
@@ -298,6 +312,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               completed: () => momDone() || get("_cyberFreeFights", 0) >= 10,
               do: $location`Cyberzone 1`,
               combat: new CombatStrategy()
+                // VHS window first (E F2 / #4(iii)) — the habitat fights here
+                // ARE the abyss monsters the tape wants, and the rock repeat
+                // below would otherwise end the fight before the throw.
+                .macro(monsterMacro(vhsMacro, vhsTargets))
                 // trySkillRepeat, not trySkill().repeat(): the latter compiles
                 // to `if hasskill X;skill X;endif;repeat;` and KoL's `repeat`
                 // re-runs the instruction before it — the `endif` — so after
