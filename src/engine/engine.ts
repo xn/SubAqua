@@ -241,7 +241,13 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
   override destruct(): void {
     // Runs from main()'s finally on completion AND on abort, so the per-group
     // accounting table (lib/gold.ts) is the last thing printed either way.
-    reportLedger();
+    // Never let the report stand between an abort and super.destruct(): that
+    // is what restores the CCS / choice properties the run overrode.
+    try {
+      reportLedger();
+    } catch (e) {
+      print(`run accounting failed: ${e}`, "red");
+    }
     super.destruct();
   }
 
@@ -981,8 +987,6 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         throw `Lost a combat during ${task.name}; stopping.`;
       }
     }
-    assertOnGoldPace(task.name, turnsSpent);
-
     // Poison cure — the ash handles exactly one tier (UTS:763-764).
     if (have($effect`Really Quite Poisoned`)) uneffect($effect`Really Quite Poisoned`);
 
@@ -1044,6 +1048,11 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
       dreadSeedCheck();
     }
+
+    // Gold guard LAST (lib/gold.ts): everything above — cures, shrugs, the
+    // whistle, the diet, the seed narrowing — must still run on the turn that
+    // trips it, so an abort here leaves nothing half-done for the restart.
+    assertOnGoldPace(task.name, turnsSpent);
   }
 
   override setChoices(task: Task, manager: PropertiesManager): void {

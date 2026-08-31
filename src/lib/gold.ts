@@ -16,10 +16,21 @@ import { freeRunSources } from "../resources/freerun";
  * that runs late but spends nothing is a scheduling difference, not a turn
  * sink, and the accounting table below still records it.
  *
- * Checkpoints are cumulative `my_turncount()` values, read off the gold log's
- * `[N]` markers at each `UTS: phase:` line (docs/…/BRIEF.md has the index).
- * Groups absent from the table (Init, Wanderers) are unchecked; tasks listed
- * in FLOATING are maintenance steps the route legitimately re-runs late.
+ * Checkpoints are read off the gold log's `[N]` markers at each `UTS: phase:`
+ * line (docs/…/BRIEF.md has the index): the marker of the NEXT phase's first
+ * adventure. Mafia logs `[getCurrentRun()+1]` (KoLAdventure.java:4603-4607)
+ * while my_turncount() is getCurrentRun(), so each checkpoint is one turn
+ * GENEROUS relative to the turncount the gold run actually had when it left
+ * the group — never strict. Groups absent from the table (Init, Wanderers)
+ * are unchecked; tasks listed in FLOATING are maintenance steps the route
+ * legitimately re-runs late.
+ *
+ * Resuming after an abort: the first paid turn of an invocation sets a
+ * session drift = how far past its checkpoint the run already was, and every
+ * later limit carries that drift. Without it a run that tripped once could
+ * never spend another turn in that group, and the only way on would be
+ * goldSlack big enough to blind every later checkpoint too. The accounting
+ * table still shows the raw Δ against gold.
  */
 export const GOLD_RUN = "UTS 2026-08-21 (41 turns)";
 
@@ -90,9 +101,14 @@ export function fightHappened(preCombatStarted: string): boolean {
   return get("_lastCombatStarted") !== preCombatStarted;
 }
 
+/** Turns the run was already behind gold when this invocation spent its
+ * first paid turn; undefined until then. */
+let sessionDrift: number | undefined;
+
 export function ledgerLines(): string[] {
   const lines = [
-    `Run accounting vs ${GOLD_RUN} (this session only; turncount now ${myTurncount()})`,
+    `Run accounting vs ${GOLD_RUN} (this session only; turncount now ${myTurncount()}` +
+      `${sessionDrift ? `; resumed ${sessionDrift} behind` : ""})`,
     "group | tasks | turns | combats | free | done@ | gold@ | Δ",
   ];
   let turns = 0;
@@ -148,14 +164,25 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
   const checkpoint = goldCheckpoints[groupOf(taskName)];
   if (checkpoint === undefined) return;
   const now = myTurncount();
-  const limit = checkpoint + args.goldSlack;
+  if (sessionDrift === undefined) {
+    sessionDrift = Math.max(0, now - turnsSpent - checkpoint);
+    if (sessionDrift > 0) {
+      print(
+        `Gold guard: resuming ${sessionDrift} turns behind ${GOLD_RUN} (turncount ${now - turnsSpent}, ` +
+          `${groupOf(taskName)} checkpoint ${checkpoint}); later limits carry that drift.`,
+        "yellow",
+      );
+    }
+  }
+  const limit = checkpoint + sessionDrift + args.goldSlack;
   if (now <= limit) return;
 
   for (const line of ledgerLines()) print(line, "red");
   for (const line of ladderState()) print(line, "red");
   throw (
     `GOLD DEVIATION: ${taskName} spent a turn at turncount ${now}; ${GOLD_RUN} had ${groupOf(taskName)} ` +
-    `done by turn ${checkpoint} (slack ${args.goldSlack}, limit ${limit}). Stopping before more turns go. ` +
+    `done by turn ${checkpoint} (slack ${args.goldSlack}${sessionDrift ? ` + ${sessionDrift} resumed drift` : ""}, ` +
+    `limit ${limit}). Stopping before more turns go. ` +
     `Compare against docs/superpowers/research/runs/gold-uts-2026-08-21.log; rerun with goldSlack=N ` +
     `to loosen or gold=false to disable.`
   );
