@@ -182,13 +182,24 @@ export function outpostQuest(): Quest {
         ready: () => get("merkinLockkeyMonster") !== null,
         completed: () => stashboxDone(),
         do: outpost,
-        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider)
+        // ash free_run(page_text, true) here, CCS:721-724 (burglar/raider) —
+        // but the ash keeps free_kill(drop) for the bead-short healer even in
+        // -combat mode (CCS:698-704). Banishing him wastes a banish AND
+        // fights the crystal ball's re-force: live 2026-08-30 two Feel
+        // Hatreds went to healers the ball predicted right back (A F3,
+        // Y:3226-3262). The kill action is upgraded to a free kill by the
+        // engine when a charge + its gear land (engine.ts customize); with
+        // the healer-backup drain fixed (A F1) charges now survive phase A.
+        // A paid healer kill still rolls the prayerbeads the route needs <3.
         freeRunBanishes: true,
-        combat: new CombatStrategy().freeRun(),
+        combat: new CombatStrategy().kill($monster`Mer-kin healer`).freeRun(),
         outfit: () => ({
           modifier: "-combat",
           familiar: sneakFamiliar(),
           equip: $items`Monodent of the Sea`,
+          // The turkey carried the ball in as maximizer famequip and its
+          // predictions overrode the banishes (A F3, Y:3219).
+          avoid: $items`miniature crystal ball`,
         }),
         effects: sneakEffects,
         prepare: (): void => {
