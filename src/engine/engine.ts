@@ -55,6 +55,7 @@ import {
 } from "libram";
 
 import { dreadSeedCheck } from "../lib/dreadscroll";
+import { assertOnGoldPace, fightHappened, recordTask, reportLedger } from "../lib/gold";
 import {
   effectFailureContext,
   isEnsureError,
@@ -233,9 +234,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
   private preTaskCombatLost = false;
   private preTaskTurncount = 0;
   private preTaskLastEncounter = "";
+  private preTaskCombatStarted = "";
 
   // NOTE deliberately no getNextTask() override: grimoire's available() honors
   // `after` dependencies and limit.skip; the old repo's override silently broke both.
+
+  override destruct(): void {
+    // Runs from main()'s finally on completion AND on abort, so the per-group
+    // accounting table (lib/gold.ts) is the last thing printed either way.
+    reportLedger();
+    super.destruct();
+  }
 
   override customize(
     task: Task,
@@ -729,6 +738,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     this.preTaskCombatLost = get("_lastCombatLost");
     this.preTaskTurncount = myTurncount();
     this.preTaskLastEncounter = get("lastEncounter");
+    this.preTaskCombatStarted = get("_lastCombatStarted");
 
     // Fishy/Waterproofly upkeep before every underwater adventuring turn
     // (spec §2; ash restores at zero in post_adv UTS:811-843). Never from
@@ -922,6 +932,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
   override post(task: Task): void {
     super.post(task);
+    // Per-group run accounting + gold guard (lib/gold.ts). Recorded before
+    // any throw below so an aborted task still shows in the table; the pace
+    // check itself runs after the Beaten Up cure so an abort never leaves
+    // the character beaten up.
+    const turnsSpent = myTurncount() - this.preTaskTurncount;
+    recordTask(task.name, turnsSpent, fightHappened(this.preTaskCombatStarted));
     if (have($effect`Beaten Up`)) {
       // Cure first, judge second: uneffect unconditionally, before any throw,
       // so an abort below never leaves the character Beaten Up for whatever
@@ -960,6 +976,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         throw `Lost a combat during ${task.name}; stopping.`;
       }
     }
+    assertOnGoldPace(task.name, turnsSpent);
 
     // Poison cure — the ash handles exactly one tier (UTS:763-764).
     if (have($effect`Really Quite Poisoned`)) uneffect($effect`Really Quite Poisoned`);
