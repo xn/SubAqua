@@ -193,10 +193,16 @@ is the banish reservation's job, not an ordering change.
 5. **Sea cowbell pull** — removed from `unpullableInPath`, given a pull reservation, and a
    `Pull Cowbell` freeaction task ahead of `Tame Seahorse` (gold: `pull: 1 sea cowbell`,
    G:5381).
-6. **Boots deferred at the gym** (`fights.ts`) — `gymFreeRun`/`gymFreeRunGear` walk
-   `Release the Boots` last. Live 2026-08-31 the gym released the boots twice ([58] poseur,
-   [67] juicer); both times Curby "stomps your opponent into paste", both times the turncount
-   advanced and `_banderRunaways` stayed 0. The stomp is a paid kill at the gym, not a run.
+6. **Release the Boots: NO-PORT** (`freerun.ts`, `engine.ts`, `fights.ts`, `gym.ts`) — user
+   correction 2026-09-01: it is a turn-taking instakill, not a runaway. The ash does use it
+   (`UnderTheSeaCCS.ash:82`, `UnderTheSeaGlobals.ash:489-492`) and is wrong about it; gold never
+   cast it once in 41 turns. Live 08-31 the gym released the boots twice ([58] poseur, [67]
+   juicer); both times Curby "stomps your opponent into paste", both times the turncount
+   advanced (58→59, 67→68) and `_banderRunaways` stayed 0. On the ash's order it sits ahead of
+   Feel Hatred and Snokebomb, so at the gym it was picked first and paid the turn anyway.
+   Removed from the ladder entirely — and with it `engine.customize()`'s free-run familiar rule
+   (the 2026-08-27 boots-vs-sneak decision), whose whole premise was this rung. Tasks keep
+   `familiar: sneakFamiliar()` uncontested and the ladder is one unrestricted walk.
 
 `yarn lint` and `yarn build` clean.
 
