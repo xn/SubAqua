@@ -105,6 +105,24 @@ export function fightHappened(preCombatStarted: string): boolean {
  * first paid turn; undefined until then. */
 let sessionDrift: number | undefined;
 
+/**
+ * Gold's actual turncount when it LEFT a group — what `done@` measures for us,
+ * and therefore the only number Δ may be computed against.
+ *
+ * `goldCheckpoints` is deliberately one turn GENEROUS (see its doc): each
+ * entry was read off the marker of the next phase's first adventure, and mafia
+ * logs `[getCurrentRun()+1]`. That slack is right for the GUARD — a threshold
+ * should never abort a run that is actually on pace — but it was also being
+ * printed as `gold@` and subtracted to make Δ, which understated every row by
+ * exactly one turn. Live 2026-09-01 the run finished at turncount 45 and the
+ * table reported the Finale as `gold@42, Δ +3`; gold's own log ends "Run End
+ * Adventures used: 41", so the true figure is +4.
+ */
+function goldTurncountAt(group: string): number | undefined {
+  const checkpoint = goldCheckpoints[group];
+  return checkpoint === undefined ? undefined : checkpoint - 1;
+}
+
 export function ledgerLines(): string[] {
   const lines = [
     `Run accounting vs ${GOLD_RUN} (this session only; turncount now ${myTurncount()}` +
@@ -116,7 +134,7 @@ export function ledgerLines(): string[] {
     const row = ledger.get(group);
     if (!row) continue;
     turns += row.turns;
-    const gold = goldCheckpoints[group];
+    const gold = goldTurncountAt(group);
     const delta =
       gold === undefined ? "" : `${row.lastTurn - gold >= 0 ? "+" : ""}${row.lastTurn - gold}`;
     lines.push(

@@ -65,24 +65,41 @@ function farmPocketWish(): void {
 }
 
 /**
- * The summon ladder (ash summon(), UnderTheSea.ash:1597-1634): locket
- * reminisce → fax (3 attempts) → mimic egg (libram ChestMimic replaces the
- * c2t_megg dependency) → pocket wish/genie (with the AT Overgrown Lot farm) →
- * abort. Starts a fight against `target`; the active combat handler owns the
- * fight. Every fallback is explicit; the final abort means the account has no
- * summon source left, which is a routing error upstream.
+ * The summon ladder: locket reminisce → mimic egg → fax (3 attempts) →
+ * pocket wish/genie (with the AT Overgrown Lot farm) → abort. Starts a fight
+ * against `target`; the active combat handler owns the fight. Every fallback
+ * is explicit; the final abort means the account has no summon source left,
+ * which is a routing error upstream.
+ *
+ * MIMIC BEFORE FAX is a deliberate deviation from the ash, which orders them
+ * the other way (summon(), UnderTheSea.ash:937-957: locket, then
+ * `_photocopyUsed == false && (faxbot || faxbot || faxbot)`, then the egg).
+ * Three reasons:
+ *
+ *  - Gold never reaches the fax. Its log has no faxbot line and no
+ *    `_photocopyUsed` at all — the aftercore session before the ascension
+ *    had already spent the day's photocopy — so both of its unholy divers
+ *    came from `[16] Combat Lover's Locket` and `[16] mimic egg`
+ *    (`_mimicEggsObtained` 0→1→2 at G:3535, :3573). The ash's fax branch is
+ *    dead code on a normal day; our run only found it because the ascension
+ *    left `_photocopyUsed` false.
+ *  - Its failure mode is the worst on the ladder. Live 2026-09-01, diver #2:
+ *    "Asking Easyfax to send a fax of unholy diver ... No response from
+ *    Easyfax after 60 seconds", three times. A third-party bot that is down
+ *    costs minutes of wall clock before the ladder moves on; the egg is
+ *    local and instant.
+ *  - The egg is cheap. libram's ChestMimic gates on
+ *    `experience >= 100 && _mimicEggsObtained < 11` (ChestMimic.js:25), so a
+ *    grown mimic banks ten-plus eggs a day and this route spends one or two.
+ *    (The ash's own `experience > 200` gate is stricter than the game's.)
+ *
+ * The fax keeps its place immediately behind: it costs no egg when it works,
+ * so it is still worth trying before the pocket-wish tail.
  */
 export function summon(target: Monster): void {
   if (CombatLoversLocket.canReminisce(target)) {
     CombatLoversLocket.reminisce(target);
     return;
-  }
-  if (!get("_photocopyUsed") && canFaxbot(target)) {
-    if (faxbot(target) || faxbot(target) || faxbot(target)) {
-      use($item`photocopied monster`);
-      runCombat();
-      return;
-    }
   }
   if (have(mimic) && mimic.experience >= 100 && get("_mimicEggsObtained") < 11) {
     if (ChestMimic.differentiableQuantity(target) === 0) ChestMimic.receive(target);
@@ -95,6 +112,13 @@ export function summon(target: Monster): void {
     // A Force cast mid-egg-fight can strand choice 1387; answer it (ash parity).
     if (handlingChoice() && lastChoice() === 1387) runChoice(3);
     return;
+  }
+  if (!get("_photocopyUsed") && canFaxbot(target)) {
+    if (faxbot(target) || faxbot(target) || faxbot(target)) {
+      use($item`photocopied monster`);
+      runCombat();
+      return;
+    }
   }
   if (have($skill`Just the Facts`)) {
     if (itemAmount($item`pocket wish`) === 0) farmPocketWish();
