@@ -109,12 +109,12 @@ function riftOutfit() {
  *
  * The wish can still come back empty, so pawWish() reports the outcome and we
  * fall through to a budgeted pull (the "sea lasso (training)" reservation in
- * pulls.ts holds the slot for exactly this). It is no longer EXPECTED to come
- * back empty: the 2026-08-31 run's twenty refused `wish=sea+lasso` submissions
- * were an invocation bug — the wish was thrown from a dry-land outfit, and a
- * paw ITEM wish is only granted for an item you could currently go and get.
- * resources/paw.ts dresses for the sea first now, the way the ash does
- * (UTS:874-876), and caps the retries. */
+ * pulls.ts holds the slot for exactly this). Two things changed on the wish
+ * side after the 2026-08-31 run threw twenty refused `wish=sea+lasso`:
+ * resources/paw.ts now dresses for the sea first, the way the ash does
+ * (UTS:874-876), and it caps the retries. Whether the outfit was the actual
+ * cause is NOT settled — see paw.ts; the exhausted-allowance explanation fits
+ * the same evidence — so this fallback stays load-bearing. */
 function riftPrepare(): void {
   recover();
   // trainingGearReady() gate: the Rufus chain now runs BEFORE the corral

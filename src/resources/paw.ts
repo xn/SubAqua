@@ -26,52 +26,39 @@ export function pawWishesLeft(): number {
  * Make the sea reachable before wishing for a sea item, then put the outfit
  * back.
  *
- * THE BUG THIS FIXES. The wiki's rule for a paw ITEM wish: "The item must be a
- * monster drop from a monster whose native zone you can currently adventure
- * in. This uses a very strict definition of 'can currently adventure in' — if
- * you don't have any underwater breathing EQUIPPED, no underwater items for
- * you, and if you don't have the transfunctioner equipped, no 8-bit items."
- * A wish that fails this returns "Quite impossible" — "you don't have access
- * to the area where the item drops".
- * (wiki.kingdomofloathing.com/Cursed_monkey's_paw and its Talk page.)
+ * WHY. The wiki's rule for a paw ITEM wish (Cursed monkey's paw, "Items"):
+ * the item has to be tradable, has to be a monster drop, the monster cannot be
+ * uncopyable, and "the item must be dropped from a monster that is available
+ * in a zone you can currently access". The wiki then says, in as many words,
+ * "It's unclear what counts as 'available'". When the conditions are unmet the
+ * message is "quite impossible" rather than "impossible" — and that text is
+ * server response, which mafia's session log does not record.
  *
- * Every item this route wishes for (sea lasso, sea cowbell, Mer-kin
- * prayerbeads, rusty rivet) drops underwater, so a wish thrown while dressed
- * for dry land is refused, silently as far as the session log goes: no item,
- * no `Cursed by a Monkey`, and `_monkeyPawWishesUsed` never moves because
- * mafia only counts successes.
- *
- * That is exactly what the 2026-08-31 run did — TWENTY `wish=sea+lasso`
- * submissions across the turn-33 rift block, every one from a Shadow Rift
- * outfit (`Maximizer: item, -back, -hat, -off-hand, -pants, -weapon`), zero
- * granted, `_monkeyPawWishesUsed` at 0 all day, and all 16 free rift fights
- * then trained nothing. Gold, wishing for the same item from the same URL
- * (`main.php?action=cmonk` -> `choice.php?whichchoice=1501&wish=sea+lasso`),
- * got 3 for 3 — because the ash equips first (UnderTheSea.ash:874-876):
+ * So the STRICT reading — that an underwater zone is not "currently
+ * accessible" without breathing gear — is not established. What is established
+ * is that both reference implementations take it. The ash equips before every
+ * sea wish (UnderTheSea.ash:874-876):
  *
  *     equip($item[really, really nice swimming trunks]);
  *     equip($item[little bitty bathysphere]);
  *     monkeypaw($item[sea lasso]);
  *
- * The earlier diagnosis in this file — "an aftercore garbo session spent the
- * rollover-day's five while mafia reset the counter" — was a guess, and wrong:
- * the invocation was the problem, not the allowance.
+ * and libram's `wishFor` calls `prepareForAdventure()` at a location where the
+ * item drops. Neither is accidental. This wrapper follows them: worn gear
+ * satisfies both the strict and loose readings, and the swap is restored
+ * immediately, so it is a cheap precaution rather than a claim.
  *
- * libram's `wishFor` already tries to do this itself, but cannot get started:
- * it builds its location list with `Location.all().filter((l) => canAdventure(l)
- * && ...)` and only then calls `prepareForAdventure(locations[0])`. Underwater
- * zones fail `canAdventure` while we cannot breathe, so the list comes back
- * empty, the prepare is skipped, and it calls `monkeyPaw()` bare. Breathing
- * FIRST breaks that circle and lets libram's own machinery work as designed.
- *
- * Note EQUIPPED, not "able to breathe": the rule is written against worn gear,
- * and there is a live report of a Mer-kin drop wish that only succeeded once
- * breathing equipment was on. So this does NOT short-circuit on Driving
- * Waterproofly / Wet Willied the way the rest of the route's breathing checks
- * do — an effect may satisfy mafia's `canAdventure` and still leave KoL's own
- * check unhappy. Equipping when an effect would have sufficed costs one swap
- * that is restored immediately.
- *
+ * WHAT IS NOT ESTABLISHED. The 2026-08-31 run submitted TWENTY
+ * `wish=sea+lasso` across the turn-33 rift block — every one from a Shadow
+ * Rift outfit (`Maximizer: item, -back, -hat, -off-hand, -pants, -weapon`) —
+ * and got nothing: no item, no `Cursed by a Monkey`, `_monkeyPawWishesUsed` at
+ * 0 all day (mafia only counts successes). Gold submitted the identical URL
+ * and went 3 for 3, having equipped the trunks and bathysphere first. That is
+ * a correlation, not a mechanism. The competing explanation — the day's five
+ * wishes were already spent by an aftercore session before the ascension,
+ * while mafia's daily counter reset — predicts exactly the same trace and
+ * CANNOT be distinguished from these logs. The next run distinguishes them: if
+ * three lasso wishes land from a sea outfit, the outfit was the problem.
  * Slot-scoped save/restore rather than `checkpoint`: libram's `wishFor` takes
  * the checkpoint itself once its location list is non-empty, and mafia keeps
  * only one, so a nested save here would hand our restore the sea outfit
