@@ -124,12 +124,25 @@ export function canBreatheUnderwater(): boolean {
  */
 export function isTrainingLasso(): boolean {
   return (
-    get("lassoTraining") !== "expertly" &&
-    get("lassoTrainingCount") < 20 &&
+    !lassoExpert() &&
     have($item`sea lasso`) &&
     have($item`sea cowboy hat`) &&
     have($item`sea chaps`)
   );
+}
+
+/**
+ * The lasso skill is FINISHED: 20 points, the "expertly" adverb. Both reads,
+ * because the count may stop moving once KoL flips the adverb.
+ *
+ * This is the line past which the sea chaps are free to be SPENT — Grandma's
+ * ROW125 barter eats them (tasks/sorceress/mine.ts), and with the gear
+ * mandated above there is no way back from that: training would freeze
+ * wherever it stood and Tame Seahorse could never become ready. mine.ts aborts
+ * on this rather than trading.
+ */
+export function lassoExpert(): boolean {
+  return get("lassoTraining") === "expertly" || get("lassoTrainingCount", 0) >= 20;
 }
 
 const scubaTanks = $items`old SCUBA tank, Elf Guard SCUBA tank`;

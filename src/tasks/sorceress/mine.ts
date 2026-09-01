@@ -26,7 +26,7 @@ import {
 } from "libram";
 
 import { CombatStrategy, killMacro } from "../../engine/combat";
-import { requiredFamiliarBreather } from "../../engine/outfit";
+import { lassoExpert, requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
@@ -520,6 +520,32 @@ export function mineQuest(): Quest {
         ready: () => !tailpieceOwned() && haveOreOrFins(),
         completed: tailpieceOwned,
         do: (): void => {
+          // POINT OF NO RETURN. ROW125's cost item is the sea chaps, and the
+          // chaps are +1 of the +3 a lasso throw is worth — isTrainingLasso()
+          // (engine/outfit.ts) mandates hat AND chaps, so trading them below
+          // expert freezes lassoTrainingCount exactly where it stands and
+          // `Tame Seahorse` (ready: training >= 20, corral.ts) can never
+          // become ready again. There is no recovery inside the run: the hat
+          // and chaps are unpullable in-path (docs/unpullable-items.txt) and
+          // the corral is the only source. Fail here, loudly, before the
+          // trade — and before the scale trip that would pay turns to reach
+          // it. User directive 2026-09-01.
+          //
+          // The run plan orders corralQuest() ahead of mineQuest() precisely
+          // so this cannot happen, and `Corral Lassos` does not complete below
+          // 20 (lassosDone()); reaching this line means one of those two
+          // invariants has moved.
+          if (!lassoExpert()) {
+            abort(
+              `Grandma's ROW125 trade spends the sea chaps, but the lasso skill is only at ` +
+                `${get("lassoTrainingCount", 0)}/20 (${get("lassoTraining") || "untrained"}). ` +
+                `The chaps are +1 of the +3 per throw and are unpullable in-path, so trading ` +
+                `them now would strand the skill below expert and make the wild seahorse ` +
+                `untameable for the rest of the run. Finish the training first — the corral ` +
+                `grind and the free Shadow Rift fights both throw, seven geared throws is 20 ` +
+                `— then rerun.`,
+            );
+          }
           if (availableAmount(scale) >= 3) {
             // Same pre-barter unequips as the mask row above (UTS
             // ab1105e:2455): the sea chaps are ROW125's own cost item.
