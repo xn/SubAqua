@@ -66,6 +66,13 @@ const navelSources = ["GAP runaway", "navel ring runaway"];
  * (6 runaways) and cast the skill zero times in 41 turns because they never
  * went restless. That is 5-6 free runs left on the table at the one zone where
  * a run is worth a whole turn.
+ *
+ * NOT PORTED (opportunity, not a bug): loopstar plans the familiar's WEIGHT
+ * before running, `goalWeight = 5 * (1 + _banderRunaways)` in
+ * planRunawayFamiliar() — it gears up to the next 5 lb threshold, so a
+ * runaway is available whenever the gear can reach one. bootsRunawaysLeft()
+ * below only reads the weight we happen to be wearing, so a run that could
+ * have been bought with familiar-weight gear is not seen.
  */
 function bootsRunawaysLeft(): number {
   return StompingBoots.have() ? StompingBoots.getRemainingRunaways() : 0;
@@ -200,7 +207,15 @@ export const freeRunSources: FreeRunSource[] = [
     available: () => bootsRunawaysLeft() > 0,
     remaining: bootsRunawaysLeft,
     equip: $familiar`Pair of Stomping Boots`,
-    do: Macro.step("runaway"),
+    // `new Macro().runaway()` — the shape loopstar uses for both familiar
+    // runaways (loopstar resources/runaway.ts:139, Stomping Boots entry:
+    // `new Macro().step(runawayFamiliarPlan.macro).runaway()`; user pointer
+    // 2026-09-01). Its `plan.macro` prefix is the familiar-WEIGHT step from
+    // planFamiliarGear(), which gears the familiar up to the next 5 lb
+    // threshold (`goalWeight = 5 * (1 + _banderRunaways)`); this route has no
+    // such planner, so bootsRunawaysLeft() just reads the weight we happen to
+    // be wearing — see the note above for the gear-up opportunity that leaves.
+    do: new Macro().runaway(),
     banishes: false,
   },
   {
