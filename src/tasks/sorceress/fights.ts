@@ -139,9 +139,9 @@ export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
     // One-arg lambda, never the bare function: Array#every passes
     // (item, index, array) and the JS bridge then hunts for a
     // have_equipped(item, int, item[]) overload — live 2026-08-29 Gymnasium.
-    // The Familiar branch is dead for now (nothing on the ladder takes the
-    // familiar slot since Release the Boots came off it, freerun.ts) but is
-    // kept: FreeRunSource.equip still admits one.
+    // A familiar source (the Stomping Boots' runaway) counts as worn while
+    // that familiar is FIELDED — gymnasiumTurn() fields gymFreeRunGear()'s
+    // familiar pick before this walk runs.
     const worn =
       source.equip === undefined ||
       (source.equip instanceof Familiar

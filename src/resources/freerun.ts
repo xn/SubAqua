@@ -8,7 +8,20 @@ import {
   Monster,
   myFamiliar,
 } from "kolmafia";
-import { $effect, $item, $locations, $phylum, $skill, get, have, Macro } from "libram";
+import {
+  $effect,
+  $familiar,
+  $item,
+  $locations,
+  $phylum,
+  $skill,
+  get,
+  have,
+  Macro,
+  StompingBoots,
+} from "libram";
+
+import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
 
 import { banishBudgetAllows, banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
@@ -28,31 +41,56 @@ const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Slea
 const navelSources = ["GAP runaway", "navel ring runaway"];
 
 /**
- * RELEASE THE BOOTS: NO-PORT (user correction 2026-09-01, "it is a turn taking
- * insta-kill").
+ * THE STOMPING BOOTS, and the skill that is NOT their free run.
  *
- * The ash lists it — `free_run()`'s skill loop (UnderTheSeaCCS.ash:82) and
- * `freeRun()`'s familiar pick (UnderTheSeaGlobals.ash:489-492, guarded on
- * `(familiar_weight + weight_adjustment) / 5 > _banderRunaways`) — but the
- * skill does not free the fight. Live 2026-08-31 the Gymnasium released the
- * boots twice, turn 58 (Mer-kin poseur) and turn 67 (Mer-kin juicer): both
- * times Curby "leaps up... stomps your opponent into paste", both times the
- * turncount advanced (58 -> 59, 67 -> 68), and `_banderRunaways` stayed at 0
- * for the whole run — mafia never booked a runaway. Gold, running the ash,
- * never cast it once in 41 turns (its boots were fielded but never went
- * restless), so the ash's own best run never exercised this rung.
+ * `Release the Boots` is a NO-PORT (user correction 2026-09-01, "it is a turn
+ * taking insta-kill"). The ash casts it — `free_run()`'s skill loop
+ * (UnderTheSeaCCS.ash:82) — and that is the ash's bug, not a mechanic we were
+ * missing. Live 2026-08-31 the Gymnasium released the boots twice, turn 58
+ * (Mer-kin poseur) and turn 67 (Mer-kin juicer): both times Curby "leaps
+ * up... stomps your opponent into paste", both times the turncount advanced
+ * (58 -> 59, 67 -> 68), and `_banderRunaways` stayed at 0. libram's own free-run
+ * ladder (actions/FreeRun.ts) does not list the skill anywhere.
  *
- * On the ladder it was actively harmful: the ash's order puts it AHEAD of Feel
- * Hatred and Snokebomb, so at the gymnasium — the one zone where a free run is
- * worth a whole turn — it was picked first and paid the turn anyway. A
- * turn-taking instakill is worth nothing over the ordinary kill ladder, so
- * there is no free-KILL entry for it either.
+ * The boots' actual free run is the plain `runaway` combat action while they
+ * are FIELDED with banked runaways — libram's StompingBoots entry in that
+ * ladder is `Macro.step("runaway")`, gated on
+ * `couldRunaway()`/`getRemainingRunaways()` — and unlike the Bandersnatch it
+ * needs no Ode to Booze (Bandersnatch.canRunaway() checks the effect,
+ * StompingBoots.canRunaway() does not). The counting is libram's (user rule
+ * 2026-08-31: check libram before hand-rolling), which also fixes an old
+ * hand-rolled bug — astro's version divided only the weight ADJUSTMENT by 5.
  *
- * With the entry gone nothing wants the Pair of Stomping Boots in the familiar
- * slot, and engine.customize()'s free-run familiar rule went with it — its
- * premise (2026-08-27: "the Boots buy ~24 free runs outright") was this rung.
- * sneakFamiliar() simply keeps the slot now.
+ * Neither script has ever actually spent one: `_banderRunaways` finished at 0
+ * in the 08-31 run AND in gold, which fielded 30 lb boots at its gymnasium
+ * (6 runaways) and cast the skill zero times in 41 turns because they never
+ * went restless. That is 5-6 free runs left on the table at the one zone where
+ * a run is worth a whole turn.
  */
+function bootsRunawaysLeft(): number {
+  return StompingBoots.have() ? StompingBoots.getRemainingRunaways() : 0;
+}
+
+/** The boots entry's full gate — banked runaways AND the underwater breathing
+ * check — in one call, so the engine can ask "would the ladder take the boots
+ * here?" BEFORE it puts them in the familiar slot. Fielding them on a gate the
+ * selector would then fail would strand a non-breathing familiar underwater,
+ * which customize()'s familiar-breathing block throws on. selectFreeRun()
+ * applies exactly this function, so the two cannot drift. */
+export function bootsRunAvailable(location?: Location): boolean {
+  if (bootsRunawaysLeft() <= 0) return false;
+  // The boots cannot breathe: underwater they need a familiar breather (an
+  // unknown zone is treated as underwater — every caller that omits the
+  // location is a sea task).
+  if (
+    (!location || location.environment === "underwater") &&
+    !hasBreathingEffect() &&
+    !familiarWaterBreathingEquipment.some((it) => have(it))
+  ) {
+    return false;
+  }
+  return true;
+}
 
 /** Ordered per ash freeRun() (UnderTheSea.ash:255-265) with the CCS spenders
  * folded in. Spring shoes appear twice on purpose: banish mode upgrades
@@ -151,6 +189,21 @@ export const freeRunSources: FreeRunSource[] = [
   // this same set underwater in production (CCS:95-105). See engine/combat.ts's
   // sea-legality audit for why mafia offers nothing to test against.
   {
+    // `runaway`, never `Release the Boots` — see the note above. Placed AFTER
+    // the geared banish rungs rather than at the ash's position (which is
+    // ahead of Feel Hatred and Snokebomb): the boots cost the familiar slot
+    // and are capped by weight, while a banish also thins the zone's roster,
+    // so the banishes go first and the boots pick up what is left. That
+    // ordering is also what keeps banish.ts's gymnasium reservation
+    // meaningful — the held charges are spent at the gym, not walked past.
+    name: "Stomping Boots runaway",
+    available: () => bootsRunawaysLeft() > 0,
+    remaining: bootsRunawaysLeft,
+    equip: $familiar`Pair of Stomping Boots`,
+    do: Macro.step("runaway"),
+    banishes: false,
+  },
+  {
     name: "glob of Blank-Out",
     available: () => itemAmount($item`glob of Blank-Out`) > 0,
     remaining: () => itemAmount($item`glob of Blank-Out`),
@@ -236,9 +289,11 @@ export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source 
  * asked to LEAVE this monster, so it was never expecting its drops, and a
  * drop-forfeiting kill costs it nothing.
  *
- * Peace Turkey vs. the Boots — the 2026-08-27 design call — is MOOT: the boots
- * are off the ladder (the NO-PORT note above), so sneakFamiliar() keeps the
- * familiar slot uncontested.
+ * Peace Turkey vs. the Boots: the boots take the familiar slot only when it is
+ * FREE (engine.customize()). A task that declares sneakFamiliar() keeps it —
+ * the 2026-08-27 matrix that would evict the turkey in a -combat context is
+ * gone, because the boots are worth 5-6 runs at this route's weights, not the
+ * 24 that decision assumed.
  *
  * `exclude` names sources the caller has already rejected, so it can ask for
  * the NEXT candidate. The engine needs this because availability is only half
@@ -278,6 +333,14 @@ export function selectFreeRun(
       !have($effect`Driving Waterproofly`)
     ) {
       return false;
+    }
+    // The boots cannot breathe: underwater they need a familiar breather
+    // (else engine.customize()'s familiar check would throw on a familiar the
+    // task never asked for). Same gate the engine consults before it fields
+    // them — bootsRunAvailable() above. Routed through source.available() so
+    // the entry's own banked-runaways gate stays live code.
+    if (source.name === "Stomping Boots runaway") {
+      return source.available() && bootsRunAvailable(location);
     }
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;

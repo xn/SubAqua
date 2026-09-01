@@ -156,10 +156,9 @@ function fallbackMacro(options: { fish?: boolean } = {}): Macro {
  * The equip gate itself is deliberate — a silently stripped equip would sell a
  * gearless macro as a banish/run — but taking the FIRST available source and
  * dropping the whole provide when its slot is occupied throws away every source
- * behind it. That is the live 2026-08-27 abort: Grandpa/Find Grandpa fields
- * sneakFamiliar() (Peace Turkey), selectFreeRun picked Release the Boots (24
- * runaways left on a 123 lb Pair of Stomping Boots), Outfit.equipFamiliar
- * returned false because the familiar slot was already claimed
+ * behind it. That is the live 2026-08-27 abort: Grandpa/Find Grandpa fielded
+ * sneakFamiliar() (Peace Turkey), the ladder's first pick wanted the familiar
+ * slot, Outfit.equipFamiliar returned false because it was already claimed
  * (grimoire outfit.js:279-283), and the task fell through to its combat default
  * with nine untried run sources still on the ladder.
  *
@@ -403,14 +402,21 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       }
     }
     if (combat.can("freeRun")) {
-      // THE FREE-RUN FAMILIAR RULE (user decision 2026-08-27) is GONE, and so
-      // is the Stomping Boots handling it existed for. Its premise was that
-      // Release the Boots buys ~24 free runaways a day, worth taking the
-      // familiar slot off sneakFamiliar() for; the skill is a turn-taking
-      // instakill (user correction 2026-09-01, and the live 2026-08-31
-      // evidence in resources/freerun.ts's NO-PORT note), so there is nothing
-      // to trade the slot for. The sneak familiar keeps it, and the ladder is
-      // one unrestricted walk again.
+      // THE FREE-RUN FAMILIAR RULE (user decision 2026-08-27) is GONE: one
+      // unrestricted walk, and the Stomping Boots take the familiar slot only
+      // when it is already FREE — grimoire's equipFamiliar refuses to
+      // overwrite a set familiar (outfit.js:279-283), so a task that declared
+      // sneakFamiliar() keeps it and firstEquippable() walks past the boots.
+      //
+      // That rule existed to EVICT the sneak familiar for the boots, on the
+      // premise that they buy ~24 free runaways a day. Two corrections since:
+      // the boots' free run is `runaway`, not the turn-taking Release the
+      // Boots the ash casts (freerun.ts's note; user correction 2026-09-01),
+      // and at this route's weights they are worth 5-6 runs, not 24 — gold
+      // fielded 30 lb boots at its gymnasium, 6 runaways. Trading a zone-wide
+      // -combat for six runs is not the trade the 2026-08-27 decision priced,
+      // so the eviction is not reinstated on its own; the boots now pick up
+      // the slot only where nothing else wants it.
       const banish = undelay(task.freeRunBanishes) === true;
       const source = firstEquippable(outfit, (exclude) =>
         selectFreeRun({ banish, location, exclude }),
