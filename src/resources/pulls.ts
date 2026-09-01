@@ -18,12 +18,15 @@ import { shubPrepShort } from "../lib/shub";
 import { currentPolicy } from "./policy";
 
 /** Items Hagnk's refuses in 11,037 Leagues (`docs/unpullable-items.txt`, from
- * the user 2026-09-01), plus the sea cowbell — the wiki's table omits it but
- * the user confirmed live 2026-08-29 that the path bans it too. Without this
- * gate pullSequence() mall-buys the item into storage and then fails
- * takeStorage: meat spent for nothing, and a reservation slot held all run for
- * a pull that can never land. */
-const unpullableInPath = $items`rough fish scale, pristine fish scale, rusty diving helmet, aerated diving helmet, teflon ore, teflon swim fins, sea leather, sea cowboy hat, sea chaps, sea cowbell, Mer-kin bunwig, crappy Mer-kin mask, crappy Mer-kin tailpiece, Mer-kin gladiator mask, Mer-kin scholar mask, Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, Mer-kin headguard, Mer-kin waistrope, Mer-kin facecowl, Mer-kin thighguard, Mer-kin dodgeball, Mer-kin dragnet, Mer-kin switchblade, unblemished pearl`;
+ * the user 2026-09-01). Without this gate pullSequence() mall-buys the item
+ * into storage and then fails takeStorage: meat spent for nothing, and a
+ * reservation slot held all run for a pull that can never land.
+ *
+ * The sea cowbell is NOT on this list: it was banned here on a 2026-08-29
+ * report, but the gold run pulls one mid-corral and it lands
+ * (`pull: 1 sea cowbell`, `_roninStoragePulls` gains 4196,
+ * docs/gold-star-run.txt:5381). User directive 2026-09-01: pull it. */
+const unpullableInPath = $items`rough fish scale, pristine fish scale, rusty diving helmet, aerated diving helmet, teflon ore, teflon swim fins, sea leather, sea cowboy hat, sea chaps, Mer-kin bunwig, crappy Mer-kin mask, crappy Mer-kin tailpiece, Mer-kin gladiator mask, Mer-kin scholar mask, Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, Mer-kin headguard, Mer-kin waistrope, Mer-kin facecowl, Mer-kin thighguard, Mer-kin dodgeball, Mer-kin dragnet, Mer-kin switchblade, unblemished pearl`;
 
 /** False for anything the path bans from Hagnk's. */
 export function pullable(item: Item): boolean {
@@ -141,6 +144,20 @@ const pullReservations: PullReservation[] = [
       get("lassoTrainingCount", 0) < 20 &&
       availableAmount($item`sea lasso`) === 0 &&
       !pulledToday($item`sea lasso`),
+  },
+  {
+    // Gold pulls one cowbell into the taming phase (G:5381, `pull: 1 sea
+    // cowbell`, id 4196) rather than farming the third off a paid sea cow —
+    // the tame throws cowbell/cowbell then cowbell/lasso, so three must be in
+    // hand and the cow is the only farm source (10% drop). Releases the slot
+    // the moment the third arrives or the seahorse is tamed.
+    name: "sea cowbell",
+    item: $item`sea cowbell`,
+    needed: () =>
+      get("corralUnlocked") &&
+      get("seahorseName") === "" &&
+      availableAmount($item`sea cowbell`) < 3 &&
+      !pulledToday($item`sea cowbell`),
   },
   {
     // B F3/D: gold pulled the digpick (G:4751, 14th pull); the 08-30 run

@@ -32,6 +32,7 @@ import {
 } from "../../resources/banish";
 import { bczAffordable } from "../../resources/freekill";
 import { freeRunChainMacro } from "../../resources/freerun";
+import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
 const rustler = $monster`Mer-kin rustler`;
@@ -459,6 +460,23 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           recover();
         },
         limit: { soft: 15, message: "Sea lassos are not accumulating." },
+      },
+      {
+        // Gold buys the third cowbell rather than farming it (G:5381,
+        // `pull: 1 sea cowbell`, right before its taming phase): the cow drops
+        // one at 10%, so the last bell is worth several paid corral turns.
+        // Runs once the lasso training is done — by then the opener bundle and
+        // the grind have contributed whatever they were going to.
+        name: "Pull Cowbell",
+        ready: () =>
+          get("corralUnlocked") &&
+          availableAmount(cowbell) < 3 &&
+          !pulledToday(cowbell) &&
+          pullBudgetAllows(cowbell),
+        completed: () => availableAmount(cowbell) >= 3 || pulledToday(cowbell) || tamed(),
+        do: () => void pullSequence(cowbell),
+        freeaction: true,
+        limit: { tries: 1 },
       },
       {
         // Taming (ash sorceress() UTS:3024-3074 + CCS:738-744): banish the

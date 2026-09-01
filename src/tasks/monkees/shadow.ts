@@ -146,9 +146,17 @@ export function shadowRiftQuest(): Quest {
         // forest loot). Never a third: the loot flag closes the second
         // disjunct once it is set.
         name: "Rufus Quest",
+        // NOT gated on trainingGearReady(): the hat and chaps are the LASSO
+        // THROW's requirement (Rift Fights below), not the phone call's, and
+        // they come out of the corral — so gating the call on them chained
+        // the whole rift to the corral. Live 2026-08-31: the corral opener
+        // missed its bundle, the leather grind ran to turn 32, and Rufus was
+        // not called until turn 33; gold calls him at turn 15, BEFORE it has
+        // any corral gear at all (G:3640-3660, chaps smithed at turn 16), so
+        // Shadow Waters is up and the day's free rift fights are waiting the
+        // moment the first lasso lands.
         ready: () =>
           have(phone) &&
-          trainingGearReady() &&
           get("questRufus") === "unstarted" &&
           !have(lodestone) &&
           get("encountersUntilSRChoice", 11) > 9 &&

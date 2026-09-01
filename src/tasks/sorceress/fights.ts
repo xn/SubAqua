@@ -132,7 +132,25 @@ function equipItems(equip: unknown): Item[] {
  * re-walks the ladder past anything whose gear didn't land.
  */
 export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
-  const exclude = new Set<string>();
+  // Release the Boots is walked LAST here, whatever the ladder's own order
+  // says. Live 2026-08-31 the gym released the boots twice ([58] poseur,
+  // [67] juicer): both times Curby "stomps your opponent into paste", both
+  // times the turn counter advanced (58 -> 59, 67 -> 68) and `_banderRunaways`
+  // stayed at 0 — mafia never booked a runaway, so the stomp is a KILL and
+  // the fight is paid. Gold frees its gym guards with real banishes instead
+  // (Curveball, Throw Latte, Feel Hatred, Snokebomb at G:8253-8420), which
+  // banish.ts's gymnasium reservation now keeps in stock for exactly this
+  // walk. The boots stay on the ladder as the last rung: a paid kill that
+  // ends the fight still beats a paid kill that takes eight rounds.
+  const deferred = ["Release the Boots"];
+  const source = gymFreeRunWalk(target, new Set(deferred));
+  return source ?? gymFreeRunWalk(target, new Set());
+}
+
+function gymFreeRunWalk(
+  target: Monster | undefined,
+  exclude: Set<string>,
+): { do: Macro } | undefined {
   for (;;) {
     const source = selectFreeRun({ banish: true, location: gymnasium, target, exclude });
     if (!source || exclude.has(source.name)) return undefined;
@@ -162,7 +180,15 @@ export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
  * 2026-08-28 paid 14 gym turns, 2026-08-30 paid 15, with the boots'
  * runaways unspent both days. */
 export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
-  const source = selectFreeRun({ banish: true, location: gymnasium });
+  // Same deferral as gymFreeRun(): whatever gear the ladder wants must be the
+  // gear the FIGHT-TIME walk will ask for, or the gym wears the boots and the
+  // banish rungs' mugs and bags never land.
+  const source =
+    selectFreeRun({
+      banish: true,
+      location: gymnasium,
+      exclude: new Set(["Release the Boots"]),
+    }) ?? selectFreeRun({ banish: true, location: gymnasium });
   if (!source) return { items: [] };
   if (source.equip instanceof Familiar) return { items: [], familiar: source.equip };
   return { items: equipItems(source.equip) };

@@ -23,7 +23,7 @@ import {
 
 import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
 
-import { banishedBy, banishSources } from "./banish";
+import { banishBudgetAllows, banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
 import { CombatResource } from "./resource";
 
@@ -309,9 +309,15 @@ export function selectFreeRun(
     return undefined;
   }
   const snokebomb = banishSources.find((source) => source.name === "snokebomb");
+  // The banishing rungs here (Curveball, Latte, Feel Hatred, Snokebomb,
+  // Spring Kick) are the SAME daily charges banish.ts hands out, so they
+  // answer to the same budget — otherwise a free run at a cheap zone would
+  // quietly spend the three the gymnasium is holding (banishReservations).
+  const banishesOverBudget = !banishBudgetAllows(location);
   const run = freeRunSources.find((source) => {
     if (exclude?.has(source.name)) return false;
     if (source.banishes && !banish) return false;
+    if (source.banishes && banishesOverBudget) return false;
     // The navel runaways need Driving Waterproofly underwater (ash
     // freeRun():257); an unknown zone is treated as underwater — every
     // caller that omits the location is a sea task.

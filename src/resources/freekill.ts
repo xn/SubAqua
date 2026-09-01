@@ -1,4 +1,4 @@
-import { itemAmount, Location, Monster, Skill } from "kolmafia";
+import { availableAmount, itemAmount, Location, Monster, Skill } from "kolmafia";
 import {
   $effect,
   $item,
@@ -14,6 +14,7 @@ import {
 } from "libram";
 
 import { currentPolicy } from "./policy";
+import { ChargeReservation } from "./reservation";
 import { CombatResource } from "./resource";
 
 export type FreeKillSource = CombatResource & {
@@ -193,6 +194,102 @@ export const freeKillSources: FreeKillSource[] = [
 const dartsOnlyNames = ["Darts: Bullseye", "Spit jurassic acid"];
 
 /**
+ * Charges the ladder holds back for the two fights gold spends its LAST two
+ * free kills on (resources/reservation.ts has the measurement).
+ */
+export const freeKillReservations: ChargeReservation[] = [
+  {
+    // The corral opener is ONE free fight in gold (G:4584-4646): back up into
+    // an Abyss monster, Refracted Gaze + McTwist for the doubled bundle, then
+    // BCZ Sweat Bullets #10 of 11 to end it — 2 cowbells, 2 leathers and 2
+    // lassos for zero turns. Without a charge in hand that copy falls to the
+    // kill ladder, the bundle never lands, and the corral grinds: 25 turns on
+    // 2026-08-31. Keyed on the bundle rather than on `corralUnlocked`, which
+    // only flips around turn 17 — long after the Outpost has drained the
+    // ladder (live: all 11 Sweat Bullets gone by turn 13).
+    name: "corral opener",
+    count: 1,
+    sites: [$location`The Coral Corral`],
+    needed: () =>
+      availableAmount($item`sea leather`) === 0 &&
+      !have($item`sea cowboy hat`) &&
+      !have($item`sea chaps`) &&
+      get("seahorseName") === "",
+  },
+  {
+    // Gold's last charge (G:6626, Sweat Bullets #11) opens the school's
+    // Sea *dent -> Refracted Gaze -> free kill chain, which yoinks ~5 Mer-kin
+    // items including the hallpasses the cowl/rope hunt spends. The shadow
+    // bricks carry the rest of that zone (gold threw 8 there); they hold
+    // themselves back with `avoidAt` rather than a reservation because they
+    // do not exist until the rift has run.
+    name: "school hallpass chain",
+    count: 1,
+    sites: [$location`Mer-kin Elementary School`],
+    // Only once the corral opener above has had its charge. The route reaches
+    // the corral first, and two live reservations against a ladder down to one
+    // charge would let the LATER site starve the earlier one — the corral would
+    // refuse its own opener because the school was holding the last charge.
+    needed: () =>
+      !get("isMerkinHighPriest", false) &&
+      (availableAmount($item`sea leather`) > 0 ||
+        have($item`sea cowboy hat`) ||
+        have($item`sea chaps`) ||
+        get("seahorseName") !== ""),
+  },
+];
+
+/**
+ * The mode/zone/fight filters selectFreeKill() applies, factored out so the
+ * budget below can count the pool a HOLDER could actually spend rather than
+ * every charge on the ladder. Counting the whole ladder would let a pile of
+ * charges the reserving site can never use (Assert your Authority outside the
+ * Sheriff zones, shadow bricks the corral refuses, the drop-forfeiting pair)
+ * satisfy the budget and the reservation would never bite.
+ */
+function usableFreeKill(
+  source: FreeKillSource,
+  options: { location?: Location; dropsMatter?: boolean; onceDaily?: boolean },
+): boolean {
+  const { location, dropsMatter = false, onceDaily = true } = options;
+  const policy = currentPolicy();
+  const atColosseum = location === colosseum;
+  if (policy.freeKillMode === "dartsOnly" && !dartsOnlyNames.includes(source.name)) return false;
+  if (atColosseum && !source.colosseumSafe) return false;
+  if (!atColosseum && source.colosseumOnly) return false;
+  if (source.name === "Assert your Authority" && (!location || !sheriffZones.includes(location))) {
+    return false;
+  }
+  if (dropsMatter && !source.dropSafe) return false;
+  if (!onceDaily && source.onceDaily) return false;
+  if (location && source.avoidAt?.includes(location)) return false;
+  return source.available();
+}
+
+/**
+ * Whether a spend at `location` would eat a charge another site is holding.
+ * Same shape as pulls.ts's pullBudgetAllows: a site never blocks itself.
+ *
+ * The pool counted is the charges usable at the still-reserving sites, with
+ * `dropsMatter` on — both reserved fights are drop hunts (the corral bundle,
+ * the school's hallpasses), so a source that forfeits drops is no use to
+ * either and must not count toward their hold.
+ */
+export function freeKillBudgetAllows(location?: Location): boolean {
+  const holders = freeKillReservations
+    .filter((reservation) => !(location && reservation.sites.includes(location)))
+    .filter((reservation) => reservation.needed());
+  if (holders.length === 0) return true;
+  const heldSites = [...new Set(holders.flatMap((reservation) => reservation.sites))];
+  const pool = freeKillSources
+    .filter((source) =>
+      heldSites.some((site) => usableFreeKill(source, { location: site, dropsMatter: true })),
+    )
+    .reduce((total, source) => total + source.remaining(), 0);
+  return pool > holders.reduce((total, reservation) => total + reservation.count, 0);
+}
+
+/**
  * First free kill the policy, zone, and fight context allow. A pending
  * curveball already banks the target's free win (CCS free_kill():14-15).
  *
@@ -214,23 +311,13 @@ export function selectFreeKill(
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
-  const policy = currentPolicy();
-  const atColosseum = location === colosseum;
-  return freeKillSources.find((source) => {
-    if (policy.freeKillMode === "dartsOnly" && !dartsOnlyNames.includes(source.name)) return false;
-    if (atColosseum && !source.colosseumSafe) return false;
-    if (!atColosseum && source.colosseumOnly) return false;
-    if (
-      source.name === "Assert your Authority" &&
-      (!location || !sheriffZones.includes(location))
-    ) {
-      return false;
-    }
-    if (dropsMatter && !source.dropSafe) return false;
-    if (!onceDaily && source.onceDaily) return false;
-    if (location && source.avoidAt?.includes(location)) return false;
-    return source.available();
-  });
+  // Budget before ladder: an opportunistic upgrade at a zone that is cheap
+  // anyway must not take the charge the corral opener or the school is
+  // holding (freeKillReservations).
+  if (!freeKillBudgetAllows(location)) return undefined;
+  return freeKillSources.find((source) =>
+    usableFreeKill(source, { location, dropsMatter, onceDaily }),
+  );
 }
 
 /**
