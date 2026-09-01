@@ -1,8 +1,8 @@
 import {
-  booleanModifier,
   canEquip,
   equip,
   equippedItem,
+  haveEquipped,
   Item,
   myFamiliar,
   Slot,
@@ -10,11 +10,7 @@ import {
 } from "kolmafia";
 import { $familiar, $item, $slot, CursedMonkeyPaw, have, unequip } from "libram";
 
-import {
-  familiarWaterBreathingEquipment,
-  hasBreathingEffect,
-  waterBreathingEquipment,
-} from "../engine/outfit";
+import { familiarWaterBreathingEquipment, waterBreathingEquipment } from "../engine/outfit";
 
 /** Thin veneer over libram's CursedMonkeyPaw (user directive 2026-08-31:
  * don't reinvent what libram already ships). Kept as a module so the ash
@@ -30,12 +26,20 @@ export function pawWishesLeft(): number {
  * Make the sea reachable before wishing for a sea item, then put the outfit
  * back.
  *
- * THE BUG THIS FIXES. A monkey-paw ITEM wish is only granted when the item is
- * currently obtainable — KoL checks that you could meet a monster that drops
- * it. Every item this route wishes for (sea lasso, sea cowbell, Mer-kin
+ * THE BUG THIS FIXES. The wiki's rule for a paw ITEM wish: "The item must be a
+ * monster drop from a monster whose native zone you can currently adventure
+ * in. This uses a very strict definition of 'can currently adventure in' — if
+ * you don't have any underwater breathing EQUIPPED, no underwater items for
+ * you, and if you don't have the transfunctioner equipped, no 8-bit items."
+ * A wish that fails this returns "Quite impossible" — "you don't have access
+ * to the area where the item drops".
+ * (wiki.kingdomofloathing.com/Cursed_monkey's_paw and its Talk page.)
+ *
+ * Every item this route wishes for (sea lasso, sea cowbell, Mer-kin
  * prayerbeads, rusty rivet) drops underwater, so a wish thrown while dressed
- * for dry land is refused, silently: no item, no `Cursed by a Monkey`, and
- * `_monkeyPawWishesUsed` never moves because mafia only counts successes.
+ * for dry land is refused, silently as far as the session log goes: no item,
+ * no `Cursed by a Monkey`, and `_monkeyPawWishesUsed` never moves because
+ * mafia only counts successes.
  *
  * That is exactly what the 2026-08-31 run did — TWENTY `wish=sea+lasso`
  * submissions across the turn-33 rift block, every one from a Shadow Rift
@@ -60,6 +64,14 @@ export function pawWishesLeft(): number {
  * empty, the prepare is skipped, and it calls `monkeyPaw()` bare. Breathing
  * FIRST breaks that circle and lets libram's own machinery work as designed.
  *
+ * Note EQUIPPED, not "able to breathe": the rule is written against worn gear,
+ * and there is a live report of a Mer-kin drop wish that only succeeded once
+ * breathing equipment was on. So this does NOT short-circuit on Driving
+ * Waterproofly / Wet Willied the way the rest of the route's breathing checks
+ * do — an effect may satisfy mafia's `canAdventure` and still leave KoL's own
+ * check unhappy. Equipping when an effect would have sufficed costs one swap
+ * that is restored immediately.
+ *
  * Slot-scoped save/restore rather than `checkpoint`: libram's `wishFor` takes
  * the checkpoint itself once its location list is non-empty, and mafia keeps
  * only one, so a nested save here would hand our restore the sea outfit
@@ -74,12 +86,16 @@ function withSeaAccess<T>(action: () => T): T {
     equip(slot, item);
   };
   try {
-    if (!hasBreathingEffect() && !booleanModifier("Adventure Underwater")) {
+    if (!waterBreathingEquipment.some((it) => haveEquipped(it))) {
       const gear = waterBreathingEquipment.find((it) => have(it) && canEquip(it));
       if (gear) wear(gear);
     }
     const familiar = myFamiliar();
-    if (familiar !== $familiar.none && !familiar.underwater && !hasBreathingEffect()) {
+    if (
+      familiar !== $familiar.none &&
+      !familiar.underwater &&
+      !familiarWaterBreathingEquipment.some((it) => haveEquipped(it))
+    ) {
       const breather = familiarWaterBreathingEquipment.find((it) => have(it));
       if (breather) wear(breather, $slot`familiar`);
     }
