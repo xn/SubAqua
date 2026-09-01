@@ -1,10 +1,8 @@
 import {
   abort,
   appearanceRates,
-  availableAmount,
   getFuel,
   haveEquipped,
-  itemAmount,
   Item,
   Location,
   Monster,
@@ -14,9 +12,7 @@ import {
   Skill,
   toMonster,
 } from "kolmafia";
-import { $class, $effect, $item, $location, $skill, AsdonMartin, get, have, Macro } from "libram";
-
-import { ChargeReservation, reservedElsewhere } from "./reservation";
+import { $class, $effect, $item, $skill, AsdonMartin, get, have, Macro } from "libram";
 
 export type BanishSource = {
   /** Literal prefix mafia records in the banishedMonsters pref. */
@@ -25,10 +21,6 @@ export type BanishSource = {
   /** Gear that must be worn to cast it (snokebomb needs none). */
   equip?: Item;
   available: () => boolean;
-  /** Charges left on this rung today. Omitted = one (the once-a-day rungs);
-   * the multi-charge rungs count themselves so the budget below can tell a
-   * ladder with nine charges left from one with one. */
-  remaining?: () => number;
   /** Full macro when a bare trySkill/tryItem of `skill` is not enough (the
    * spring shoes' kick banishes without ending the fight and must be followed
    * by Spring Away). Engine customize() prefers this over `skill`. */
@@ -87,7 +79,6 @@ export const banishSources: BanishSource[] = [
     name: "Feel Hatred",
     skill: $skill`Feel Hatred`,
     available: () => get("_feelHatredUsed") < 3 && have($skill`Emotionally Chipped`),
-    remaining: () => Math.max(0, 3 - get("_feelHatredUsed", 0)),
   },
   {
     name: "Latte",
@@ -107,13 +98,11 @@ export const banishSources: BanishSource[] = [
     skill: $skill`Reflex Hammer`,
     equip: $item`Lil' Doctor™ bag`,
     available: () => get("_reflexHammerUsed") < 3 && have($item`Lil' Doctor™ bag`),
-    remaining: () => Math.max(0, 3 - get("_reflexHammerUsed", 0)),
   },
   {
     name: "Snokebomb",
     skill: $skill`Snokebomb`,
     available: () => get("_snokebombUsed") < 3 && have($skill`Snokebomb`),
-    remaining: () => Math.max(0, 3 - get("_snokebombUsed", 0)),
   },
   {
     name: "KGB dart",
@@ -121,13 +110,11 @@ export const banishSources: BanishSource[] = [
     equip: $item`Kremlin's Greatest Briefcase`,
     available: () =>
       get("_kgbTranquilizerDartUses") < 3 && have($item`Kremlin's Greatest Briefcase`),
-    remaining: () => Math.max(0, 3 - get("_kgbTranquilizerDartUses", 0)),
   },
   {
     name: "Yam Stinkbomb",
     skill: $item`stuffed yam stinkbomb`,
     available: () => have($item`stuffed yam stinkbomb`),
-    remaining: () => itemAmount($item`stuffed yam stinkbomb`),
   },
   {
     name: "Middle Finger",
@@ -190,45 +177,6 @@ export const banishSources: BanishSource[] = [
   },
 ];
 
-/**
- * Charges the banish ladder holds back for the gymnasium
- * (resources/reservation.ts has the measurement). Gold banishes three of its
- * eight gym encounters — Throw Latte, Feel Hatred and Snokebomb at
- * G:8253-8420, plus a Curveball — and pays only for the "Ators Gonna Ate"
- * NCs: 8 visits, 4 turns. The 08-31 run threw four banishes in An Octopus's
- * Garden on turn 3 and two more in the Trench, reached the gym with every
- * rung spent, killed all seven guards, and paid 15 turns for gym + park.
- * Every gym fight is worth nothing but the turn it costs (fights.ts
- * gymFreeRun), so a charge held here is a turn bought.
- */
-export const banishReservations: ChargeReservation[] = [
-  {
-    name: "gymnasium guards",
-    count: 3,
-    sites: [$location`Mer-kin Gymnasium`],
-    // Mirrors gym.ts's Guard Grind `completed`: the colosseum outfit needs
-    // BOTH pieces, so either one still missing keeps the grind (and this
-    // reservation) alive.
-    needed: () =>
-      availableAmount($item`Mer-kin gladiator mask`) === 0 ||
-      availableAmount($item`Mer-kin gladiator tailpiece`) === 0,
-  },
-];
-
-/** Turn-free banish charges left today. The paid tail is excluded: it is a
- * fallback that costs the turn anyway, so holding it back buys nothing. */
-function freeBanishChargesRemaining(): number {
-  return banishSources
-    .filter((source) => !source.paid && source.available())
-    .reduce((total, source) => total + (source.remaining?.() ?? 1), 0);
-}
-
-/** Whether a banish at `location` would eat a charge another site is holding.
- * Same shape as pulls.ts's pullBudgetAllows: a site never blocks itself. */
-export function banishBudgetAllows(location?: Location): boolean {
-  return freeBanishChargesRemaining() > reservedElsewhere(banishReservations, location);
-}
-
 /** The macro that fires one source: its override, else a guarded skill/item. */
 export function sourceMacro(source: BanishSource): Macro {
   return (
@@ -254,12 +202,8 @@ export function sourceMacro(source: BanishSource): Macro {
  */
 export function banishChainMacro(location?: Location, opts: { paid?: boolean } = {}): Macro {
   const macro = new Macro();
-  const overBudget = !banishBudgetAllows(location);
   for (const source of banishSources) {
     if (source.paid && !opts.paid) continue;
-    // Over budget the free rungs are spoken for elsewhere (banishReservations);
-    // the paid tail still fires, since it costs the turn either way.
-    if (overBudget && !source.paid) continue;
     if (source.equip && !haveEquipped(source.equip)) continue;
     if (!source.available()) continue;
     if (location) {
@@ -320,10 +264,8 @@ export function pickBanishSource(
   location?: Location,
   exclude?: ReadonlySet<string>,
 ): BanishSource | undefined {
-  const overBudget = !banishBudgetAllows(location);
   return banishSources.find((source) => {
     if (exclude?.has(source.name)) return false;
-    if (overBudget && !source.paid) return false;
     if (!source.available()) return false;
     if (!location) return true;
     const current = banishedBy(source);
@@ -409,9 +351,6 @@ export function assertBanishHeld(targets: Monster[], location: Location, taskNam
     const replacement = get("lastCopyableMonster");
     if (!replacement || !targets.includes(replacement) || banishActive(replacement)) return;
   }
-  // A banish the BUDGET withheld (banishReservations — the gym's three) is a
-  // deliberate skip, not a misfire: nothing was supposed to land here.
-  if (!banishBudgetAllows(location)) return;
   const source = pickBanishSource(location);
   if (!source) return;
   abort(

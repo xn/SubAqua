@@ -14,7 +14,7 @@ import {
 } from "libram";
 
 import { currentPolicy } from "./policy";
-import { ChargeReservation } from "./reservation";
+import { activeHolders, ChargeReservation } from "./reservation";
 import { CombatResource } from "./resource";
 
 export type FreeKillSource = CombatResource & {
@@ -267,25 +267,31 @@ function usableFreeKill(
 }
 
 /**
- * Whether a spend at `location` would eat a charge another site is holding.
- * Same shape as pulls.ts's pullBudgetAllows: a site never blocks itself.
+ * Whether spending THIS source at `location` would eat a charge another site
+ * is holding. Same shape as pulls.ts's pullBudgetAllows: a site never blocks
+ * itself.
  *
- * The pool counted is the charges usable at the still-reserving sites, with
- * `dropsMatter` on — both reserved fights are drop hunts (the corral bundle,
- * the school's hallpasses), so a source that forfeits drops is no use to
- * either and must not count toward their hold.
+ * Per-source, not per-location: a source no holder could ever spend cannot
+ * deplete the reservation, so refusing it buys the holder nothing and costs
+ * the caller a turn. Assert your Authority is not usable at the school (not a
+ * sheriffZone), the shadow bricks are not usable at the corral (`avoidAt`),
+ * and Club 'Em Back in Time is colosseum-only — none of them may be held back
+ * on those sites' behalf.
+ *
+ * The pool is counted with `dropsMatter` on: both reserved fights are drop
+ * hunts (the corral bundle, the school's hallpasses), so a source that
+ * forfeits drops is no use to either.
  */
-export function freeKillBudgetAllows(location?: Location): boolean {
-  const holders = freeKillReservations
-    .filter((reservation) => !(location && reservation.sites.includes(location)))
-    .filter((reservation) => reservation.needed());
+function freeKillBudgetAllows(source: FreeKillSource, location?: Location): boolean {
+  const holders = activeHolders(freeKillReservations, location);
   if (holders.length === 0) return true;
   const heldSites = [...new Set(holders.flatMap((reservation) => reservation.sites))];
+  const inPool = (candidate: FreeKillSource): boolean =>
+    heldSites.some((site) => usableFreeKill(candidate, { location: site, dropsMatter: true }));
+  if (!inPool(source)) return true;
   const pool = freeKillSources
-    .filter((source) =>
-      heldSites.some((site) => usableFreeKill(source, { location: site, dropsMatter: true })),
-    )
-    .reduce((total, source) => total + source.remaining(), 0);
+    .filter(inPool)
+    .reduce((total, candidate) => total + candidate.remaining(), 0);
   return pool > holders.reduce((total, reservation) => total + reservation.count, 0);
 }
 
@@ -311,12 +317,13 @@ export function selectFreeKill(
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
-  // Budget before ladder: an opportunistic upgrade at a zone that is cheap
-  // anyway must not take the charge the corral opener or the school is
-  // holding (freeKillReservations).
-  if (!freeKillBudgetAllows(location)) return undefined;
-  return freeKillSources.find((source) =>
-    usableFreeKill(source, { location, dropsMatter, onceDaily }),
+  // Budget alongside the ladder filters: an opportunistic upgrade at a zone
+  // that is cheap anyway must not take the charge the corral opener or the
+  // school is holding (freeKillReservations).
+  return freeKillSources.find(
+    (source) =>
+      usableFreeKill(source, { location, dropsMatter, onceDaily }) &&
+      freeKillBudgetAllows(source, location),
   );
 }
 

@@ -393,6 +393,35 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           ]
         : []) as Task[]),
       {
+        // Gold buys the third cowbell rather than farming it (G:5381,
+        // `pull: 1 sea cowbell`, right before its taming phase): the cow drops
+        // one at 10%, and gold only ever saw TWO drop (G:4616-4617) yet spent
+        // three in the tame (G:6068, G:6071).
+        //
+        // MUST sit ahead of "Corral Leather": leatherDone() requires
+        // `cowbell >= 3`, so while the bells are short Corral Leather is ready
+        // and incomplete and grimoire picks it every iteration — a Pull
+        // Cowbell placed after it could never run, and the third bell would
+        // have to come off the 10% drop (dolphins steal them: 08-31 run
+        // :5813, :8264) or the grind would abort on its 15-attempt soft limit.
+        // Gated on the leather half being done so the pull is spent on the
+        // piece that is actually blocking, not on the first turn of the phase.
+        name: "Pull Cowbell",
+        ready: () =>
+          get("corralUnlocked") &&
+          availableAmount($item`sea leather`) +
+            availableAmount($item`sea chaps`) +
+            availableAmount($item`sea cowboy hat`) >=
+            2 &&
+          availableAmount(cowbell) < 3 &&
+          !pulledToday(cowbell) &&
+          pullBudgetAllows(cowbell),
+        completed: () => availableAmount(cowbell) >= 3 || pulledToday(cowbell) || tamed(),
+        do: () => void pullSequence(cowbell),
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
         // Sea-cow farm: leather (chaps + hat) and three cowbells. The
         // seaCow saber reservation backs forceItems; the parka ray serves
         // first when charged (both force all drops). Ash getMissingCorralItems
@@ -460,23 +489,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           recover();
         },
         limit: { soft: 15, message: "Sea lassos are not accumulating." },
-      },
-      {
-        // Gold buys the third cowbell rather than farming it (G:5381,
-        // `pull: 1 sea cowbell`, right before its taming phase): the cow drops
-        // one at 10%, so the last bell is worth several paid corral turns.
-        // Runs once the lasso training is done — by then the opener bundle and
-        // the grind have contributed whatever they were going to.
-        name: "Pull Cowbell",
-        ready: () =>
-          get("corralUnlocked") &&
-          availableAmount(cowbell) < 3 &&
-          !pulledToday(cowbell) &&
-          pullBudgetAllows(cowbell),
-        completed: () => availableAmount(cowbell) >= 3 || pulledToday(cowbell) || tamed(),
-        do: () => void pullSequence(cowbell),
-        freeaction: true,
-        limit: { tries: 1 },
       },
       {
         // Taming (ash sorceress() UTS:3024-3074 + CCS:738-744): banish the

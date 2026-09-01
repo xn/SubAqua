@@ -66,7 +66,14 @@ function slabMacro(): Macro {
 function riftCombat(): CombatStrategy {
   const strategy = new CombatStrategy();
   strategy.startingMacro(() =>
-    get("_seadentWaveUsed", false) && training() < 20 && itemAmount(lasso) > 0
+    // trainingGearReady(): +3 per throw needs the hat and chaps on, and
+    // riftOutfit only pins them when we own them. Without the gate the
+    // pre-corral rift adventures (Labyrinth, Loded Stone) would throw the
+    // stock away for zero training.
+    get("_seadentWaveUsed", false) &&
+    trainingGearReady() &&
+    training() < 20 &&
+    itemAmount(lasso) > 0
       ? openerOnce(Macro.tryItem(lasso), 1)
       : new Macro(),
   );
@@ -109,7 +116,12 @@ function riftOutfit() {
  * pulls.ts holds the slot in exactly this broken state). */
 function riftPrepare(): void {
   recover();
-  if (training() < 20 && itemAmount(lasso) === 0 && !pawWish(lasso)) {
+  // trainingGearReady() gate: the Rufus chain now runs BEFORE the corral
+  // (Rufus Quest's `ready`), so this fires at training 0 / lasso 0 with no hat
+  // and no chaps. A lasso thrown gearless does not train (user correction
+  // 2026-08-31, corral.ts lassosDone()) — buying one here would spend a paw
+  // wish, or the reserved pull, on a throw worth nothing.
+  if (trainingGearReady() && training() < 20 && itemAmount(lasso) === 0 && !pawWish(lasso)) {
     print(
       "Paw wish for a sea lasso produced nothing (wishes spent pre-run?); pulling instead.",
       "red",

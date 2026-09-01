@@ -23,7 +23,7 @@ import {
 
 import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
 
-import { banishBudgetAllows, banishedBy, banishSources } from "./banish";
+import { banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
 import { CombatResource } from "./resource";
 
@@ -61,11 +61,13 @@ const navelSources = ["GAP runaway", "navel ring runaway"];
  * 2026-08-31: check libram before hand-rolling), which also fixes an old
  * hand-rolled bug — astro's version divided only the weight ADJUSTMENT by 5.
  *
- * Neither script has ever actually spent one: `_banderRunaways` finished at 0
- * in the 08-31 run AND in gold, which fielded 30 lb boots at its gymnasium
- * (6 runaways) and cast the skill zero times in 41 turns because they never
- * went restless. That is 5-6 free runs left on the table at the one zone where
- * a run is worth a whole turn.
+ * Neither log shows a boots RUNAWAY being spent — but note `_banderRunaways`
+ * is never printed in either, so that is an absence of evidence, not a
+ * measurement. What IS measured: gold fielded 30 lb boots at its gymnasium
+ * (G:8365 22 lb, :8402/:8415 30 lb) and cast `Release the Boots` zero times in
+ * 41 turns, because the ash only casts it when the fight page offers it and
+ * they never went restless. So the ~6 runaways that fielding bought were not
+ * converted into runs at the one zone where a run is worth a whole turn.
  *
  * NOT PORTED (opportunity, not a bug): loopstar plans the familiar's WEIGHT
  * before running, `goalWeight = 5 * (1 + _banderRunaways)` in
@@ -330,15 +332,9 @@ export function selectFreeRun(
     return undefined;
   }
   const snokebomb = banishSources.find((source) => source.name === "snokebomb");
-  // The banishing rungs here (Curveball, Latte, Feel Hatred, Snokebomb,
-  // Spring Kick) are the SAME daily charges banish.ts hands out, so they
-  // answer to the same budget — otherwise a free run at a cheap zone would
-  // quietly spend the three the gymnasium is holding (banishReservations).
-  const banishesOverBudget = !banishBudgetAllows(location);
   const run = freeRunSources.find((source) => {
     if (exclude?.has(source.name)) return false;
     if (source.banishes && !banish) return false;
-    if (source.banishes && banishesOverBudget) return false;
     // The navel runaways need Driving Waterproofly underwater (ash
     // freeRun():257); an unknown zone is treated as underwater — every
     // caller that omits the location is a sea task.
