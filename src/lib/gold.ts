@@ -16,14 +16,37 @@ import { freeRunSources } from "../resources/freerun";
  * that runs late but spends nothing is a scheduling difference, not a turn
  * sink, and the accounting table below still records it.
  *
- * Checkpoints are read off the gold log's `[N]` markers at each `UTS: phase:`
- * line (docs/…/BRIEF.md has the index): the marker of the NEXT phase's first
- * adventure. Mafia logs `[getCurrentRun()+1]` (KoLAdventure.java:4603-4607)
- * while my_turncount() is getCurrentRun(), so each checkpoint is one turn
- * GENEROUS relative to the turncount the gold run actually had when it left
- * the group — never strict. Groups absent from the table (Init, Wanderers)
- * are unchecked; tasks listed in FLOATING are maintenance steps the route
- * legitimately re-runs late.
+ * WHAT A CHECKPOINT IS, exactly: gold's TRUE turncount when it left the group.
+ * Nothing else. The table was previously read off the `[N]` marker at each
+ * `UTS: phase:` banner, which mafia logs as `[getCurrentRun()+1]`
+ * (KoLAdventure.java:4603-4607) and which does NOT advance on a free fight —
+ * so entries silently mixed `gold_end` and `gold_end + 1`, and the ledger
+ * subtracted them as if they were uniform. Measured against the per-zone paid
+ * -turn ledger rebuilt from the gold log (which sums to exactly 41): Grandpa,
+ * School, Library and Finale were one high while Outpost, Colosseum, Mom
+ * Finish and Shub were exact, so no single offset could fix the table. It is
+ * re-derived here from that ledger, cumulatively:
+ *
+ *   Haunted Pantry 5 -> 5 | Wreck 1 -> 6 | Marinara 3 -> 9 | Outpost 6 -> 15 |
+ *   Corral 0 -> 15 | School 4 -> 19 | Library 1 + dreadscroll 1 -> 21 |
+ *   Skate Park 4 -> 25 | Right Door 1 -> 26 | Gymnasium 4 -> 30 |
+ *   Colosseum 7 -> 37 | Abyss 3 -> 40 | Left Door 1 -> 41 | Center Door 0 -> 41
+ *
+ * The one-turn generosity the old marker convention gave by accident is now
+ * explicit and applies uniformly: the GUARD adds MARKER_SLACK, the ledger
+ * prints the checkpoint raw. A guard should never abort a run that is actually
+ * on pace; a scoreboard should never flatter one.
+ *
+ * UNCHECKED GROUPS. Init and Wanderers have no gold analogue. Yog-Urt,
+ * Gladiator Gear and Skate Park are unchecked for a different reason: our route
+ * runs them in a DIFFERENT ORDER from gold, which does Skate Park (22-25) then
+ * the Right Door (26) then the Gymnasium (27-30) while we do Yog-Urt then the
+ * gym then the park. A positional checkpoint cannot be valid for both
+ * orderings, and pretending otherwise is what produced the 2026-09-01 ledger's
+ * impossible pair — `Skate Park -2` sitting next to `Gladiator Gear +1`. Their
+ * turns are still counted in the total; only the per-group Δ is withheld.
+ * Tasks listed in FLOATING are maintenance steps the route legitimately
+ * re-runs late.
  *
  * Resuming after an abort: the first paid turn of an invocation sets a
  * session drift = how far past its checkpoint the run already was, and every
@@ -38,26 +61,30 @@ export const goldCheckpoints: Record<string, number> = {
   Openers: 5,
   Pellet: 5,
   "Big Brother": 6,
-  Grandpa: 10,
+  Grandpa: 9,
   Outpost: 15,
   Currents: 15,
-  Helmet: 16,
-  Mom: 16,
-  "Shadow Rift": 16,
-  Corral: 16,
-  "Sorceress Dailies": 16,
-  Teflon: 16,
-  School: 20,
+  Helmet: 15,
+  Mom: 15,
+  "Shadow Rift": 15,
+  Corral: 15,
+  "Sorceress Dailies": 15,
+  Teflon: 15,
+  School: 19,
   Library: 21,
-  "Yog-Urt": 22,
-  "Gladiator Gear": 30,
-  "Skate Park": 30,
+  // "Yog-Urt", "Gladiator Gear" and "Skate Park": deliberately absent — see
+  // UNCHECKED GROUPS above. Gold's are 26 / 30 / 25, in that order; ours is
+  // Yog-Urt, gym, park, so the numbers do not transfer.
   Colosseum: 37,
   "Mom Finish": 40,
   Shub: 41,
-  Finale: 42,
+  Finale: 41,
 };
 
+/** The turn of slack every guard limit carries, so a checkpoint is never
+ * strict. Explicit now that the checkpoints themselves are exact; it used to
+ * be an accident of the `[N]` marker convention, applied unevenly. */
+const MARKER_SLACK = 1;
 /** Tasks the route re-runs late by design; never checked against their group. */
 const FLOATING = new Set(["Mom/Banish Constructs"]);
 
@@ -105,24 +132,6 @@ export function fightHappened(preCombatStarted: string): boolean {
  * first paid turn; undefined until then. */
 let sessionDrift: number | undefined;
 
-/**
- * Gold's actual turncount when it LEFT a group — what `done@` measures for us,
- * and therefore the only number Δ may be computed against.
- *
- * `goldCheckpoints` is deliberately one turn GENEROUS (see its doc): each
- * entry was read off the marker of the next phase's first adventure, and mafia
- * logs `[getCurrentRun()+1]`. That slack is right for the GUARD — a threshold
- * should never abort a run that is actually on pace — but it was also being
- * printed as `gold@` and subtracted to make Δ, which understated every row by
- * exactly one turn. Live 2026-09-01 the run finished at turncount 45 and the
- * table reported the Finale as `gold@42, Δ +3`; gold's own log ends "Run End
- * Adventures used: 41", so the true figure is +4.
- */
-function goldTurncountAt(group: string): number | undefined {
-  const checkpoint = goldCheckpoints[group];
-  return checkpoint === undefined ? undefined : checkpoint - 1;
-}
-
 export function ledgerLines(): string[] {
   const lines = [
     `Run accounting vs ${GOLD_RUN} (this session only; turncount now ${myTurncount()}` +
@@ -134,7 +143,7 @@ export function ledgerLines(): string[] {
     const row = ledger.get(group);
     if (!row) continue;
     turns += row.turns;
-    const gold = goldTurncountAt(group);
+    const gold = goldCheckpoints[group];
     const delta =
       gold === undefined ? "" : `${row.lastTurn - gold >= 0 ? "+" : ""}${row.lastTurn - gold}`;
     lines.push(
@@ -183,7 +192,7 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
   if (checkpoint === undefined) return;
   const now = myTurncount();
   if (sessionDrift === undefined) {
-    sessionDrift = Math.max(0, now - turnsSpent - checkpoint);
+    sessionDrift = Math.max(0, now - turnsSpent - checkpoint - MARKER_SLACK);
     if (sessionDrift > 0) {
       print(
         `Gold guard: resuming ${sessionDrift} turns behind ${GOLD_RUN} (turncount ${now - turnsSpent}, ` +
@@ -192,7 +201,7 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
       );
     }
   }
-  const limit = checkpoint + sessionDrift + args.goldSlack;
+  const limit = checkpoint + MARKER_SLACK + sessionDrift + args.goldSlack;
   if (now <= limit) return;
 
   for (const line of ledgerLines()) print(line, "red");
