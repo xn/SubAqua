@@ -12,6 +12,7 @@ import {
   $effect,
   $familiar,
   $item,
+  $location,
   $locations,
   $phylum,
   $skill,
@@ -39,6 +40,31 @@ export type FreeRunSource = CombatResource & {
 const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Sleazy Back Alley, The Haunted Pantry`;
 
 const navelSources = ["GAP runaway", "navel ring runaway"];
+const corral = $location`The Coral Corral`;
+const inkBladder = $item`ink bladder`;
+
+/**
+ * The ink bladders belong to the corral until the seahorse is tamed.
+ *
+ * The taming regime's whole economy is that a corral fight which does NOT
+ * produce the wild seahorse should cost nothing: corral.ts appends
+ * freeRunChainMacro() behind the waffle re-roll for exactly that. Gold spends
+ * BOTH of its bladders there (G:5776, :5925) and every one of those visits
+ * ends "This combat did not cost a turn" — including the one where the waffle
+ * was consumed without re-rolling the monster.
+ *
+ * Live 2026-09-01 we spent our only bladder at the Marinara Trench on turn 7
+ * (run log :1968) during the Grandpa hunt, where the ladder had banishes to
+ * spare. By the corral the chain was empty and three sea cows were killed for
+ * full turns ([15], [16], [17]).
+ *
+ * Keyed on `seahorseName`, not `corralUnlocked`: the corral only unlocks
+ * around turn 11 and the bladder was already gone by then. Two are held (gold's
+ * count); a third and beyond is free for anyone.
+ */
+function inkBladderReserved(location?: Location): boolean {
+  return location !== corral && get("seahorseName") === "" && itemAmount(inkBladder) <= 2;
+}
 
 /**
  * THE STOMPING BOOTS, and the skill that is NOT their free run.
@@ -363,6 +389,7 @@ export function selectFreeRun(
     if (source.name === "Mer-kin pinkslip" && target && target.phylum !== $phylum`mer-kin`) {
       return false;
     }
+    if (source.name === "ink bladder" && inkBladderReserved(location)) return false;
     return source.available();
   });
   // selectFreeKill takes no exclusion list of its own, so the fallback is

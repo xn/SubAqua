@@ -202,6 +202,20 @@ export function shadowRiftQuest(): Quest {
           have(phone) &&
           get("questRufus") === "started" &&
           get("rufusQuestType") === "artifact" &&
+          // Quest #1 runs freely: its Labyrinth is FORCED (prepare below), so
+          // it costs one fight. Quest #2's arrives naturally at counter 0 —
+          // that is the hunt that eats the day's free rift fights, and those
+          // fights are only worth their +3 lasso training once the corral has
+          // smithed the hat and chaps. Live 2026-09-01 the corral unlocked at
+          // turncount 11 (run log :3319) but the opener did not run until
+          // :5065, and the FIFTEEN free rift fights in between (:4249-5054)
+          // trained ZERO — `lassoTrainingCount` does not move once. Only five
+          // fights were left afterwards, so training stalled at 12/20 and the
+          // last 8 points were bought on PAID corral turns (:5802, :5866).
+          // Gold: opener 4584, chaps 4683, hat 4699, then eighteen rift
+          // fights carrying `lassoTrainingCount` 0->20 entirely free
+          // (G:4887-5292).
+          (!have(waters) || trainingGearReady()) &&
           (riftFightsFree() ||
             get("encountersUntilSRChoice", 11) === 0 ||
             get("noncombatForcerActive")),
