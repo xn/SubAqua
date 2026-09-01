@@ -8,20 +8,7 @@ import {
   Monster,
   myFamiliar,
 } from "kolmafia";
-import {
-  $effect,
-  $familiar,
-  $item,
-  $locations,
-  $phylum,
-  $skill,
-  get,
-  have,
-  Macro,
-  totalFamiliarWeight,
-} from "libram";
-
-import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
+import { $effect, $item, $locations, $phylum, $skill, get, have, Macro } from "libram";
 
 import { banishBudgetAllows, banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
@@ -38,36 +25,34 @@ export type FreeRunSource = CombatResource & {
  * (UnderTheSeaCCS.ash:86-89). */
 const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Sleazy Back Alley, The Haunted Pantry`;
 
-const boots = $familiar`Pair of Stomping Boots`;
 const navelSources = ["GAP runaway", "navel ring runaway"];
 
-function bootsRunawaysLeft(): number {
-  if (!have(boots)) return 0;
-  return Math.max(0, Math.floor(totalFamiliarWeight(boots) / 5) - get("_banderRunaways"));
-}
-
-/** The boots entry's full gate — banked runaways AND the underwater breathing
- * check below — in one call, so the engine's free-run familiar rule
- * (engine/engine.ts customize(), user decision 2026-08-27) can ask "would the
- * ladder take the boots here?" BEFORE it puts them in the familiar slot.
- * Fielding them on a gate the selector would then fail would strand a
- * non-breathing familiar underwater, which customize()'s familiar-breathing
- * block throws on. selectFreeRun() applies exactly this function, so the two
- * cannot drift. */
-export function bootsRunAvailable(location?: Location): boolean {
-  if (bootsRunawaysLeft() <= 0) return false;
-  // The boots cannot breathe: underwater they need a familiar breather (an
-  // unknown zone is treated as underwater — every caller that omits the
-  // location is a sea task).
-  if (
-    (!location || location.environment === "underwater") &&
-    !hasBreathingEffect() &&
-    !familiarWaterBreathingEquipment.some((it) => have(it))
-  ) {
-    return false;
-  }
-  return true;
-}
+/**
+ * RELEASE THE BOOTS: NO-PORT (user correction 2026-09-01, "it is a turn taking
+ * insta-kill").
+ *
+ * The ash lists it — `free_run()`'s skill loop (UnderTheSeaCCS.ash:82) and
+ * `freeRun()`'s familiar pick (UnderTheSeaGlobals.ash:489-492, guarded on
+ * `(familiar_weight + weight_adjustment) / 5 > _banderRunaways`) — but the
+ * skill does not free the fight. Live 2026-08-31 the Gymnasium released the
+ * boots twice, turn 58 (Mer-kin poseur) and turn 67 (Mer-kin juicer): both
+ * times Curby "leaps up... stomps your opponent into paste", both times the
+ * turncount advanced (58 -> 59, 67 -> 68), and `_banderRunaways` stayed at 0
+ * for the whole run — mafia never booked a runaway. Gold, running the ash,
+ * never cast it once in 41 turns (its boots were fielded but never went
+ * restless), so the ash's own best run never exercised this rung.
+ *
+ * On the ladder it was actively harmful: the ash's order puts it AHEAD of Feel
+ * Hatred and Snokebomb, so at the gymnasium — the one zone where a free run is
+ * worth a whole turn — it was picked first and paid the turn anyway. A
+ * turn-taking instakill is worth nothing over the ordinary kill ladder, so
+ * there is no free-KILL entry for it either.
+ *
+ * With the entry gone nothing wants the Pair of Stomping Boots in the familiar
+ * slot, and engine.customize()'s free-run familiar rule went with it — its
+ * premise (2026-08-27: "the Boots buy ~24 free runs outright") was this rung.
+ * sneakFamiliar() simply keeps the slot now.
+ */
 
 /** Ordered per ash freeRun() (UnderTheSea.ash:255-265) with the CCS spenders
  * folded in. Spring shoes appear twice on purpose: banish mode upgrades
@@ -148,22 +133,6 @@ export const freeRunSources: FreeRunSource[] = [
     banishes: true,
   },
   {
-    // One free runaway per five full pounds, on the Bandersnatch counter
-    // (FightRequest.java:11861-11865: modifiedWeight / 5 > _banderRunaways).
-    // Ash freeRun() G:487-494 + CCS free_run() ladder at 89982f5. Takes the
-    // familiar slot: engine.customize()'s free-run familiar rule (user
-    // decision 2026-08-27) decides whether this task's familiar slot is the
-    // boots' to have — up front in a +combat context, last-resort in a
-    // -combat one — and the provide stays equip-gated either way, so on a
-    // task whose familiar is spoken for the ladder simply walks past this.
-    name: "Release the Boots",
-    available: () => bootsRunawaysLeft() > 0,
-    remaining: bootsRunawaysLeft,
-    equip: $familiar`Pair of Stomping Boots`,
-    do: Macro.trySkill($skill`Release the Boots`),
-    banishes: false,
-  },
-  {
     name: "Feel Hatred",
     available: () => have($skill`Feel Hatred`) && get("_feelHatredUsed") < 3,
     remaining: () => (have($skill`Feel Hatred`) ? Math.max(0, 3 - get("_feelHatredUsed")) : 0),
@@ -235,11 +204,7 @@ export const freeRunSources: FreeRunSource[] = [
 ];
 
 /** Tells an actual run apart from the free-kill fallthrough in a
- * selectFreeRun() result. engine.customize()'s -combat pass uses it to stop at
- * the end of the RUN ladder: that is the point where the Stomping Boots earn
- * the familiar slot — 24 banked runaways are cheaper than any charge the
- * free-kill ladder would spend here — so the fallthrough must not be taken
- * ahead of them. */
+ * selectFreeRun() result. */
 export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source is FreeRunSource {
   return "banishes" in source;
 }
@@ -257,13 +222,8 @@ export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source 
  * are runs and banishes only. It never throws a dart. The ash only ever spends
  * Everything Looks Red from free_kill(), at its own call sites.
  *
- * That distinction matters here because the fallthrough fires often: all five
- * freeRun tasks in this route field a familiar of their own (sneakFamiliar(),
- * engine/outfit.ts — or the goth kid in guild.ts), so Release the Boots — 20+
- * banked runaways on a grown Pair of Stomping Boots — used to fail the equip
- * gate in firstEquippable() every time and the ladder walked past it. The
- * engine's free-run familiar rule (below) fixes that case; what is left is
- * capped to free kills that do not close off a whole ladder for the rest of
+ * The fallthrough fires often — the geared rungs run dry — so it is capped to
+ * free kills that do not close off a whole ladder for the rest of
  * the day (`onceDaily: false`). Today that excludes exactly one source, the
  * parka's Everything Looks Yellow acid spit, which would take the forced-drop
  * ladder down with it. The dart bullseye is NOT excluded (user correction
@@ -276,25 +236,16 @@ export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source 
  * asked to LEAVE this monster, so it was never expecting its drops, and a
  * drop-forfeiting kill costs it nothing.
  *
- * DESIGN CALL, SETTLED — Peace Turkey vs. the Boots (user decision
- * 2026-08-27). sneakFamiliar() (Peace Turkey, ash UTS:349-355) buys -combat,
- * which thins the whole zone; the Boots buy ~24 free runs outright, which is
- * what a freeRun task actually asked for, and the two cannot both hold the
- * familiar slot. The resolution lives in engine.customize()'s freeRun branch,
- * not here: in a +combat/non-sneak context the boots take the slot up front
- * (nothing is lost); in a -combat context the sneak familiar keeps it and the
- * boots are the LAST resort, fielded only when no non-familiar run source can
- * equip for that task. This selector is unchanged by that rule — it still
- * returns the first source the mode, zone and fight context allow, and the
- * engine still equip-gates whatever comes back.
+ * Peace Turkey vs. the Boots — the 2026-08-27 design call — is MOOT: the boots
+ * are off the ladder (the NO-PORT note above), so sneakFamiliar() keeps the
+ * familiar slot uncontested.
  *
  * `exclude` names sources the caller has already rejected, so it can ask for
  * the NEXT candidate. The engine needs this because availability is only half
  * the test: the winning source's gear also has to land in the task's outfit,
- * and a source whose slot is already taken (Release the Boots against a task
- * that fields its own familiar — the live 2026-08-27 case) used to sink the
- * whole provide and drop the task onto its combat default. Passing the
- * rejected names back lets the ladder walk on instead.
+ * and a source whose slot is already taken used to sink the whole provide and
+ * drop the task onto its combat default. Passing the rejected names back lets
+ * the ladder walk on instead.
  */
 export function selectFreeRun(
   options: {
@@ -327,16 +278,6 @@ export function selectFreeRun(
       !have($effect`Driving Waterproofly`)
     ) {
       return false;
-    }
-    // The boots cannot breathe: underwater they need a familiar breather
-    // (else engine.customize()'s familiar check would throw on a familiar
-    // the task never asked for). Same gate the engine consults before it
-    // fields them — see bootsRunAvailable() above. Routed through
-    // source.available() (the entry's own banked-runaways gate, line ~142)
-    // rather than past it, so that gate stays live code instead of an
-    // unreachable duplicate of bootsRunAvailable()'s own runaway check.
-    if (source.name === "Release the Boots") {
-      return source.available() && bootsRunAvailable(location);
     }
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;

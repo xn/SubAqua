@@ -71,10 +71,10 @@ export function gymnasiumTurn(): void {
     }
   }
   // The free-run/banish source's gear (ash tempEquipment(... freeRun() ...),
-  // UTS:659) — see fights.ts gymFreeRun(). A familiar pick (the Stomping
-  // Boots once the geared sources dry up, ash freeRun() G:487-494) is
-  // fielded HERE, before the breather below prices against the fielded
-  // familiar.
+  // UTS:659) — see fights.ts gymFreeRun(). Nothing on the ladder takes the
+  // familiar slot any more (Release the Boots is a NO-PORT, freerun.ts), but
+  // the branch stays: a familiar pick must be fielded HERE, before the
+  // breather below prices against the fielded familiar.
   const runGear = gymFreeRunGear();
   if (runGear.familiar) useFamiliar(runGear.familiar);
   // Familiar breathing: this wrapper task declares no `outfit`, so the engine's

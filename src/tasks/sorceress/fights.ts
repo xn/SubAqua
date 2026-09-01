@@ -125,41 +125,23 @@ function equipItems(equip: unknown): Item[] {
  * (monsters.txt:433,437,446 — juicer/poseur/trainer drop belts and juices),
  * only the "Ators Gonna Ate" NC does, so every fight made free is a turn
  * saved; UTS 08-26 paid for 3 gym turns (all NCs), live 2026-08-28 subaqua
- * paid 14 with snokebomb 0/3, parasol 0/3 and the boots' runaways unspent.
- * Familiar-slot sources are skipped (the gym fields the combat familiar); a
- * gear-backed source only counts once its gear is actually worn — gym.ts
+ * paid 14 with snokebomb 0/3 and parasol 0/3. banish.ts's gymnasium
+ * reservation keeps three banish charges in stock for exactly this walk.
+ * A gear-backed source only counts once its gear is actually worn — gym.ts
  * wears `gymFreeRunGear()`'s pick, and the fight-time selection here
  * re-walks the ladder past anything whose gear didn't land.
  */
 export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
-  // Release the Boots is walked LAST here, whatever the ladder's own order
-  // says. Live 2026-08-31 the gym released the boots twice ([58] poseur,
-  // [67] juicer): both times Curby "stomps your opponent into paste", both
-  // times the turn counter advanced (58 -> 59, 67 -> 68) and `_banderRunaways`
-  // stayed at 0 — mafia never booked a runaway, so the stomp is a KILL and
-  // the fight is paid. Gold frees its gym guards with real banishes instead
-  // (Curveball, Throw Latte, Feel Hatred, Snokebomb at G:8253-8420), which
-  // banish.ts's gymnasium reservation now keeps in stock for exactly this
-  // walk. The boots stay on the ladder as the last rung: a paid kill that
-  // ends the fight still beats a paid kill that takes eight rounds.
-  const deferred = ["Release the Boots"];
-  const source = gymFreeRunWalk(target, new Set(deferred));
-  return source ?? gymFreeRunWalk(target, new Set());
-}
-
-function gymFreeRunWalk(
-  target: Monster | undefined,
-  exclude: Set<string>,
-): { do: Macro } | undefined {
+  const exclude = new Set<string>();
   for (;;) {
     const source = selectFreeRun({ banish: true, location: gymnasium, target, exclude });
     if (!source || exclude.has(source.name)) return undefined;
     // One-arg lambda, never the bare function: Array#every passes
     // (item, index, array) and the JS bridge then hunts for a
     // have_equipped(item, int, item[]) overload — live 2026-08-29 Gymnasium.
-    // A familiar source (Release the Boots) counts as worn while that
-    // familiar is FIELDED — gymnasiumTurn() fields the ladder's familiar
-    // pick, ash freeRun() parity (G:487-494).
+    // The Familiar branch is dead for now (nothing on the ladder takes the
+    // familiar slot since Release the Boots came off it, freerun.ts) but is
+    // kept: FreeRunSource.equip still admits one.
     const worn =
       source.equip === undefined ||
       (source.equip instanceof Familiar
@@ -171,24 +153,10 @@ function gymFreeRunWalk(
 }
 
 /** What the first free-run/banish source needs: gear to pin, or a familiar
- * to field. The ash's freeRun() SWITCHES THE FAMILIAR ITSELF when the walk
- * reaches the Stomping Boots (G:487-494) — 20+ banked runaways are the gym
- * ladder's workhorse once the daily sources dry up — and the gym is a
- * +combat context, where the boots take the slot up front (user rule
- * 2026-08-27, freerun.ts's settled design call). The old familiar-skipping
- * walk here left every gym fight past the dailies to the kill ladder: live
- * 2026-08-28 paid 14 gym turns, 2026-08-30 paid 15, with the boots'
- * runaways unspent both days. */
+ * to field. Must agree with gymFreeRun()'s fight-time walk, or the gym wears
+ * one source's gear and the fight asks for another's. */
 export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
-  // Same deferral as gymFreeRun(): whatever gear the ladder wants must be the
-  // gear the FIGHT-TIME walk will ask for, or the gym wears the boots and the
-  // banish rungs' mugs and bags never land.
-  const source =
-    selectFreeRun({
-      banish: true,
-      location: gymnasium,
-      exclude: new Set(["Release the Boots"]),
-    }) ?? selectFreeRun({ banish: true, location: gymnasium });
+  const source = selectFreeRun({ banish: true, location: gymnasium });
   if (!source) return { items: [] };
   if (source.equip instanceof Familiar) return { items: [], familiar: source.equip };
   return { items: equipItems(source.equip) };
