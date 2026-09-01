@@ -131,8 +131,10 @@ const pullReservations: PullReservation[] = [
     // Training-lasso safety net (live 2026-08-31): the rift's free-fight
     // training needs a lasso IN HAND, and both normal suppliers can be gone
     // at once — the corral opener bundle (missed on a resumed run) and the
-    // paw wishes (spent by aftercore garbo before the ascension, invisible
-    // to mafia's reset `_monkeyPawWishesUsed`). Live whenever the training
+    // paw wishes. The 08-31 wish failures were an invocation bug, not a spent
+    // allowance (resources/paw.ts dresses for the sea now), but the net stays:
+    // the paw can genuinely run out at 5/day, and gold budgets THREE of those
+    // five on lassos (G:5125, :5207, :6096). Live whenever the training
     // gear exists, training is short, and no lasso is anywhere; releases at
     // training 20 or on the first lasso. The init-time ALWAYS-pull this
     // replaces was dropped per B F3.

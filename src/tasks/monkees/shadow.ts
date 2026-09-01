@@ -102,19 +102,19 @@ function riftOutfit() {
   };
 }
 
-/** Shared "Rufus Labyrinth"/"Rift Fights" prep: heal up, and wish for a
- * lasso when the stock is dry mid-training (UTS:864-868) — both tasks can be
- * the one spending the day's free rift fights, depending on whether a
- * forcer landed the Labyrinth NC or the fights ran out naturally first.
+/** Shared "Rufus Labyrinth"/"Rift Fights" prep: heal up, and buy a lasso when
+ * the stock is dry mid-training (UTS:864-868) — both tasks can be the one
+ * spending the day's free rift fights, depending on whether a forcer landed
+ * the Labyrinth NC or the fights ran out naturally first.
  *
- * The wish can FAIL SILENTLY: KoL's paw limit is 5 per rollover-day, and an
- * aftercore garbo session before the ascension spends them all while mafia's
- * `_monkeyPawWishesUsed` resets to 0 at ascension detection — live
- * 2026-08-31, two `wish=sea+lasso` submissions produced nothing and all 16
- * free rift fights then trained ZERO (no lasso in inventory), pushing the
- * training onto 8 paid corral fights. pawWish() reports the failure; fall
- * back to a budgeted pull (the "sea lasso (training)" reservation in
- * pulls.ts holds the slot in exactly this broken state). */
+ * The wish can still come back empty, so pawWish() reports the outcome and we
+ * fall through to a budgeted pull (the "sea lasso (training)" reservation in
+ * pulls.ts holds the slot for exactly this). It is no longer EXPECTED to come
+ * back empty: the 2026-08-31 run's twenty refused `wish=sea+lasso` submissions
+ * were an invocation bug — the wish was thrown from a dry-land outfit, and a
+ * paw ITEM wish is only granted for an item you could currently go and get.
+ * resources/paw.ts dresses for the sea first now, the way the ash does
+ * (UTS:874-876), and caps the retries. */
 function riftPrepare(): void {
   recover();
   // trainingGearReady() gate: the Rufus chain now runs BEFORE the corral
