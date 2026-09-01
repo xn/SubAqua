@@ -67,6 +67,15 @@ export function screechTurn(): boolean {
     have($item`server room key`) &&
     !get("banishedPhyla").includes("construct") &&
     get("_monsterHabitatsFightsLeft", 0) === 1 &&
+    // ...and the chain we are about to zero must actually BE the golem's. The
+    // Screech banishes the phylum of whatever it lands on, so this predicate
+    // is only safe while the outstanding chain is a construct. Without it an
+    // EYE chain sitting at fightsLeft === 1 reads as a screech turn, and
+    // mom.ts's "Cyber Mom" would field the Patriotic Eagle over every
+    // Cyberzone fight for a macro that can never fire (no golems there) —
+    // costing the route its chosen familiar, and risking the moxie floor its
+    // prepare() throws on.
+    get("_monsterHabitatsMonster") === golem &&
     get("_monsterHabitatsRecalled", 0) >= 2
   );
 }

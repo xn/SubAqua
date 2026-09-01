@@ -79,12 +79,24 @@ function momDone(): boolean {
 /** At 40 the eye's backup/habitat copies are worthless progress, and a
  * forced Peridot eye fight would pre-empt the rescue NC that finishes the
  * quest — so stop offering it once the bar caps. */
-/** The phylum the Patriotic Screech has banished for the day, if any.
- * `banishedPhyla` is `phylum:banisher:turn` triples, comma-joined. */
+/**
+ * Has the Patriotic Screech banished this phylum today?
+ *
+ * `banishedPhyla` is `phylum:banisher:turn` triples joined by COLONS, not
+ * commas — mafia's BanishManager uses one separator throughout, so two entries
+ * serialize as `a:x:0:b:y:5` with no comma anywhere (verified: zero commas in
+ * either `banishedPhyla` or `banishedMonsters` across both run logs, e.g.
+ * `fluffy bunny:ice house:0:sea cowboy:Feel Hatred:14:...`). Splitting on
+ * commas yielded one element and only ever matched the FIRST phylum; the
+ * screech is an 11-combat cooldown rather than a daily, so a second banished
+ * phylum is reachable and would have read as un-banished.
+ */
 function phylumBanished(target: Phylum): boolean {
-  return get("banishedPhyla")
-    .split(",")
-    .some((entry) => entry.split(":")[0] === target.toString());
+  const fields = get("banishedPhyla").split(":");
+  for (let i = 0; i < fields.length; i += 3) {
+    if (fields[i] === target.toString()) return true;
+  }
+  return false;
 }
 
 /** The monster a live Recall Facts: Monster Habitats chain still owes us, or
@@ -119,6 +131,30 @@ function habitatMonster(): Monster {
 function habitatDrawable(): boolean {
   const habitat = habitatMonster();
   return habitat === $monster.none || !phylumBanished(habitat.phylum);
+}
+
+/**
+ * The cyber Mom lane can no longer finish, and the Abyss fallback should take
+ * over rather than the run quietly ending with tasks remaining.
+ *
+ * "Abyss Habitats" needs `_monsterHabitatsFightsLeft === 0` because KoL will
+ * not offer a recall while a chain is live, so an outstanding chain that can
+ * never drain is an ABSORBING state: no recall, no eye, no cyber progress, and
+ * main.ts prints "N tasks remaining" instead of aborting. Two ways in — the
+ * chain's monster is no longer drawable (its phylum got banished), or the
+ * day's ten free cyber fights are gone and the golem never showed. The 09-01
+ * run ended in exactly this state.
+ *
+ * A stuck chain cannot be cleared in-run, so the lane is written off and the
+ * plain Abyss grind opens instead: turns rather than a dead quest.
+ */
+function cyberLaneStuck(): boolean {
+  // cyberKit() inlined: it is momQuest()-scoped and this helper is not.
+  if (!have(eagle) || !have($item`server room key`)) return false;
+  if (get("_monsterHabitatsFightsLeft", 0) === 0) return false;
+  // Already on an abyss monster: this chain is the one we wanted.
+  if (habitatTargets.some((target) => target === get("_monsterHabitatsMonster"))) return false;
+  return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
 }
 
 const abyssPeridot = () =>
@@ -403,16 +439,32 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // outpost lane can finish with a charge still outstanding and
               // then the golem is only ever met in the Cyberzone.
               combat: new CombatStrategy()
+                // monsterMacro(), NOT the raw monster slot: screechTurn() is
+                // false on almost every fight of this lane, and grimoire's
+                // CompressedMacro.add() only drops a macro whose toString() is
+                // EMPTY — libram stringifies an empty Macro as ";", length 1 —
+                // so the raw slot would prepend a bodyless
+                // `if monsterid 1188;endif;` to nearly every Cyberzone macro.
+                // engine/combat.ts:365-411 exists for exactly that hazard, and
+                // outpost.ts:122 already uses the helper on this same monster.
                 .macro(
-                  () =>
-                    screechTurn()
-                      ? openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`))
-                      : new Macro(),
-                  $monster`Black Crayon Golem`,
+                  monsterMacro(
+                    () =>
+                      screechTurn()
+                        ? openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`))
+                        : new Macro(),
+                    $monster`Black Crayon Golem`,
+                  ),
                 )
-                // VHS window first (E F2 / #4(iii)) — the habitat fights here
-                // ARE the abyss monsters the tape wants, and the rock repeat
-                // below would otherwise end the fight before the throw.
+                // VHS tape, on the same abyss monsters the habitat draws. NOTE
+                // the tape does NOT in fact get first refusal: monsterMacro()
+                // routes it to grimoire's DEFAULT slot while the rock below
+                // takes the MONSTER slot, and monster macros compile first
+                // (the ordering trap at engine/combat.ts:389-392). The live
+                // macro is rock-then-tape (run log :3618) and the rock's
+                // `repeat hasskill` ends the fight, so the tape never throws
+                // here. Pre-existing; left alone rather than reordered blind,
+                // but the comment no longer claims the opposite.
                 .macro(monsterMacro(vhsMacro, vhsTargets))
                 // trySkillRepeat, not trySkill().repeat(): the latter compiles
                 // to `if hasskill X;skill X;endif;repeat;` and KoL's `repeat`
@@ -429,6 +481,15 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               outfit: () => ({
                 modifier: "moxie",
                 equip: $items`shark jumper, Monodent of the Sea`,
+                // No crystal ball, same as abyssOutfit and "Abyss Habitats":
+                // its prediction LOCKS the next fight in the zone, overriding
+                // both the construct banish and the habitat draw. Live
+                // 2026-09-01 the maximizer took it as famequip here
+                // (run log :3616) and predicted `greyhat hacker` (:3626);
+                // gold lost one of its six Cyberzone adventures the same way
+                // (G:3907 predicts purplehat hacker, G:4056 draws it with no
+                // habitat decrement).
+                avoid: $items`miniature crystal ball`,
                 // The eagle only for the fight that zeroes the chain — see the
                 // screech macro above. Every other cyber fight keeps whatever
                 // familiar the route wants.
@@ -458,7 +519,9 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         // lane is the whole early phase and the remainder is deferred to
         // Mom Finish (runplans.ts). Live 2026-08-28 this ground 21 -> 40 at
         // 7 paid turns right after the cyber lane.
-        ready: () => have(glass) && !(opts.cyber && cyberKit()),
+        // ...or when the cyber lane has stranded itself (cyberLaneStuck):
+        // without this the Mom quest simply never completes.
+        ready: () => have(glass) && (!(opts.cyber && cyberKit()) || cyberLaneStuck()),
         completed: () => momDone() || get("momSeaMonkeeProgress", 0) >= initialMomProgress(),
         do: abyss,
         peridot: abyssPeridot,
