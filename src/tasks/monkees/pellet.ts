@@ -1,4 +1,4 @@
-import { itemAmount, use, visitUrl } from "kolmafia";
+import { handlingChoice, itemAmount, runChoice, use, visitUrl } from "kolmafia";
 import { $familiar, $item, $location, $monster, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
@@ -87,13 +87,20 @@ export function pelletQuest(opts: { swordLane: boolean }): Quest {
         limit: { tries: 3, message: "The Sword of S Words would not imprint on the flytrap." },
       },
       {
-        // Ash flytrap():1157-1165 — the meatsmith talk leaves choice 1059
-        // pending, which the ash accepts inline before adventuring.
+        // Ash flytrap():1157-1165. The meatsmith talk leaves choice 1059
+        // PENDING and nothing submits it: a bare visitUrl is not an adventure,
+        // and grimoire's `choices` only pre-registers an answer for choices
+        // mafia resolves while adventuring. The ash runs it inline
+        // (`if (handling_choice()) run_choice(1)`) and so must we — live
+        // 2026-09-01 this task visited twice, left 1059 sitting, never flipped
+        // skeletonStoreAvailable, and died on its own tries limit.
         name: "Skeleton Store Unlock",
         ready: () => laneOpen() && imprinted() && !get("skeletonStoreAvailable", false),
         completed: () => get("skeletonStoreAvailable", false) || have(pellet) || monkeesStep() >= 0,
-        do: () => void visitUrl("shop.php?whichshop=meatsmith&action=talk"),
-        choices: { 1059: 1 },
+        do: (): void => {
+          visitUrl("shop.php?whichshop=meatsmith&action=talk");
+          if (handlingChoice()) runChoice(1);
+        },
         freeaction: true,
         limit: { tries: 2 },
       },
@@ -128,7 +135,13 @@ export function pelletQuest(opts: { swordLane: boolean }): Quest {
           spadeAimed() &&
           get("_archSpadeDigs", 0) < 11,
         completed: () => have(pellet) || get("_archSpadeDigs", 0) >= 11 || monkeesStep() >= 0,
-        do: () => void use(spade),
+        // Same shape as the unlock above: `use()` is not an adventure, so the
+        // 1596 pending choice is submitted here. `choices` stays as well —
+        // harmless, and it covers the path where mafia resolves 1596 itself.
+        do: (): void => {
+          use(spade);
+          if (handlingChoice()) runChoice(3);
+        },
         choices: { 1596: 3 },
         outfit: { modifier: "item", familiar: sword },
         effects: itemDropEffects,
