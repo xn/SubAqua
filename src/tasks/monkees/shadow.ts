@@ -208,8 +208,12 @@ export function shadowRiftQuest(): Quest {
           // fights are only worth their +3 lasso training once the corral has
           // smithed the hat and chaps. Live 2026-09-01 the corral unlocked at
           // turncount 11 (run log :3319) but the opener did not run until
-          // :5065, and the FIFTEEN free rift fights in between (:4249-5054)
-          // trained ZERO — `lassoTrainingCount` does not move once. Only five
+          // :5065. Fifteen rift adventures fell in between (:4249-5054) and
+          // trained ZERO, but this gate withholds only the ELEVEN hunt combats
+          // at :4324-4996 — the other four are quest #1's forced Labyrinth
+          // (:4249), Loded Stone #1 (:4290, itself ungated) and quest #2's
+          // Labyrinth NC and Loded Stone (:5023, :5054), which are the payoff
+          // the gate defers rather than cancels. Only five
           // fights were left afterwards, so training stalled at 12/20 and the
           // last 8 points were bought on PAID corral turns (:5802, :5866).
           // Gold: opener 4584, chaps 4683, hat 4699, then eighteen rift
