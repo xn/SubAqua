@@ -124,6 +124,7 @@ export function momFinishQuest(): Quest {
         prepare: (): void => {
           recover();
           combJellyPrep();
+          scaleMailPrep();
         },
         limit: { soft: 20, message: "Mom's rescue is stalling; check momSeaMonkeeProgress." },
       },
@@ -159,6 +160,19 @@ function combJellyPrep(): void {
   if (!have($effect`Jelly Combed`) && availableAmount($item`comb jelly`) > 0) {
     use($item`comb jelly`);
   }
+}
+
+/** E F1: an Abyss kill scores +1 mom progress per Jelly Combed, shark jumper
+ * and scale-mail underwear (FightRequest.java:4372-4380), so the finish runs at
+ * +3 or +2 — 6 fights versus 9. The jelly is once-a-day and cannot be
+ * re-pulled once it lapses, but the underwear buys the same +1 back: a legal
+ * in-path pull (docs/unpullable-items.txt) that init.ts skips on this account
+ * because the Kramco opts it into the trunks instead, and a breather itself, so
+ * abyssOutfit's pants slot loses nothing. */
+function scaleMailPrep(): void {
+  const underwear = $item`scale-mail underwear`;
+  if (have($effect`Jelly Combed`) || availableAmount(underwear) > 0) return;
+  if (pullBudgetAllows(underwear)) pullSequence(underwear);
 }
 
 export function momQuest(opts: { cyber: boolean }): Quest {

@@ -121,5 +121,33 @@ opener defect replayed verbatim), the remaining ranked fixes landed:
 - **#9** `init.ts` — sea-lasso pull dropped (stale rationale), FLUDA added to the discretionary
   gear pulls; `pulls.ts` — digpick reservation (mirrors mine.ts `oreSecured()`).
 
-Still open, deliberately: scale-mail pull when jelly is down (E F1, legality), Macrometeorite
-school re-rolls (#10, unverified share), X-Ray ladder reorder (#10), SCUBA pull review (B F3).
+Still open, deliberately: Macrometeorite school re-rolls (#10, unverified share), X-Ray ladder
+reorder (#10), SCUBA pull review (B F3).
+
+## Changes landed 2026-09-01 (pull legality)
+
+The user supplied `docs/unpullable-items.txt` — the in-path Hagnk's blacklist (24 items: both fish
+scales, both diving helmets, teflon ore/fins, sea leather/cowboy hat/chaps, every Mer-kin mask,
+tailpiece, headguard, waistrope, facecowl, thighguard, dodgeball, dragnet, switchblade, the bunwig
+and the unblemished pearl). Consequences:
+
+- **#8 scale-mail underwear is legal** (absent from the list) — E F1's parked proposal landed:
+  `mom.ts scaleMailPrep()` pulls it in the Abyss Finish prepare when Jelly Combed is down and none
+  is owned, restoring +3/kill (6 fights instead of 9). It is a breather itself, so `abyssOutfit`'s
+  pants slot loses nothing; init.ts still skips it at setup because the Kramco opts this account
+  into the trunks.
+- **`pulls.ts` now gates on the list** (`pullable()`, enforced in both `pullSequence()` and
+  `pullBudgetAllows()`): an illegal pull used to mall-BUY the item into storage and then fail
+  `takeStorage`.
+- **The sea cowbell reservation is gone** (kept on the blacklist per the user's 2026-08-29 live
+  finding, which the wiki table omits): its `needed()` could never be satisfied by a pull, so it
+  held a pull slot for most of the run — a direct contributor to #9's "5 reservations idle, 16
+  pulls used". The two dead `pullSequence(cowbell)` calls in `corral.ts` (Corral Leather, Tame
+  Seahorse prepare) are deleted; cows and paw wishes remain the only cowbell sources.
+- Every other pull site was audited against the list and is legal (rusty rivet, damp old wallet,
+  11-leaf clover, GAP, hidepaint, prayerbeads, pinkslip, ink bladder, comb jelly, sea lasso,
+  digpick, hallpass, skate blade, knucklebone, worktea, cheatsheet, antidote, healscroll,
+  lodestone, sneakmask, shark jumper, SCUBA tank, FLUDA, the fishy ladder, Shub's three).
+
+Tier question closed: the account has been running **mid** tier; the 08-27 `garbo_valueOfFreeFight`
+flip is not in force.

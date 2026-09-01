@@ -17,6 +17,19 @@ import { shubPrepShort } from "../lib/shub";
 
 import { currentPolicy } from "./policy";
 
+/** Items Hagnk's refuses in 11,037 Leagues (`docs/unpullable-items.txt`, from
+ * the user 2026-09-01), plus the sea cowbell — the wiki's table omits it but
+ * the user confirmed live 2026-08-29 that the path bans it too. Without this
+ * gate pullSequence() mall-buys the item into storage and then fails
+ * takeStorage: meat spent for nothing, and a reservation slot held all run for
+ * a pull that can never land. */
+const unpullableInPath = $items`rough fish scale, pristine fish scale, rusty diving helmet, aerated diving helmet, teflon ore, teflon swim fins, sea leather, sea cowboy hat, sea chaps, sea cowbell, Mer-kin bunwig, crappy Mer-kin mask, crappy Mer-kin tailpiece, Mer-kin gladiator mask, Mer-kin scholar mask, Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, Mer-kin headguard, Mer-kin waistrope, Mer-kin facecowl, Mer-kin thighguard, Mer-kin dodgeball, Mer-kin dragnet, Mer-kin switchblade, unblemished pearl`;
+
+/** False for anything the path bans from Hagnk's. */
+export function pullable(item: Item): boolean {
+  return !unpullableInPath.includes(item);
+}
+
 /** _roninStoragePulls holds today's pulled item ids, comma-separated. Exact-id
  * membership needs the comma-wrap trick (iotm.ash:368): id 360 must not
  * substring-match a list containing 3604. */
@@ -29,6 +42,7 @@ export function pulledToday(item: Item): boolean {
  * Returns false when the pull is unavailable (already pulled today / no pulls
  * left) so callers fall back to farming, exactly like the ash. */
 export function pullSequence(item: Item): boolean {
+  if (!pullable(item)) return false;
   if (pullsRemaining() === 0) return false;
   if (pulledToday(item)) return false;
   if (storageAmount(item) === 0) {
@@ -96,11 +110,6 @@ const pullReservations: PullReservation[] = [
     item: $item`Mer-kin prayerbeads`,
     needed: () =>
       availableAmount($item`Mer-kin prayerbeads`) < 3 && !pulledToday($item`Mer-kin prayerbeads`),
-  },
-  {
-    name: "sea cowbell",
-    item: $item`sea cowbell`,
-    needed: () => availableAmount($item`sea cowbell`) < 3 && !pulledToday($item`sea cowbell`),
   },
   {
     name: "ink bladder",
@@ -233,6 +242,7 @@ export function reservedPulls(): number {
  * this exact trap at the skate-blade site (UnderTheSea.ash:1331-1333); this
  * generalizes it to every reserved item. */
 export function pullBudgetAllows(item: Item): boolean {
+  if (!pullable(item)) return false;
   const isOwnReservation = pullReservations.some(
     (reservation) => reservation.item === item && reservation.needed(),
   );

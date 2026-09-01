@@ -32,7 +32,6 @@ import {
 } from "../../resources/banish";
 import { bczAffordable } from "../../resources/freekill";
 import { freeRunChainMacro } from "../../resources/freerun";
-import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 
 const corral = $location`The Coral Corral`;
 const rustler = $monster`Mer-kin rustler`;
@@ -423,7 +422,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           // fight to check.
           assertBanishHeld([rustler], corral, "Corral Leather");
           recover();
-          if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },
         limit: { soft: 15, message: "Sea leather/cowbells are not accumulating." },
       },
@@ -538,7 +536,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           // unbanished on purpose is a designed outcome, not a failed banish.
           assertBanishHeld(armedPrev ?? [], corral, "Tame Seahorse");
           recover();
-          if (availableAmount(cowbell) < 3 && pullBudgetAllows(cowbell)) pullSequence(cowbell);
         },
         post: resyncSeahorse,
         limit: { soft: 12, message: "The wild seahorse is not spawning; check banishes." },
