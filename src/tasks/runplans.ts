@@ -62,7 +62,11 @@ export function buildRunplan(tier: Tier): Task[] {
     initQuest(),
     wanderers,
     guildTasks({ phonelessSwordOnly: !high, unlockGuild: !high }),
-    pelletQuest(),
+    // pelletQuest's sword lane is the ash's `!highShiny()` branch (flytrap(),
+    // UTS:1151): imprint the Sword of S Words on the Neptune flytrap and farm
+    // the wriggling pellet off free spade digs. High spends the imprint on the
+    // sea cowboy instead (guildTasks' Sword Imprint / SWordLasso UTS:1090).
+    pelletQuest({ swordLane: !high }),
     bigBrotherQuest(),
     grandpaQuest({ golem: !high }),
     outpostQuest(),
