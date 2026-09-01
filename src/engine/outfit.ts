@@ -94,11 +94,41 @@ export function canBreatheUnderwater(): boolean {
   );
 }
 
-/** Wiki §9: hat+pants must stay free for sea cowboy hat + sea chaps while lasso training,
- * so back-slot SCUBA tanks jump the breathing-preference queue. */
+/**
+ * Are we in a position to train the sea lasso PROFITABLY?
+ *
+ * Mechanic (wiki, sea lasso — user correction 2026-09-01, which overturns the
+ * "gearless throws do not train" note this route used to carry): the lasso can
+ * be practiced in ANY undersea location at any time — no Coral Corral unlock,
+ * no wild seahorse needed — and a bare throw is worth +1. A sea cowboy hat and
+ * sea chaps add +1 EACH on a normal monster, so a geared throw is +3. Expert
+ * is 20 points, i.e. 20 bare throws or 7 geared ones. The throw is once per
+ * combat, and the lasso is only consumed when the message says it broke.
+ *
+ * So the gear is not a precondition, it is a 3x multiplier on a resource that
+ * is capped by FIGHTS, not by lassos — and this route's fights are the scarce
+ * thing. User directive 2026-09-01: mandate the gear anyway. Requiring it here
+ * is what makes that mandate real: every throw site in the route is gated on
+ * this function, so the 13 free rift fights buy 20 points instead of 13, and
+ * no fight is ever spent on a +1.
+ *
+ * Hat+pants must therefore stay free for the two pieces while training, which
+ * is why back-slot SCUBA tanks jump the breathing-preference queue below.
+ *
+ * The cost of mandating: if the gear is GONE before training reaches 20, this
+ * goes false and training freezes rather than falling back to +1 throws. The
+ * one consumer is Grandma's ROW125 barter, which spends the sea chaps
+ * (mine.ts:525) — and mineQuest() sits after corralQuest() in the run plan, so
+ * the tame is finished before the chaps are traded. If that order ever moves,
+ * this gate has to move with it.
+ */
 export function isTrainingLasso(): boolean {
   return (
-    get("lassoTraining") !== "expertly" && get("lassoTrainingCount") < 20 && have($item`sea lasso`)
+    get("lassoTraining") !== "expertly" &&
+    get("lassoTrainingCount") < 20 &&
+    have($item`sea lasso`) &&
+    have($item`sea cowboy hat`) &&
+    have($item`sea chaps`)
   );
 }
 

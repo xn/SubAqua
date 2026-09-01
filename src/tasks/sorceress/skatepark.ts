@@ -98,9 +98,10 @@ export function skateParkTurn(): void {
     // dress() and would strip both. Only the maximizing branch needs this; the
     // forcer branch above maximizes nothing, so the engine's pins survive it.
     // In `terms`, so the no-`sea` retry below keeps them too.
-    // Gated on OWNING each piece, same as gym.ts: isTrainingLasso() only tests
-    // the lasso, and ROW125 consumes the sea chaps — naming an unowned item
-    // makes Evaluator.checkEquipment fail every candidate in both passes.
+    // Gated on OWNING each piece, same as gym.ts. isTrainingLasso() now tests
+    // the gear too (outfit.ts), so these are belt-and-braces; they stay because
+    // naming an unowned item makes Evaluator.checkEquipment fail every
+    // candidate in both passes, and ROW125 consumes the sea chaps.
     if (isTrainingLasso()) {
       if (have($item`sea cowboy hat`)) terms.push("+equip sea cowboy hat");
       if (have($item`sea chaps`)) terms.push("+equip sea chaps");

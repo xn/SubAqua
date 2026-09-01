@@ -66,10 +66,11 @@ function slabMacro(): Macro {
 function riftCombat(): CombatStrategy {
   const strategy = new CombatStrategy();
   strategy.startingMacro(() =>
-    // trainingGearReady(): +3 per throw needs the hat and chaps on, and
-    // riftOutfit only pins them when we own them. Without the gate the
-    // pre-corral rift adventures (Labyrinth, Loded Stone) would throw the
-    // stock away for zero training.
+    // trainingGearReady(): the hat and chaps are +1 each on top of the bare
+    // +1, so a geared throw is worth three. The throw is once per combat, so
+    // an ungeared Labyrinth or Loded Stone adventure would spend a free rift
+    // fight for a third of its training — seven geared throws reach 20, bare
+    // ones would need twenty.
     get("_seadentWaveUsed", false) &&
     trainingGearReady() &&
     training() < 20 &&
@@ -118,9 +119,11 @@ function riftPrepare(): void {
   recover();
   // trainingGearReady() gate: the Rufus chain now runs BEFORE the corral
   // (Rufus Quest's `ready`), so this fires at training 0 / lasso 0 with no hat
-  // and no chaps. A lasso thrown gearless does not train (user correction
-  // 2026-08-31, corral.ts lassosDone()) — buying one here would spend a paw
-  // wish, or the reserved pull, on a throw worth nothing.
+  // and no chaps. A bare throw DOES train, at +1 against the geared +3 (wiki;
+  // user correction 2026-09-01) — the reason not to buy a lasso yet is that
+  // the throw is once per combat, so a gearless rift fight would spend one of
+  // the day's ~13 free fights for a third of its value. The gear is mandated
+  // (engine/outfit.ts isTrainingLasso), so wait for the corral to smith it.
   if (trainingGearReady() && training() < 20 && itemAmount(lasso) === 0 && !pawWish(lasso)) {
     print(
       "Paw wish for a sea lasso produced nothing (wishes spent pre-run?); pulling instead.",

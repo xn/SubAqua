@@ -69,13 +69,14 @@ function leatherDone(): boolean {
 function lassosDone(): boolean {
   // Training FIRST, then one banked lasso for the tame. The old 23-point
   // reserve credit (training + 3·lassos >= 23, ash Glob:649) let the grind
-  // retire at training 19 with lassos banked — but a banked lasso only
-  // becomes training when thrown WITH the hat+chaps worn, and the taming
-  // phase doesn't wear them (user correction 2026-08-31: the tame-phase
-  // throws flew gearless and the skill sat below 20, which is why the tame
-  // could never land — the ash tames only at exactly 20, CCS:747). The
-  // grind's own fights pin the gear (engine round-1 injection), so finishing
-  // to 20 here is the cheap, guaranteed place to do it.
+  // retire at training 19 with lassos banked — but a lasso in the bag is not
+  // skill: it only counts once THROWN, one throw per combat, and the taming
+  // phase has no spare fights to throw it in (user correction 2026-08-31: the
+  // skill sat below 20 and the tame could never land — the ash tames only at
+  // exactly 20, CCS:747). Each throw is +3 with the hat and chaps on and +1
+  // without (wiki; user correction 2026-09-01), and isTrainingLasso() mandates
+  // the gear, so the grind's own fights are worth three apiece — the cheap,
+  // guaranteed place to finish to 20.
   return get("lassoTrainingCount", 0) >= 20 && availableAmount(lasso) >= 1;
 }
 

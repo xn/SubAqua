@@ -100,10 +100,11 @@ export function gymnasiumTurn(): void {
   // strips both and drops lasso training to the un-geared rate. Nothing else in
   // `pieces` claims the hat or pants slot here, and putting the terms in
   // `pieces` carries them through the no-`sea` retry below.
-  // Each piece is gated on OWNING it: isTrainingLasso() only tests the lasso,
-  // and ROW125 consumes the sea chaps, so a post-trade `+equip sea chaps` would
-  // name an item on no account and Evaluator.checkEquipment would fail every
-  // candidate — in the `sea` pass AND the retry.
+  // Each piece is gated on OWNING it. isTrainingLasso() now tests the gear
+  // too (outfit.ts — the 2026-09-01 mandate), so these are belt-and-braces
+  // rather than load-bearing; they stay because naming an item on no account
+  // makes Evaluator.checkEquipment fail every candidate — in the `sea` pass
+  // AND the retry — and ROW125 does consume the sea chaps (mine.ts:525).
   if (isTrainingLasso()) {
     if (have($item`sea cowboy hat`)) pieces.push("+equip sea cowboy hat");
     if (have($item`sea chaps`)) pieces.push("+equip sea chaps");
