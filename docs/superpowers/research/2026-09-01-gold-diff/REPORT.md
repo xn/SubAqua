@@ -193,16 +193,22 @@ is the banish reservation's job, not an ordering change.
 5. **Sea cowbell pull** — removed from `unpullableInPath`, given a pull reservation, and a
    `Pull Cowbell` freeaction task ahead of `Tame Seahorse` (gold: `pull: 1 sea cowbell`,
    G:5381).
-6. **Release the Boots: NO-PORT** (`freerun.ts`, `engine.ts`, `fights.ts`, `gym.ts`) — user
-   correction 2026-09-01: it is a turn-taking instakill, not a runaway. The ash does use it
-   (`UnderTheSeaCCS.ash:82`, `UnderTheSeaGlobals.ash:489-492`) and is wrong about it; gold never
-   cast it once in 41 turns. Live 08-31 the gym released the boots twice ([58] poseur, [67]
-   juicer); both times Curby "stomps your opponent into paste", both times the turncount
-   advanced (58→59, 67→68) and `_banderRunaways` stayed 0. On the ash's order it sits ahead of
-   Feel Hatred and Snokebomb, so at the gym it was picked first and paid the turn anyway.
-   Removed from the ladder entirely — and with it `engine.customize()`'s free-run familiar rule
-   (the 2026-08-27 boots-vs-sneak decision), whose whole premise was this rung. Tasks keep
-   `familiar: sneakFamiliar()` uncontested and the ladder is one unrestricted walk.
+6. **Stomping Boots: the skill is a NO-PORT, the `runaway` is restored** (`freerun.ts`,
+   `engine.ts`, `fights.ts`, `gym.ts`). `Release the Boots` is a turn-taking instakill (user
+   correction). The ash casts it (`UnderTheSeaCCS.ash:82`) and that is the ash's bug: libram's
+   own free-run ladder (`actions/FreeRun.ts`, behind `tryFindFreeRun`/`ensureFreeRun`) gives
+   the boots as `Macro.step("runaway")` gated on `StompingBoots.getRemainingRunaways()`, and
+   never lists the skill. Live 08-31 the gym released the boots twice ([58] poseur, [67]
+   juicer): both stomped "into paste", both advanced the turncount (58→59, 67→68), and
+   `_banderRunaways` stayed 0. **Neither run has ever spent a boots runaway** — gold fielded
+   30 lb boots at its gymnasium (6 charges) and never went restless, so the ash's skill never
+   fired. Restored as "Stomping Boots runaway", `new Macro().runaway()` per loopstar
+   (`resources/runaway.ts:139`), counting delegated to libram's `StompingBoots`, placed AFTER
+   the geared banish rungs so the gymnasium reservation still gets spent there.
+7. **The 2026-08-27 free-run familiar rule is retired** (`engine.ts`). It evicted
+   `sneakFamiliar()` for the boots on a "~24 runaways" premise; the real number at this route's
+   weights is 5-6. One unrestricted walk now; the boots take the familiar slot only where it is
+   already free (grimoire's `equipFamiliar` refuses to overwrite a set familiar).
 
 `yarn lint` and `yarn build` clean.
 
@@ -221,5 +227,9 @@ is the banish reservation's job, not an ordering change.
   free. Gold threw 8 at the school on turn 17.
 - **Curveball target.** Gold curveballs the **sea cow** at the corral (banking free sea-cow
   wins); we curveballed the **Mer-kin rustler** three times.
+- **Familiar-weight planning for the boots.** loopstar's `planRunawayFamiliar()` sets
+  `goalWeight = 5 * (1 + _banderRunaways)` and gears the familiar up to the next 5 lb
+  threshold, so a runaway is available whenever the GEAR can reach one. Our
+  `bootsRunawaysLeft()` only reads the weight currently worn.
 - **`Do an Epic McTwist!` was never cast in the whole 08-31 run**, and `BCZ: Refracted Gaze`
   once (gold: 12). Both should follow from the fixed opener, but neither is verified live.
