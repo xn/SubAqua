@@ -76,9 +76,6 @@ function momDone(): boolean {
   return get("questS02Monkees") === "finished";
 }
 
-/** At 40 the eye's backup/habitat copies are worthless progress, and a
- * forced Peridot eye fight would pre-empt the rescue NC that finishes the
- * quest — so stop offering it once the bar caps. */
 /**
  * Has the Patriotic Screech banished this phylum today?
  *
@@ -157,6 +154,9 @@ function cyberLaneStuck(): boolean {
   return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
 }
 
+/** At 40 the eye's backup/habitat copies are worthless progress, and a
+ * forced Peridot eye fight would pre-empt the rescue NC that finishes the
+ * quest — so stop offering it once the bar caps. */
 const abyssPeridot = () =>
   get("momSeaMonkeeProgress", 0) < 40 ? $monster`eye in the darkness` : undefined;
 

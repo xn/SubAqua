@@ -53,14 +53,35 @@ const inkBladder = $item`ink bladder`;
  * ends "This combat did not cost a turn" — including the one where the waffle
  * was consumed without re-rolling the monster.
  *
- * Live 2026-09-01 we spent our only bladder at the Marinara Trench on turn 7
- * (run log :1968) during the Grandpa hunt, where the ladder had banishes to
- * spare. By the corral the chain was empty and three sea cows were killed for
- * full turns ([15], [16], [17]).
+ * Live 2026-09-01 we spent our only bladder at the Marinara Trench (run log
+ * :1968) during the Grandpa hunt. NOT, as first written here, "where the
+ * ladder had banishes to spare": `Find Grandpa` sets `freeRunBanishes` on the
+ * cosmic bowling ball, the ball was already out (:1941), so the walk ran in
+ * NON-banish mode with every banishing rung filtered out before availability
+ * was consulted — the bladder was the last rung standing and the run it bought
+ * was genuinely free (:1972). By the corral the chain was empty and three sea
+ * cows were killed for full turns ([15], [16], [17]).
+ *
+ * So this reservation is a TRADE, not a free win: with the bladder withheld,
+ * that Grandpa call falls through to selectFreeKill({onceDaily: false}) and
+ * spends a free-kill charge instead, or pays the turn if the kill ladder is
+ * dry too. It is taken because a corral run is worth a whole paid turn while
+ * the Grandpa fight had a free-kill substitute, but it is worth revisiting if
+ * the free-kill ladder turns out to be the tighter resource. The real answer
+ * is probably supply: gold ran THREE bladders (two corral, one gym) where we
+ * pull at most one.
  *
  * Keyed on `seahorseName`, not `corralUnlocked`: the corral only unlocks
  * around turn 11 and the bladder was already gone by then. Two are held (gold's
- * count); a third and beyond is free for anyone.
+ * corral count); a third and beyond is free for anyone.
+ *
+ * CAVEAT, inherited: `seahorseName` stays "" after a tame that came out of a
+ * WAFFLED monster — mafia sets it from the opening monster only — which
+ * corral.ts documents and papers over with resyncSeahorse(). If that resync
+ * ever misses, this reservation holds the bladders for the rest of the day and
+ * denies them to the gymnasium, where a run is also worth a whole turn. The
+ * corral's own completion depends on the same predicate, so this adds no NEW
+ * failure mode, but it does widen the blast radius of that one.
  */
 function inkBladderReserved(location?: Location): boolean {
   return location !== corral && get("seahorseName") === "" && itemAmount(inkBladder) <= 2;

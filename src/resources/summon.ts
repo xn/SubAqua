@@ -10,6 +10,7 @@ import {
   lastChoice,
   Monster,
   myClass,
+  print,
   runChoice,
   runCombat,
   use,
@@ -83,11 +84,14 @@ function farmPocketWish(): void {
  *    (`_mimicEggsObtained` 0→1→2 at G:3535, :3573). The ash's fax branch is
  *    dead code on a normal day; our run only found it because the ascension
  *    left `_photocopyUsed` false.
- *  - Its failure mode is the worst on the ladder. Live 2026-09-01, diver #2:
- *    "Asking Easyfax to send a fax of unholy diver ... No response from
- *    Easyfax after 60 seconds", three times. A third-party bot that is down
- *    costs minutes of wall clock before the ladder moves on; the egg is
- *    local and instant.
+ *  - Its failure mode is the worst on the ladder. Observed live 2026-09-01 on
+ *    diver #2, in the session console (NOT in docs/2026-09-01-run.txt, whose
+ *    session-log form keeps only the three bare "Visiting Fax Machine in clan
+ *    VIP lounge" lines at :3470-3474): "Asking Easyfax to send a fax of unholy
+ *    diver ... No response from Easyfax after 60 seconds", three times over. A
+ *    third-party bot that is down costs minutes of wall clock before the
+ *    ladder moves on; the egg is local and instant. The run log alone does not
+ *    evidence the stall — cite the console, not the file.
  *  - The egg is cheap. libram's ChestMimic gates on
  *    `experience >= 100 && _mimicEggsObtained < 11` (ChestMimic.js:25), so a
  *    grown mimic banks ten-plus eggs a day and this route spends one or two.
@@ -103,15 +107,23 @@ export function summon(target: Monster): void {
   }
   if (have(mimic) && mimic.experience >= 100 && get("_mimicEggsObtained") < 11) {
     if (ChestMimic.differentiableQuantity(target) === 0) ChestMimic.receive(target);
-    if (ChestMimic.differentiableQuantity(target) === 0) {
-      abort(
-        `Failed to extract a mimic egg for ${target.name}. Rerun; if it repeats, summon it manually.`,
-      );
+    // FALL THROUGH, never abort. Moving the mimic ahead of the fax turned a
+    // soft rung into a hard barrier: `ChestMimic.receive` returns false
+    // whenever the target's option is absent or disabled in the DNA-bank
+    // dropdown (libram ChestMimic.js:27-33, 74-83), which is a live
+    // possibility for the sea cowboy (guild.ts Sword Imprint) and the Black
+    // Crayon Golem (grandpa.ts) — neither of which the mimic has ever served
+    // in either log. Aborting here would stop the whole run with the fax and
+    // the pocket wish still untried, and under the OLD order the fax would
+    // simply have fired. The ladder's promise is that every fallback is
+    // explicit; a failed rung has to hand on to the next one.
+    if (ChestMimic.differentiableQuantity(target) > 0) {
+      ChestMimic.differentiate(target);
+      // A Force cast mid-egg-fight can strand choice 1387; answer it (ash parity).
+      if (handlingChoice() && lastChoice() === 1387) runChoice(3);
+      return;
     }
-    ChestMimic.differentiate(target);
-    // A Force cast mid-egg-fight can strand choice 1387; answer it (ash parity).
-    if (handlingChoice() && lastChoice() === 1387) runChoice(3);
-    return;
+    print(`Mimic egg for ${target.name} could not be extracted; trying the fax.`, "red");
   }
   if (!get("_photocopyUsed") && canFaxbot(target)) {
     if (faxbot(target) || faxbot(target) || faxbot(target)) {
