@@ -16,37 +16,45 @@ import { freeRunSources } from "../resources/freerun";
  * that runs late but spends nothing is a scheduling difference, not a turn
  * sink, and the accounting table below still records it.
  *
- * WHAT A CHECKPOINT IS, exactly: gold's TRUE turncount when it left the group.
- * Nothing else. The table was previously read off the `[N]` marker at each
- * `UTS: phase:` banner, which mafia logs as `[getCurrentRun()+1]`
- * (KoLAdventure.java:4603-4607) and which does NOT advance on a free fight —
- * so entries silently mixed `gold_end` and `gold_end + 1`, and the ledger
- * subtracted them as if they were uniform. Measured against the per-zone paid
- * -turn ledger rebuilt from the gold log (which sums to exactly 41): Grandpa,
- * School, Library and Finale were one high while Outpost, Colosseum, Mom
- * Finish and Shub were exact, so no single offset could fix the table. It is
- * re-derived here from that ledger, cumulatively:
+ * WHAT A CHECKPOINT IS, exactly: gold's TRUE turncount when it left the group,
+ * re-derived from the per-zone paid-turn spine of the gold log (which
+ * reconciles to "Run End Adventures used: 41"):
  *
- *   Haunted Pantry 5 -> 5 | Wreck 1 -> 6 | Marinara 3 -> 9 | Outpost 6 -> 15 |
- *   Corral 0 -> 15 | School 4 -> 19 | Library 1 + dreadscroll 1 -> 21 |
- *   Skate Park 4 -> 25 | Right Door 1 -> 26 | Gymnasium 4 -> 30 |
- *   Colosseum 7 -> 37 | Abyss 3 -> 40 | Left Door 1 -> 41 | Center Door 0 -> 41
+ *   Haunted Pantry 1-5 -> 5 | Wreck 6 -> 6 | Marinara 7-9 -> 9 |
+ *   Outpost 10-15 -> 15 | Corral 0 -> 15 | School 16-19 -> 19 |
+ *   Library 20 + dreadscroll 21 -> 21 | Skate Park 22-25 -> 25 |
+ *   Right Door 26 -> 26 | Gymnasium 27-30 -> 30 | Colosseum 31-37 -> 37 |
+ *   Abyss 38-40 -> 40 | Left Door 41 -> 41 | Center Door 0 paid -> 41
  *
- * The one-turn generosity the old marker convention gave by accident is now
- * explicit and applies uniformly: the GUARD adds MARKER_SLACK, the ledger
- * prints the checkpoint raw. A guard should never abort a run that is actually
- * on pace; a scoreboard should never flatter one.
+ * It used to be read off the `[N]` marker at each `UTS: phase:` banner. Mafia
+ * logs `[getCurrentRun()+1]` and the marker does not advance on a free fight,
+ * so entries silently mixed `gold_end` and `gold_end + 1` and no single offset
+ * could correct them: Grandpa, School and Finale were one high; Helmet, Mom,
+ * Shadow Rift, Corral, Sorceress Dailies and Teflon were one high the other
+ * way (16 for a phase gold left at 15); Outpost, Library, Colosseum, Mom
+ * Finish and Shub were already exact.
  *
- * UNCHECKED GROUPS. Init and Wanderers have no gold analogue. Yog-Urt,
- * Gladiator Gear and Skate Park are unchecked for a different reason: our route
- * runs them in a DIFFERENT ORDER from gold, which does Skate Park (22-25) then
- * the Right Door (26) then the Gymnasium (27-30) while we do Yog-Urt then the
- * gym then the park. A positional checkpoint cannot be valid for both
- * orderings, and pretending otherwise is what produced the 2026-09-01 ledger's
- * impossible pair — `Skate Park -2` sitting next to `Gladiator Gear +1`. Their
- * turns are still counted in the total; only the per-group Δ is withheld.
- * Tasks listed in FLOATING are maintenance steps the route legitimately
- * re-runs late.
+ * TWO TABLES, because there are two consumers with different needs.
+ * `goldTurncounts` is the SCOREBOARD: what gold actually did, one row per
+ * group, printed as `gold@`. `goldCheckpoints` is the GUARD: the turncount a
+ * paid turn may not pass. They differ for exactly three groups.
+ *
+ * THE REORDERED BLOCK. Gold runs Skate Park (22-25) -> Right Door (26) ->
+ * Gymnasium (27-30); we run Yog-Urt -> Gladiator Gear -> Skate Park. No
+ * per-group checkpoint is valid for both orderings — but the three are
+ * CONTIGUOUS in both, bounded by the Library below and the Colosseum above, so
+ * the BLOCK bound (gold left all three by turn 30) guards all three under
+ * either order. That is what the guard uses. The scoreboard keeps the true
+ * per-group numbers and marks the rows, since a Δ against a block bound would
+ * be meaningless.
+ *
+ * (An earlier pass deleted these three outright, on the grounds that the
+ * 2026-09-01 ledger showed an impossible `Skate Park -2` beside
+ * `Gladiator Gear +1`. That pair was an artifact of the old table's wrong
+ * Skate Park value of 30 — gold's is 25 — which the same pass was already
+ * fixing. Deleting them removed two working block guards; only `Yog-Urt: 22`
+ * was actually wrong, and in the dangerous direction: four turns too STRICT,
+ * so an on-pace run spending its Yog-Urt turn at 26 would have false-aborted.)
  *
  * Resuming after an abort: the first paid turn of an invocation sets a
  * session drift = how far past its checkpoint the run already was, and every
@@ -57,7 +65,8 @@ import { freeRunSources } from "../resources/freerun";
  */
 export const GOLD_RUN = "UTS 2026-08-21 (41 turns)";
 
-export const goldCheckpoints: Record<string, number> = {
+/** SCOREBOARD: gold's true turncount when it left each group. */
+export const goldTurncounts: Record<string, number> = {
   Openers: 5,
   Pellet: 5,
   "Big Brother": 6,
@@ -72,19 +81,35 @@ export const goldCheckpoints: Record<string, number> = {
   Teflon: 15,
   School: 19,
   Library: 21,
-  // "Yog-Urt", "Gladiator Gear" and "Skate Park": deliberately absent — see
-  // UNCHECKED GROUPS above. Gold's are 26 / 30 / 25, in that order; ours is
-  // Yog-Urt, gym, park, so the numbers do not transfer.
+  "Yog-Urt": 26,
+  "Skate Park": 25,
+  "Gladiator Gear": 30,
   Colosseum: 37,
   "Mom Finish": 40,
   Shub: 41,
   Finale: 41,
 };
 
-/** The turn of slack every guard limit carries, so a checkpoint is never
- * strict. Explicit now that the checkpoints themselves are exact; it used to
- * be an accident of the `[N]` marker convention, applied unevenly. */
-const MARKER_SLACK = 1;
+/** Groups our route runs in a different ORDER from gold. Guarded as one block
+ * (see the header); their scoreboard Δ is annotated rather than trusted. */
+const REORDERED_BLOCK = new Set(["Yog-Urt", "Gladiator Gear", "Skate Park"]);
+const REORDERED_BLOCK_END = 30;
+
+/** GUARD: the turncount a paid turn on this group may not pass (before
+ * tolerance and drift). Identical to goldTurncounts except that the reordered
+ * block members all carry the block bound. */
+export const goldCheckpoints: Record<string, number> = Object.fromEntries(
+  Object.entries(goldTurncounts).map(([group, turncount]) => [
+    group,
+    REORDERED_BLOCK.has(group) ? REORDERED_BLOCK_END : turncount,
+  ]),
+);
+
+/** Deliberate tolerance on every guard limit, so a checkpoint is never strict.
+ * Named for what it is: this is policy, not an accounting correction. The
+ * previous name (GUARD_TOLERANCE) described a log-marker artifact that no longer
+ * exists now the checkpoints are exact turncounts. */
+const GUARD_TOLERANCE = 1;
 /** Tasks the route re-runs late by design; never checked against their group. */
 const FLOATING = new Set(["Mom/Banish Constructs"]);
 
@@ -118,7 +143,12 @@ export function recordTask(taskName: string, turnsSpent: number, fought: boolean
     row.combats += 1;
     if (turnsSpent === 0) row.free += 1;
   }
-  row.lastTurn = myTurncount();
+  // FLOATING tasks are maintenance the route legitimately re-runs late
+  // (assertOnGoldPace exempts them for the same reason). Letting one bump
+  // lastTurn stamps a permanent false Δ on its group: `Mom/Banish Constructs`
+  // re-firing at turn 100 would report Mom as finishing there. Their turns and
+  // combats still count; only the position marker is theirs to skip.
+  if (!FLOATING.has(taskName)) row.lastTurn = myTurncount();
 }
 
 /** True when a combat (free or paid) started since the snapshot: mafia stamps
@@ -143,11 +173,14 @@ export function ledgerLines(): string[] {
     const row = ledger.get(group);
     if (!row) continue;
     turns += row.turns;
-    const gold = goldCheckpoints[group];
+    const gold = goldTurncounts[group];
     const delta =
       gold === undefined ? "" : `${row.lastTurn - gold >= 0 ? "+" : ""}${row.lastTurn - gold}`;
+    // The reordered block's Δ compares positions our route reaches in a
+    // different sequence from gold's, so it is reported but flagged.
+    const note = REORDERED_BLOCK.has(group) ? " (reordered)" : "";
     lines.push(
-      `${group} | ${row.tasks} | ${row.turns} | ${row.combats} | ${row.free} | ${row.lastTurn} | ${gold ?? "-"} | ${delta}`,
+      `${group} | ${row.tasks} | ${row.turns} | ${row.combats} | ${row.free} | ${row.lastTurn} | ${gold ?? "-"} | ${delta}${note}`,
     );
   }
   lines.push(`total turns this session: ${turns}`);
@@ -192,7 +225,12 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
   if (checkpoint === undefined) return;
   const now = myTurncount();
   if (sessionDrift === undefined) {
-    sessionDrift = Math.max(0, now - turnsSpent - checkpoint - MARKER_SLACK);
+    // NOT `- GUARD_TOLERANCE`: subtracting it here and adding it to `limit`
+    // below cancels exactly, and the whole check collapses to
+    // `turnsSpent <= goldSlack` — the checkpoint drops out and the tolerance
+    // buys nothing. With goldSlack=0 a resumed run then aborts on its first
+    // paid turn, which is precisely what drift exists to prevent.
+    sessionDrift = Math.max(0, now - turnsSpent - checkpoint);
     if (sessionDrift > 0) {
       print(
         `Gold guard: resuming ${sessionDrift} turns behind ${GOLD_RUN} (turncount ${now - turnsSpent}, ` +
@@ -201,14 +239,15 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
       );
     }
   }
-  const limit = checkpoint + MARKER_SLACK + sessionDrift + args.goldSlack;
+  const limit = checkpoint + GUARD_TOLERANCE + sessionDrift + args.goldSlack;
   if (now <= limit) return;
 
   for (const line of ledgerLines()) print(line, "red");
   for (const line of ladderState()) print(line, "red");
   throw (
     `GOLD DEVIATION: ${taskName} spent a turn at turncount ${now}; ${GOLD_RUN} had ${groupOf(taskName)} ` +
-    `done by turn ${checkpoint} (slack ${args.goldSlack}${sessionDrift ? ` + ${sessionDrift} resumed drift` : ""}, ` +
+    `done by turn ${checkpoint} (tolerance ${GUARD_TOLERANCE} + slack ${args.goldSlack}` +
+    `${sessionDrift ? ` + ${sessionDrift} resumed drift` : ""}, ` +
     `limit ${limit}). Stopping before more turns go. ` +
     `Compare against docs/superpowers/research/runs/gold-uts-2026-08-21.log; rerun with goldSlack=N ` +
     `to loosen or gold=false to disable.`
