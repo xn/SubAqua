@@ -233,3 +233,77 @@ is the banish reservation's job, not an ordering change.
   `bootsRunawaysLeft()` only reads the weight currently worn.
 - **`Do an Epic McTwist!` was never cast in the whole 08-31 run**, and `BCZ: Refracted Gaze`
   once (gold: 12). Both should follow from the fixed opener, but neither is verified live.
+
+---
+
+# Adversarial review outcome (2026-09-01)
+
+An adversarial agent reviewed `991275d..e1105ff`. Two findings were run-aborting; both were
+mine, both are fixed in `839841b`.
+
+## Fixed
+
+| #   | Sev      | Finding                                                                                                                                                                                                                                                                                                        |
+| --- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | CRITICAL | `Pull Cowbell` was unreachable exactly when needed — `leatherDone()` requires 3 cowbells and `Corral Leather.completed` is `leatherDone()`, so while bells were short Corral Leather was ready-and-incomplete and grimoire picked it every iteration. Moved ahead of it, gated on the leather half being done. |
+| 2   | CRITICAL | The gymnasium banish reservation **starved the corral**. Reverted entirely — see below.                                                                                                                                                                                                                        |
+| 4   | HIGH     | The Rufus ungating made `riftPrepare()` buy a training lasso (paw wish, else the reserved pull) and `riftCombat()` throw it at training 0 / lasso 0, before the corral produced the hat and chaps — and a gearless throw does not train. Both gated on `trainingGearReady()`.                                  |
+| 7   | MEDIUM   | The free-kill budget was per-LOCATION, refusing sources no holder could ever spend (Assert your Authority outside the Sheriff zones, bricks at the corral, Club 'Em at the Colosseum). Now per-source.                                                                                                         |
+| 8   | —        | Comment corrections: gold banishes **four** gym guards, not three (G:8260, :8313, :8349, :8397); the drain was 4 at An Octopus's Garden + 2 in the Trench + 2 at the Outpost; and "`_banderRunaways` finished at 0 in both runs" is an inference — that pref is never printed in either log.                   |
+
+### Why the banish reservation was reverted, not resized
+
+A count held at the END of a gradually-drained ladder does not stop the drain and only starves
+the middle:
+
+- **Turn 3, An Octopus's Garden** — the ladder still held ~12 charges, so a 3-charge hold
+  passes and all four banishes happen anyway. The reservation does not prevent the thing it was
+  written for.
+- **Turn 27, the corral** — the run's own dump (`docs/2026-08-31-run.txt:5558`) reads
+  `banishes available: Reflex Hammer, Sea *dent, Monkey Paw`: **two** free charges. A 3-charge
+  hold makes the Mer-kin rustler unbanishable for a 15-attempt grind and deadlocks
+  `Tame Seahorse`, whose entire premise is banishing the other draws so the seahorse spawns.
+
+It was also undersized — gold banishes four gym guards, not three.
+
+The drain is real. The right shape is a **zone policy**, not a global count: gold spends ZERO
+banishes in An Octopus's Garden and the Marinara Trench, where we spent six. `pellet.ts:26`
+hunts the Neptune flytrap there with `.banish()` while gold uses a Peridot force plus one free
+kill, so changing it is a route decision, not a mechanical fix. **Left unmade.**
+
+The free-KILL reservation stands: it holds one charge for the corral opener and one for the
+school, both keyed on outcomes that are true from turn 0, so it bites at the Outpost (turn
+12-13) where the drain actually happens.
+
+## Confirmed by the review (not defects)
+
+`new Macro().runaway()` is exactly libram's `Macro.step("runaway")`; a boots equip cannot
+silently fail (grimoire's `equipFamiliar` returns false and `firstEquippable` walks on); the
+breathing gate matches the engine's enforcement; the `-combat` free-kill fallthrough is not
+newly reachable; nothing orphaned by the familiar-rule deletion; the corral opener CAN spend
+the charge it holds (`eye in the darkness` / `slithering thing` are not in `freeMonsters`, so
+`upgradeKill()` does not suppress it); the corral-opener and school reservations cannot
+deadlock (their `needed()` predicates are mutually exclusive); every new pref name and cap
+checks out; the cowbell pull is consistent with `docs/unpullable-items.txt` and the gold log.
+
+## Open — not fixed, needs a decision
+
+- **Banish zone policy** (above). The +6 gym turns are still on the table.
+- **`bootsRunawaysLeft()` reads a stale weight** — it is evaluated in `customize()` /
+  `gymFreeRunGear()` before dress/maximize, against the previous task's gear, and
+  `gymnasiumTurn()` then maximizes `combat rate` and force-equips a famequip breather, which
+  can displace a weight famequip. If the post-dress weight falls below the next 5 lb threshold
+  the emitted `runaway` is a paid attempt. Compounded by the missing weight _planner_
+  (loopstar's `goalWeight = 5 * (1 + _banderRunaways)`).
+- **Undocumented**: with the familiar rule gone the boots now claim the familiar slot on any
+  task that declares no familiar and no `item` modifier.
+- **`mom.ts:165-176` `scaleMailPrep`** — its comment says Jelly Combed / shark jumper /
+  scale-mail stack, the code treats the first two as alternatives; it runs in `prepare` (after
+  `dress()`), so the pull is not worn for that turn; and `pullSequence` can `abort()` on a mall
+  overrun for a cosmetic +1. Pre-existing.
+- **`freerun.ts:332`** — `banishSources.find(s => s.name === "snokebomb")` never matches the
+  entry named `"Snokebomb"`, so the ash's `banishUsedAtYourLocation` zone-skip is dead code.
+  Pre-existing.
+- **`fights.ts:155`** — the comment claims `gymFreeRunGear()` and `gymFreeRun()` cannot
+  diverge, but the latter passes a `target` and the former does not, and both the curveball
+  guard and the pinkslip phylum filter are target-sensitive.
