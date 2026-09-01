@@ -52,8 +52,16 @@ const eagle = $familiar`Patriotic Eagle`;
  * account with the cyber kit and no construct banish yet: the ash fields the
  * eagle for exactly that fight and screeches in it (UTS:1319-1322,
  * CCS:676-678) — the construct banish costs no turn there, where the Madness
- * Bakery lane costs one. */
-function screechTurn(): boolean {
+ * Bakery lane costs one.
+ *
+ * Exported because the Outpost is not the only place the last habitat golem
+ * can be met: if the outpost work finishes with a charge outstanding, the
+ * cyber lane meets it in Cyberzone 1 instead and screeches there (mom.ts
+ * "Cyber Mom"). Live 2026-09-01 the outpost left the chain at 1 with no golem
+ * fight remaining, so this never got a turn to ride and the banish fell
+ * through to a PAID Madness Bakery turn (run log :3583) — which then banished
+ * the golem's own phylum and froze the chain for the day. */
+export function screechTurn(): boolean {
   return (
     have(eagle) &&
     have($item`server room key`) &&

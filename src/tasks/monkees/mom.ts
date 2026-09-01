@@ -5,8 +5,10 @@ import {
   canAdventure,
   handlingChoice,
   itemAmount,
+  Monster,
   myBuffedstat,
   myPrimestat,
+  Phylum,
   runChoice,
   totalTurnsPlayed,
   use,
@@ -32,6 +34,8 @@ import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
+
+import { screechTurn } from "./outpost";
 
 const abyss = $location`The Caliginous Abyss`;
 const glass = $item`black glass`;
@@ -75,6 +79,48 @@ function momDone(): boolean {
 /** At 40 the eye's backup/habitat copies are worthless progress, and a
  * forced Peridot eye fight would pre-empt the rescue NC that finishes the
  * quest — so stop offering it once the bar caps. */
+/** The phylum the Patriotic Screech has banished for the day, if any.
+ * `banishedPhyla` is `phylum:banisher:turn` triples, comma-joined. */
+function phylumBanished(target: Phylum): boolean {
+  return get("banishedPhyla")
+    .split(",")
+    .some((entry) => entry.split(":")[0] === target.toString());
+}
+
+/** The monster a live Recall Facts: Monster Habitats chain still owes us, or
+ * none. A chain is only spendable while its monster can actually be drawn. */
+function habitatMonster(): Monster {
+  return get("_monsterHabitatsFightsLeft", 0) > 0
+    ? (get("_monsterHabitatsMonster") ?? $monster.none)
+    : $monster.none;
+}
+
+/**
+ * Can the outstanding habitat chain still produce its monster?
+ *
+ * The recall makes the target "a possible encounter in any zone you adventure
+ * in until you've encountered it 5 times" (wiki), so a chain normally drains
+ * anywhere. A PHYLUM BANISH takes that away: the monster stops being drawable
+ * at all and the counter freezes forever.
+ *
+ * Live 2026-09-01 that is exactly what happened. The golem chain was at 1
+ * (run log :3127), "Banish Constructs" then banished the construct phylum
+ * (:3583) — the Black Crayon Golem's own phylum — and the next ELEVEN
+ * Cyberzone fights were all dude hackers with the counter stuck at 1 (:3620
+ * onward). "Cyber Mom" (ready: fightsLeft > 0) ran forever and drained all ten
+ * `_cyberFreeFights`; "Abyss Habitats" (ready: fightsLeft === 0) never fired;
+ * momSeaMonkeeProgress stayed 0 until turncount 40 and cost 4 Abyss turns,
+ * 8 shadow bricks and all 3 Assert your Authority to catch up.
+ *
+ * Gold never hit it because it ordered the two: both golem chains ran to 0
+ * (G:2828) and the Screech went off in round 2 of the fight that zeroed the
+ * last one (G:2837-2842).
+ */
+function habitatDrawable(): boolean {
+  const habitat = habitatMonster();
+  return habitat === $monster.none || !phylumBanished(habitat.phylum);
+}
+
 const abyssPeridot = () =>
   get("momSeaMonkeeProgress", 0) < 40 ? $monster`eye in the darkness` : undefined;
 
@@ -227,7 +273,14 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // phylum via Patriotic Screech so cyberzone fights draw the
               // habitat monsters.
               name: "Banish Constructs",
-              ready: () => cyberKit(),
+              // NEVER while a habitat chain is outstanding: the Screech
+              // banishes the phylum of whatever we are fighting, and the
+              // chain's own monster is usually a Black Crayon Golem — a
+              // construct. Banishing it freezes the chain for the day and
+              // deadlocks the whole cyber lane (habitatDrawable() above has
+              // the live evidence). Gold banishes only once both golem chains
+              // read 0 (G:2828 then G:2842).
+              ready: () => cyberKit() && get("_monsterHabitatsFightsLeft", 0) === 0,
               // Also done once the cyber lane has nothing left to use it for:
               // the Screech's phylum banish expires, and live 2026-08-28 this
               // re-fired at turn 120 (a paid Madness Bakery turn) with
@@ -322,10 +375,41 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               // fights inside CyberRealm's free fights; each abyss-monster
               // kill ticks momSeaMonkeeProgress wherever it happens.
               name: "Cyber Mom",
-              ready: () => cyberKit() && get("_monsterHabitatsFightsLeft", 0) > 0,
-              completed: () => momDone() || get("_cyberFreeFights", 0) >= 10,
+              // habitatDrawable(): a chain whose monster has been banished can
+              // never advance, and this task would otherwise spend the day's
+              // free cyber fights trying — 11 fights, 10/10 allowance, zero
+              // progress on 2026-09-01.
+              ready: () =>
+                cyberKit() && get("_monsterHabitatsFightsLeft", 0) > 0 && habitatDrawable(),
+              // Stop when the CHAIN is spent, not when the cyber allowance is.
+              // The five recalled fights are the whole point; gold landed its
+              // five in six adventures and kept 4 of its 10 free fights
+              // (G: _cyberFreeFights 6), while `_cyberFreeFights >= 10` drains
+              // all ten whatever happens. Cyberzone 1 schedules a hacker or
+              // countermeasure on every odd adventure (wiki), so ~6 adventures
+              // per 5 charges is the expected rate once the construct banish
+              // has taken the countermeasure out of that draw.
+              completed: () =>
+                momDone() ||
+                get("_monsterHabitatsFightsLeft", 0) === 0 ||
+                get("_cyberFreeFights", 0) >= 10,
               do: $location`Cyberzone 1`,
+              // The eagle rides along on the fight that ZEROES the chain, so
+              // the construct banish costs nothing: screechTurn() is true only
+              // at fightsLeft === 1 (mafia decrements on encounter, so the last
+              // habitat fight is met with a build-time 1), which is exactly the
+              // fight after which no chain is left to strand. Gold does this at
+              // the Outpost (G:2837-2842); we need it here too, because the
+              // outpost lane can finish with a charge still outstanding and
+              // then the golem is only ever met in the Cyberzone.
               combat: new CombatStrategy()
+                .macro(
+                  () =>
+                    screechTurn()
+                      ? openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`))
+                      : new Macro(),
+                  $monster`Black Crayon Golem`,
+                )
                 // VHS window first (E F2 / #4(iii)) — the habitat fights here
                 // ARE the abyss monsters the tape wants, and the rock repeat
                 // below would otherwise end the fight before the throw.
@@ -345,6 +429,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               outfit: () => ({
                 modifier: "moxie",
                 equip: $items`shark jumper, Monodent of the Sea`,
+                // The eagle only for the fight that zeroes the chain — see the
+                // screech macro above. Every other cyber fight keeps whatever
+                // familiar the route wants.
+                ...(screechTurn() ? { familiar: eagle } : {}),
               }),
               prepare: (): void => {
                 recover();
