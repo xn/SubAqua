@@ -249,6 +249,13 @@ Ranked by turns per run, cheapest first:
    fights. Cascade: the engine re-picks the familiar on every item-modifier task, so Glover does
    not linger past Cyber Mom any more than the previous familiar did.
 
+5. **School of many.** `abyssCombat` now routes the school through the banish ladder instead
+   of the hardcoded Sea \*dent bolt. The bolt is a paid banish (`banish.ts:94-99`); both runs
+   paid that turn (gold t39, ours t42) with Bowl a Curveball castable (ball return counter −1 at
+   `gold:9247`, `:9540`) and, in gold, 2 Snokebombs in hand. Mafia data: `NOWISH`, `Group: 20`,
+   no `BOSS`, no `NOBANISH`; the drops are autosold. The chain keeps the bolt as the paid
+   fallback. Expected −1 turn for both runs; `assertBanishHeld` aborts if the school ignores it.
+
 ## 7. What this ledger cannot settle
 
 - Whether `school of many` is free-kill-immune (both runs paid it with a lightning bolt).

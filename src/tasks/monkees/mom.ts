@@ -67,14 +67,6 @@ const crystalBall = $item`miniature crystal ball`;
 function schoolBanished(): boolean {
   return get("banishedMonsters").includes("school of many");
 }
-function schoolMacro(): Macro {
-  return Macro.trySkill($skill`Sea *dent: Throw a Lightning Bolt`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`);
-}
-
 function momDone(): boolean {
   return get("questS02Monkees") === "finished";
 }
@@ -137,10 +129,7 @@ function initialMomProgress(): number {
 }
 
 const abyssCombat = () =>
-  new CombatStrategy()
-    .macro(monsterMacro(vhsMacro, vhsTargets))
-    .macro(schoolMacro(), school)
-    .kill();
+  new CombatStrategy().macro(monsterMacro(vhsMacro, vhsTargets)).banish(school).kill();
 
 const abyssOutfit = () => ({
   modifier: "item",
