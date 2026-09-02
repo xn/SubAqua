@@ -1,4 +1,14 @@
-import { availableAmount, itemAmount, Location, Monster, Skill } from "kolmafia";
+import {
+  availableAmount,
+  Familiar,
+  haveEquipped,
+  Item,
+  itemAmount,
+  Location,
+  Monster,
+  myFamiliar,
+  Skill,
+} from "kolmafia";
 import {
   $effect,
   $item,
@@ -114,7 +124,14 @@ export const freeKillSources: FreeKillSource[] = [
     equip: { equip: [...sheriffOutfit] },
     do: Macro.trySkill($skill`Assert your Authority`),
     colosseumSafe: false,
-    dropSafe: true,
+    // "Kill a monster for no adventures, get their meat but not their stuff"
+    // (wiki Assert_your_Authority; the Free_fights table says the same:
+    // "Forfeits item drops, but not stats or meat"). It was flagged dropSafe
+    // until 2026-09-02, which was harmless only while one source was ever
+    // compiled; the killFree chain would otherwise append it behind a
+    // drop-safe pick and throw the fight's drops away. Its failed uses also
+    // consume the daily charge, immune monsters included.
+    dropSafe: false,
   },
   {
     name: "Chest X-Ray",
@@ -323,6 +340,55 @@ export function selectFreeKill(
   return freeKillSources.find(
     (source) =>
       usableFreeKill(source, { location, dropsMatter, onceDaily }) &&
+      freeKillBudgetAllows(source, location),
+  );
+}
+
+/** Is this source's gear WORN right now (not merely owned)? Same test the
+ * banish chain applies (banish.ts:207), widened to the shapes a free-kill
+ * `equip` can take: a bare Item, a familiar, or OutfitSpec(s) whose `equip`
+ * list must be on in full (the Sheriff trio, the parka). Modes are not
+ * checked — a parka in the wrong mode simply does not grant the skill, and
+ * the step's own `if hasskill` guard makes it inert. */
+function gearWorn(equip: FreeKillSource["equip"]): boolean {
+  if (equip === undefined) return true;
+  if (equip instanceof Item) return haveEquipped(equip);
+  if (equip instanceof Familiar) return myFamiliar() === equip;
+  const specs = Array.isArray(equip) ? equip : [equip];
+  return specs.every((spec) => (spec.equip ?? []).every((item) => haveEquipped(item)));
+}
+
+/**
+ * EVERY free kill castable right now, in ladder order — the same filters
+ * selectFreeKill() applies, plus "its gear is actually worn". Built at compile
+ * time (after dress()), the same point grimoire undelays resource macros.
+ *
+ * Why a chain and not the single pick (the banish ladder's reasoning,
+ * banish.ts:196-201, and the same shape): the dart bullseye is the one
+ * PROBABILISTIC rung on this ladder — a ~25% instakill (wiki Free_fights,
+ * "Darts: Aim for the Bullseye"; the miss just throws at a random part) — and
+ * it sits first. With one pick compiled, a miss walked straight into
+ * killFree's trailing abort and stopped the run mid-fight: live 2026-09-02,
+ * the Flytrap Imprint at An Octopus's Garden ("You're on your own, partner").
+ * Gold does not stop there — it fires the next rung in the same round
+ * (G:1602-1605: AIM FOR THE BULLSEYE, then SHATTERING PUNCH, won on the
+ * following round). Every step is hasskill/hascombatitem-guarded, so the first
+ * one KoL offers ends the fight and the rest are inert.
+ *
+ * Chaining is safe against the charge budget precisely because a rung only
+ * fires when the one ahead of it did NOT end the fight: at most one charge is
+ * actually spent per fight. The exception is an instakill-IMMUNE monster,
+ * where every rung fires and none works — out of scope by construction, since
+ * boss handling never reaches free_kill() (see freeKillTargetDropsMatter).
+ */
+export function freeKillChain(
+  options: { location?: Location; dropsMatter?: boolean; onceDaily?: boolean } = {},
+): FreeKillSource[] {
+  const { location } = options;
+  return freeKillSources.filter(
+    (source) =>
+      gearWorn(source.equip) &&
+      usableFreeKill(source, options) &&
       freeKillBudgetAllows(source, location),
   );
 }

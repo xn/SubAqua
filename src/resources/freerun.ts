@@ -283,10 +283,25 @@ export const freeRunSources: FreeRunSource[] = [
     banishes: false,
   },
   {
+    // The parasol shares ONE daily runaway counter with the GAP and the navel
+    // ring above — "The runaway counter is shared with that of the Greatest
+    // American Pants and the peppermint parasol" (wiki, Navel ring of navel
+    // gazing) — and only the day's first three runs are a sure thing: 100%,
+    // then 80% (4th-6th), 50% (7th-9th), 20% beyond. A failed roll does NOT
+    // end the fight, so it falls through to the kill ladder and costs the turn.
+    //
+    // Gated on `parasolUsed` until 2026-09-02, which is the WRONG counter
+    // twice over: it carries no leading underscore, so it is not a daily
+    // preference at all (it is the cumulative per-ascension count toward the
+    // parasol breaking on its 10th use), and it counts only the parasol's own
+    // uses. With three GAP/navel runs already spent it still read "available"
+    // and fired at 80% or worse. `_navelRunaways` is the shared counter mafia
+    // keeps — the parasol emits the same "getting kinda queasy" breakpoint
+    // messages the navel ring does, which is what mafia parses.
     name: "peppermint parasol",
-    available: () => itemAmount($item`peppermint parasol`) > 0 && get("parasolUsed") < 3,
+    available: () => itemAmount($item`peppermint parasol`) > 0 && get("_navelRunaways") < 3,
     remaining: () =>
-      itemAmount($item`peppermint parasol`) > 0 ? Math.max(0, 3 - get("parasolUsed")) : 0,
+      itemAmount($item`peppermint parasol`) > 0 ? Math.max(0, 3 - get("_navelRunaways")) : 0,
     do: Macro.tryItem($item`peppermint parasol`),
     banishes: false,
   },

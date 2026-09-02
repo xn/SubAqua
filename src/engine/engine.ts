@@ -74,6 +74,7 @@ import {
 import { banishChainMacro, pickBanishSource, sourceMacro } from "../resources/banish";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
+  freeKillChain,
   freeKillNever,
   freeKillTargetDropsMatter,
   selectFreeKill,
@@ -287,9 +288,29 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     // thrown ahead of the cowbell protocol is the reserved tame lasso wasted
     // on a boss that shrugs it off.
     if (!undelay(task.freeaction) && isTrainingLasso() && isUnderwaterTask(task)) {
-      combat.startingMacro(
-        openerOnce(Macro.ifNot($monster`wild seahorse`, Macro.tryItem($item`sea lasso`)), 1),
-      );
+      // DELAYED, so the throw is decided after dress() rather than here: the
+      // two pins below are best-effort and isTrainingLasso() only proves the
+      // pieces are OWNED. Two things can still strip them — a task that
+      // claimed the hat or pants slot itself (outfit.equip() then returns
+      // false and says nothing), and the breathing block below (:607, :643),
+      // which deliberately releases the pinned hat when every owned breather
+      // lives in a pinned slot. Grimoire writes the CCS after dressing, so
+      // haveEquipped() here reads the outfit actually worn.
+      // Neither piece worn is the +1 rate the 2026-09-01 gear mandate exists
+      // to prevent (outfit.ts isTrainingLasso), and a fight is the scarce
+      // thing, not the lasso: skip the throw and keep the fight's lasso for a
+      // geared one. Hat- or chaps-only (+2) still throws — that is exactly the
+      // trade the breathing release makes on purpose.
+      combat.startingMacro(() => {
+        if (!haveEquipped($item`sea cowboy hat`) && !haveEquipped($item`sea chaps`)) {
+          print(
+            "Lasso training gear is not worn; skipping the round-1 throw (would be +1).",
+            "red",
+          );
+          return new Macro();
+        }
+        return openerOnce(Macro.ifNot($monster`wild seahorse`, Macro.tryItem($item`sea lasso`)), 1);
+      });
       outfit.equip($item`sea cowboy hat`);
       outfit.equip($item`sea chaps`);
     }
@@ -390,14 +411,32 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       // stripped equip would sell a gearless macro as a free kill; failing
       // through to MyActionDefaults degrades loudly instead (killFree aborts).
       if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
-        // Macro.step() copies rather than mutating, so the shared ladder entry
-        // is never appended to in place. The trailing abort keeps killFree's
-        // "a task that requires a free kill must be given one" semantics while
-        // making an uncastable source abort LOUDLY instead of handing KoL an
-        // action-free macro.
+        // The whole castable ladder behind the pick, not the pick alone — the
+        // banish provide's reasoning above, for a sharper failure: the dart
+        // bullseye leads this ladder and only lands ~25% of the time, so one
+        // compiled rung meant three fights in four walked into the abort below
+        // (live 2026-09-02, Flytrap Imprint). freeKillChain() is evaluated at
+        // compile time, after dress(), so it sees exactly the gear that landed;
+        // `source` is what made the pick's gear land, and it heads the chain
+        // whenever it is still castable.
+        //
+        // `dropsMatter: true` on the chain: the pick was chosen deliberately,
+        // but a rung APPENDED behind it must not quietly change the fight's
+        // contract — groveling gravel forfeiting the flytrap pellet or the
+        // cowboy's lasso is the fight's whole point thrown away.
+        //
+        // Macro.step() copies rather than mutating, so the shared ladder
+        // entries are never appended to in place. The trailing abort keeps
+        // killFree's "a task that requires a free kill must be given one"
+        // semantics while making a ladder that fires nothing abort LOUDLY
+        // instead of handing KoL an action-free macro.
         resources.provide("killFree", {
           prepare: source.prepare,
-          do: Macro.step(source.do).abort(),
+          do: () => {
+            const chain = freeKillChain({ location, dropsMatter: true });
+            const ladder = chain.includes(source) ? chain : [source, ...chain];
+            return ladder.reduce((macro, rung) => macro.step(rung.do), new Macro()).abort();
+          },
         });
       }
     }
