@@ -237,7 +237,9 @@ Ranked by turns per run, cheapest first:
    and no longer casts the screech (Cyberzone `:3685` shows no banish text and no
    `banishedPhyla` change, so that screech is a no-op there). Banish Constructs reminisces a
    golem from the locket when a charge is spare (diver hunt not active, or ≥ 2 summons left) and
-   falls back to the Bakery only without one.
+   falls back to the Bakery only without one. The cast is a combat filter gated the way the UTS
+   ash gates it (`UnderTheSea.ash:1846-1849`): only when `screechCombats` is 0 and the fight page
+   offers the skill, so a cast KoL would reject is never submitted.
 
 ## 7. What this ledger cannot settle
 

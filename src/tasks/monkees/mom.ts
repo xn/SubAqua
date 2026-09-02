@@ -1,5 +1,6 @@
 import {
   abort,
+  adv1,
   availableAmount,
   buy,
   canAdventure,
@@ -30,13 +31,14 @@ import {
   Macro,
 } from "libram";
 
-import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
+import { CombatStrategy, killMacro, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 import { rivetHuntActive } from "../../resources/saber";
 import { summonsAvailable } from "../../resources/summon";
+import { CombatFilter } from "../sorceress/fights";
 
 const abyss = $location`The Caliginous Abyss`;
 const glass = $item`black glass`;
@@ -88,6 +90,15 @@ function habitatIsMomTarget(): boolean {
 
 const golem = $monster`Black Crayon Golem`;
 const bakery = $location`Madness Bakery`;
+
+const screech = $skill`%fn, Release the Patriotic Screech!`;
+
+function screechFilter(): CombatFilter {
+  return (_round, _monster, text) =>
+    get("screechCombats", 0) === 0 && text.includes("Release the Patriotic Screech")
+      ? Macro.trySkill(screech).toString()
+      : killMacro(false).toString();
+}
 
 function screechGolemFromLocket(): boolean {
   if (!CombatLoversLocket.canReminisce(golem)) return false;
@@ -226,18 +237,11 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 momDone() ||
                 get("_cyberFreeFights", 0) >= 10 ||
                 get("banishedPhyla").includes("construct"),
-              do: () => {
-                if (screechGolemFromLocket()) {
-                  CombatLoversLocket.reminisce(golem);
-                  return undefined;
-                }
-                return bakery;
+              do: (): void => {
+                if (screechGolemFromLocket()) CombatLoversLocket.reminisce(golem, screechFilter());
+                else adv1(bakery, -1, screechFilter());
               },
-              combat: new CombatStrategy()
-                .macro(() =>
-                  openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)),
-                )
-                .kill(),
+              combat: new CombatStrategy().kill(),
               outfit: { familiar: eagle },
               prepare: (): void => {
                 recover();
