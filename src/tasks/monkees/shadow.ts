@@ -219,6 +219,23 @@ export function shadowRiftQuest(): Quest {
           // Gold: opener 4584, chaps 4683, hat 4699, then eighteen rift
           // fights carrying `lassoTrainingCount` 0->20 entirely free
           // (G:4887-5292).
+          //
+          // DEFERRING COSTS NOTHING. Shadow Affinity is a budget of rift
+          // COMBATS, not a wall-clock timer: "Adventuring in Shadow Rifts will
+          // consume turns of this instead of Adventures", and "one duration of
+          // this effect will be lost at the end of any combat in Shadow Rift,
+          // even if the fight would already be free" (wiki). So paid turns
+          // spent elsewhere — the corral turns this gate waits through — do not
+          // erode it, and the eleven free fights are still eleven whenever we
+          // get to them. The logs corroborate the combat-only rule: 20 rift
+          // adventures in the 09-01 affinity window produced only 15
+          // decrements (run log :4142-5708), the other five being the rift's
+          // non-combats (the Labyrinth NCs and Loded Stones).
+          //
+          // The live risk is the OTHER effect: Shadow Waters is an ordinary
+          // ~30-turn buff and `Rift Fights` requires it, so a corral that runs
+          // very long could still strand the day's bricks. 09-01 had ~15 turns
+          // of margin; a corral blowout would eat it.
           (!have(waters) || trainingGearReady()) &&
           (riftFightsFree() ||
             get("encountersUntilSRChoice", 11) === 0 ||
