@@ -2,6 +2,7 @@ import {
   abort,
   adv1,
   availableAmount,
+  Effect,
   buy,
   canAdventure,
   handlingChoice,
@@ -44,6 +45,19 @@ const abyss = $location`The Caliginous Abyss`;
 const glass = $item`black glass`;
 const vhs = $item`Spooky VHS Tape`;
 const eagle = $familiar`Patriotic Eagle`;
+const glover = $familiar`Glover`;
+
+function cyberKit(): boolean {
+  return have(eagle) && have($item`server room key`) && have($skill`OVERCLOCK(10)`) && have(glover);
+}
+
+function famWeightEffects(): Effect[] {
+  const effects: Effect[] = [];
+  if (have($skill`Leash of Linguini`)) effects.push($effect`Leash of Linguini`);
+  if (have($skill`Empathy of the Newt`)) effects.push($effect`Empathy`);
+  return effects;
+}
+
 const habitatTargets = [$monster`slithering thing`, $monster`eye in the darkness`];
 const school = $monster`school of many`;
 const vhsTargets = [...habitatTargets, school];
@@ -106,7 +120,7 @@ function screechGolemFromLocket(): boolean {
 }
 
 function cyberLaneStuck(): boolean {
-  if (!have(eagle) || !have($item`server room key`)) return false;
+  if (!cyberKit()) return false;
   if (get("_monsterHabitatsFightsLeft", 0) === 0) return false;
   if (habitatTargets.some((target) => target === get("_monsterHabitatsMonster"))) return false;
   return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
@@ -195,7 +209,6 @@ function scaleMailPrep(): void {
 }
 
 export function momQuest(opts: { cyber: boolean }): Quest {
-  const cyberKit = () => have(eagle) && have($item`server room key`);
   return {
     name: "Mom",
     tasks: [
@@ -305,9 +318,11 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 .kill(),
               outfit: {
                 modifier: "moxie",
+                familiar: glover,
                 equip: $items`shark jumper, Monodent of the Sea`,
                 avoid: $items`miniature crystal ball`,
               },
+              effects: famWeightEffects,
               prepare: (): void => {
                 recover();
                 if (myBuffedstat($stat`Moxie`) < 500) {

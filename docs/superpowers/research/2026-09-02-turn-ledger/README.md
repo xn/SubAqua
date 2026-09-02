@@ -241,6 +241,14 @@ Ranked by turns per run, cheapest first:
    ash gates it (`UnderTheSea.ash:1846-1849`): only when `screechCombats` is 0 and the fight page
    offers the skill, so a cast KoL would reject is never submitted.
 
+4. **Cyber eye fights.** Cyber Mom now fields Glover with the Leash/Empathy weight buffs, as the
+   ash does (`UnderTheSea.ash:1630`). Gold's eye at `gold:3757` took the rock's 10 plus five or six
+   Glover hits a round and died on round 12; ours at `:3962` took the rock alone with
+   Jill-of-All-Trades out and hit the round cap. Glover and OVERCLOCK(10) now belong to the cyber
+   kit, so without either the whole lane yields to the paid Abyss fallback instead of losing
+   fights. Cascade: the engine re-picks the familiar on every item-modifier task, so Glover does
+   not linger past Cyber Mom any more than the previous familiar did.
+
 ## 7. What this ledger cannot settle
 
 - Whether `school of many` is free-kill-immune (both runs paid it with a lightning bolt).
