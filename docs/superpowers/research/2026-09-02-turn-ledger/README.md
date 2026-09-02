@@ -222,6 +222,23 @@ Ranked by turns per run, cheapest first:
    phases they touched are at parity now), autumn-aton and Möbius ring (no paid turn in either
    ledger traces to them).
 
+## 6a. Shipped 2026-09-02 (unverified live)
+
+1. **Pantry.** `guild.ts` Guild Test now fields the Pair of Stomping Boots while it has runaways
+   left, the Goth Kid only otherwise. Root cause: the forced Goth Kid made the boots rung
+   un-equippable, and every other non-banish rung is unowned, so after Spring Away the free-run
+   ladder fell through to darts and a paid kill. Gold never fielded the Goth Kid.
+2. **Abyss eye.** `engine.ts` free-kill selection (both the `killFree` provider and the
+   kill-upgrade path) now iterates sources with `firstEquippable`, and `equipResource` trials
+   multi-piece gear on a cloned outfit so a failed spec no longer leaves half an outfit on. Root
+   cause at `:3879`: Assert your Authority was first in the ladder, its badge could not fit beside
+   black glass + Peridot, and the old code returned instead of trying Sweat Bullets or Punch.
+3. **Bakery screech.** `mom.ts` Cyber Mom no longer runs while the habitat is still the golem
+   and no longer casts the screech (Cyberzone `:3685` shows no banish text and no
+   `banishedPhyla` change, so that screech is a no-op there). Banish Constructs reminisces a
+   golem from the locket when a charge is spare (diver hunt not active, or ≥ 2 summons left) and
+   falls back to the Bakery only without one.
+
 ## 7. What this ledger cannot settle
 
 - Whether `school of many` is free-kill-immune (both runs paid it with a lightning bolt).
