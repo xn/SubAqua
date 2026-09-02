@@ -1,5 +1,5 @@
 import { bufferToFile, myTurncount, print } from "kolmafia";
-import { get } from "libram";
+import { get, set } from "libram";
 
 import { args } from "../args";
 import { banishSources } from "../resources/banish";
@@ -128,8 +128,57 @@ type GroupLedger = {
 const ledger = new Map<string, GroupLedger>();
 const order: string[] = [];
 
+/**
+ * The ledger SURVIVES a restart, because the run does.
+ *
+ * It used to live only in these two module-level values, so every `subaqua`
+ * invocation started counting from zero and the report was headed "this
+ * session only". A run that aborts and is restarted — which is most of them:
+ * two aborts on 2026-09-02 alone — then reports a total that is short by
+ * everything the earlier invocations spent. The 45-turn run of 2026-09-02
+ * printed 40, missing exactly the five turns of Init/Openers/Pellet/Big
+ * Brother that the first invocation had already banked.
+ *
+ * A daily preference is the whole mechanism: mafia clears `_`-prefixed
+ * preferences at rollover AND on ascension, which is precisely the ledger's
+ * lifetime — one run, one day. (A run that crosses rollover would restart the
+ * count; this route is a 41-turn day, so that trade buys simplicity for a
+ * case it never sees.)
+ */
+const LEDGER_PREF = "_subaqua_ledger";
+type LedgerState = { order: string[]; rows: Record<string, GroupLedger> };
+let ledgerLoaded = false;
+
+function loadLedger(): void {
+  if (ledgerLoaded) return;
+  ledgerLoaded = true;
+  const raw = get(LEDGER_PREF, "");
+  if (raw === "") return;
+  try {
+    const state = JSON.parse(raw) as LedgerState;
+    for (const group of state.order ?? []) {
+      const row = state.rows?.[group];
+      if (!row) continue;
+      ledger.set(group, row);
+      order.push(group);
+    }
+  } catch {
+    // A half-written or hand-edited value must never take the run down from
+    // inside post(): drop it and count this invocation from zero, which is
+    // exactly the old behaviour.
+    print(`Gold ledger: ${LEDGER_PREF} was unreadable; counting from this invocation.`, "yellow");
+  }
+}
+
+function saveLedger(): void {
+  const rows: Record<string, GroupLedger> = {};
+  for (const [group, row] of ledger) rows[group] = row;
+  set(LEDGER_PREF, JSON.stringify({ order, rows }));
+}
+
 /** Record one task execution in the per-group ledger (call from post()). */
 export function recordTask(taskName: string, turnsSpent: number, fought: boolean): void {
+  loadLedger();
   const group = groupOf(taskName);
   let row = ledger.get(group);
   if (!row) {
@@ -149,6 +198,7 @@ export function recordTask(taskName: string, turnsSpent: number, fought: boolean
   // re-firing at turn 100 would report Mom as finishing there. Their turns and
   // combats still count; only the position marker is theirs to skip.
   if (!FLOATING.has(taskName)) row.lastTurn = myTurncount();
+  saveLedger();
 }
 
 /** True when a combat (free or paid) started since the snapshot: mafia stamps
@@ -163,9 +213,10 @@ export function fightHappened(preCombatStarted: string): boolean {
 let sessionDrift: number | undefined;
 
 export function ledgerLines(): string[] {
+  loadLedger();
   const lines = [
-    `Run accounting vs ${GOLD_RUN} (this session only; turncount now ${myTurncount()}` +
-      `${sessionDrift ? `; resumed ${sessionDrift} behind` : ""})`,
+    `Run accounting vs ${GOLD_RUN} (whole run; turncount now ${myTurncount()}` +
+      `${sessionDrift ? `; this invocation resumed ${sessionDrift} behind` : ""})`,
     "group | tasks | turns | combats | free | done@ | gold@ | Δ",
   ];
   let turns = 0;
@@ -183,12 +234,24 @@ export function ledgerLines(): string[] {
       `${group} | ${row.tasks} | ${row.turns} | ${row.combats} | ${row.free} | ${row.lastTurn} | ${gold ?? "-"} | ${delta}${note}`,
     );
   }
-  lines.push(`total turns this session: ${turns}`);
+  // The cross-check that would have caught the 2026-09-02 shortfall on sight:
+  // my_turncount() is turns spent THIS ASCENSION, so with every turn attributed
+  // it equals the ledger total. Anything left over was spent where the ledger
+  // could not see it — before the script was first started, or by hand in the
+  // relay browser (the two macro aborts of 2026-09-02 were both finished that
+  // way).
+  const unattributed = myTurncount() - turns;
+  const gap =
+    unattributed > 0
+      ? ` (+${unattributed} unattributed: spent before the ledger's first task, or by hand)`
+      : "";
+  lines.push(`total turns this run: ${turns}${gap}`);
   return lines;
 }
 
 /** Print the ledger and persist it to data/subaqua_lastrun.txt for post-run review. */
 export function reportLedger(): void {
+  loadLedger();
   if (order.length === 0) return;
   const lines = ledgerLines();
   for (const line of lines) print(line, "blue");
