@@ -3,12 +3,16 @@ import {
   availableAmount,
   cliExecute,
   equip,
+  Item,
   itemAmount,
+  mallPrice,
   maximize,
+  pullsRemaining,
+  storageAmount,
   turnsPlayed,
   visitUrl,
 } from "kolmafia";
-import { $item, $location, $slot, get, have } from "libram";
+import { $item, $items, $location, $slot, get, have } from "libram";
 
 import { killMacro } from "../../engine/combat";
 import {
@@ -18,11 +22,36 @@ import {
   seaKeyword,
 } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
-import { recover } from "../../lib";
+import { buyLimit, recover } from "../../lib";
 import { forceNextNoncombat } from "../../resources/ncforce";
-import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
+import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 const blade = $item`skate blade`;
+const parasol = $item`peppermint parasol`;
+const latePullOrder = $items`peppermint parasol, ink bladder, Mer-kin pinkslip, stuffed yam stinkbomb, anchor bomb`;
+
+function latePullable(it: Item): boolean {
+  if (pulledToday(it)) return false;
+  if (
+    it === parasol &&
+    (have($item`navel ring of navel gazing`) || have($item`Greatest American Pants`))
+  ) {
+    return false;
+  }
+  if (storageAmount(it) === 0 && mallPrice(it) > buyLimit()) return false;
+  return pullBudgetAllows(it);
+}
+
+function latePullsDone(): boolean {
+  return pullsRemaining() === 0 || !latePullOrder.some(latePullable);
+}
+
+function latePulls(): void {
+  for (const it of latePullOrder) {
+    if (pullsRemaining() === 0) return;
+    if (latePullable(it)) pullSequence(it);
+  }
+}
 
 let lastRefreshedTurn = -1;
 
@@ -84,6 +113,14 @@ export function skateParkQuest(): Quest {
           soft: 8,
           message: "The skate-park war is not resolving; check NC forcers and the skate blade.",
         },
+      },
+      {
+        name: "Late Pulls",
+        ready: () => get("yogUrtDefeated", false) && !skateWarOpen(),
+        completed: latePullsDone,
+        do: latePulls,
+        freeaction: true,
+        limit: { tries: 2 },
       },
     ],
   };
