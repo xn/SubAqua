@@ -256,19 +256,41 @@ export function reservedPulls(): number {
   return pullReservations.filter((reservation) => reservation.needed()).length;
 }
 
-/** Budget gate. Strict `>` for discretionary pulls; `>=` when the requested
- * item is itself a live reservation — its slot is already inside the count, so
- * `>` would deadlock the reservation against its own pull. The ash documents
- * this exact trap at the skate-blade site (UnderTheSea.ash:1331-1333); this
- * generalizes it to every reserved item. */
+/**
+ * Budget gate. Strict `>` for discretionary pulls; a RESERVED item may take any
+ * pull that is left.
+ *
+ * The reservation count is a floor for discretionary spending, and nothing
+ * more. It was also applied to reserved items themselves — `pullsRemaining()
+ * >= reservedPulls()` — which reads as "a reservation may spend down to the
+ * line", and only untangles the one case where the count exactly equals the
+ * pulls left (the trap the ash documents at the skate-blade site,
+ * UnderTheSea.ash:1331-1333). The moment reservations OUTNUMBER the pulls left,
+ * that test fails for every reserved item at once and the queue freezes: no
+ * reservation can pull, so no reservation is ever satisfied, so the count never
+ * drops, so the slots expire unused at end of run.
+ *
+ * Live 2026-09-02, and it cost a turn. At turncount 22 the run had spent 17 of
+ * 20 pulls with four-plus reservations still live, so `3 >= 4` refused the
+ * skate blade — which is itself a reservation, and the one pull with a
+ * guaranteed payoff (skatepark.ts: Holey Rollers only fires with the blade
+ * equipped; bladeless serves `Picking Sides` instead, an extra turn AND an
+ * extra forcer). The blade arrived anyway as that NC's consolation prize, and
+ * the run ended with three pulls unspent and not one `pull:` line after turn 22
+ * (docs/superpowers/research/2026-09-02-trace/skate-colosseum.md).
+ *
+ * So: a reserved item competes only against the hard cap. Among reserved items
+ * this is first-come-first-served, which can let an early reservation take the
+ * slot a later one wanted — strictly better than the previous behaviour, where
+ * a full queue meant nobody pulled at all. If the ordering ever matters, the
+ * fix is priorities on the reservations, not a floor that blocks them all.
+ */
 export function pullBudgetAllows(item: Item): boolean {
   if (!pullable(item)) return false;
   const isOwnReservation = pullReservations.some(
     (reservation) => reservation.item === item && reservation.needed(),
   );
-  return isOwnReservation
-    ? pullsRemaining() >= reservedPulls()
-    : pullsRemaining() > reservedPulls();
+  return isOwnReservation ? pullsRemaining() >= 1 : pullsRemaining() > reservedPulls();
 }
 
 /** Policy- and budget-gated convenience for non-essential pulls (low shiny
