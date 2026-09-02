@@ -33,8 +33,8 @@ export const args = Args.create(
       help: "Abort at ≤17 turns played if dreadscroll clue 7 is still unknown (top-turncount insurance).",
       default: false,
     }),
-    seedScan: Args.flag({
-      help: "Enable the dreadscroll seed-space scan (native seedfinder port). Disable if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
+    seedScan: Args.boolean({
+      help: "Enable the dreadscroll seed-space scan (native seedfinder port). seedScan=false if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
       default: true,
       setting: "",
     }),
@@ -45,6 +45,16 @@ export const args = Args.create(
     }),
     actions: Args.number({
       help: "Run at most this many tasks, then stop (incremental testing).",
+      setting: "",
+    }),
+    gold: Args.boolean({
+      help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference UTS 2026-08-21, 41 turns). gold=false disables.",
+      default: true,
+      setting: "",
+    }),
+    goldSlack: Args.number({
+      help: "Turns of slack allowed over each gold checkpoint before the gold guard aborts.",
+      default: 3,
       setting: "",
     }),
     version: Args.flag({ help: "Print the version and exit.", default: false, setting: "" }),

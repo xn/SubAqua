@@ -5,6 +5,7 @@ import {
   cliExecute,
   getWorkshed,
   handlingChoice,
+  itemAmount,
   retrieveItem,
   runChoice,
   storageAmount,
@@ -39,16 +40,7 @@ const catalog = $item`2002 Mr. Store Catalog`;
 const vhs = $item`Spooky VHS Tape`;
 const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, model train set, TakerSpace letter of Marque`;
 
-/** Sea-gear storage pulls (ash UTS:1122-1143), all policy-gated through
- * discretionaryPull (low shiny farms instead, spec §3/§4). The CMOI is
- * never bought — ash aborts "Get yer own CMOI" (UTS:1137-1138); we simply
- * skip it unless it is already in Hagnk's. */
-// Elf Guard SCUBA tank is pullable in-path (not on InventoryManager.pullableInSeaPath's
-// blocklist, unlike the other diver-payoff items — see resources/saber.ts diverHuntActive());
-// spec §3/§4's softcore exceptions list confirms it.
-// The FLUDA is not pulled: its only site is the rift's Douse Foe rider,
-// which the shadow-rift port (tasks/monkees/shadow.ts) does not carry.
-const seaGearPulls = $items`Mer-kin sneakmask, sea lasso, shark jumper, scale-mail underwear, Elf Guard SCUBA tank`;
+const seaGearPulls = $items`Mer-kin sneakmask, shark jumper, scale-mail underwear, Elf Guard SCUBA tank, Flash Liquidizer Ultra Dousing Accessory`;
 
 export function initQuest(): Quest {
   const policy = currentPolicy();
@@ -57,9 +49,6 @@ export function initQuest(): Quest {
     tasks: [
       {
         name: "Pearl Guard",
-        // Spec §9 init guard: five pearls must arrive codpiece-smuggled or
-        // in inventory; abort at turn 0 beats the ash's silent wall at the
-        // center door. Checked once per day (re-entrancy).
         completed: () => get("_subaqua_pearls_checked", false),
         do: (): void => {
           const mounted = EternityCodpiece.have()
@@ -86,43 +75,17 @@ export function initQuest(): Quest {
         limit: { tries: 1 },
       },
       {
-        // Free sea jelly (the garbo fork tasks/dailySea.ts:18-30). Choice 1219
-        // "Approach the Jellyfish" is reached by a place.php VISIT, not an
-        // adventure — ChoiceControl.java:6386-6393 stamps _seaJellyHarvested on
-        // option 1 and mafia's own breakfast runs it as a login freebie
-        // (BreakfastManager.collectSeaJelly, :868-899). Zero turns, zero meat,
-        // zero pulls, and its gates are exactly the two the route already has:
-        // the Space Jellyfish (familiars.txt:246 — tagged `underwater`, so it
-        // needs no familiar breather) and a started Old Guy quest, which is why
-        // this sits directly after "Old Guy Quest". Breakfast's own version
-        // takes no breathing gear either, so no `underwater: true` here.
-        //
-        // Payoff: +10 Fishy turns from a rung fishy.ts already carries but
-        // never stocked (FISHY_SOURCES `sea jelly`, `available: have(...)`) —
-        // the harvest is what makes that rung fire.
         name: "Sea Jelly",
         ready: () => have($familiar`Space Jellyfish`) && get("questS01OldGuy") !== "unstarted",
-        // _seaJellyHarvested is the primary completion, but it is only stamped
-        // on DECISION 1 (ChoiceControl.java:6386-6393). mafia's breakfast writes
-        // choiceAdventure1219 = 1 permanently (BreakfastManager.java:893), so on
-        // an account where that pref has since been changed the choice would be
-        // auto-resolved to another option, the pref would never be stamped, and
-        // a `tries: 1` task that never completes is a grimoire throw. The daily
-        // marker is the backstop — same pattern as "Toot" below, whose quest
-        // pref likewise never flips on this path.
         completed: () =>
           !have($familiar`Space Jellyfish`) ||
           get("_seaJellyHarvested") ||
           get("_subaqua_sea_jelly_visited", false),
         do: (): void => {
           visitUrl("place.php?whichplace=thesea&action=thesea_left2");
-          // Belt to the `choices` braces below: if mafia auto-resolved the
-          // choice there is nothing left to handle, otherwise answer it.
           if (handlingChoice()) runChoice(1);
           set("_subaqua_sea_jelly_visited", true);
         },
-        // The engine applies task choices before `do`, which pins decision 1
-        // whatever the account's own choiceAdventure1219 says.
         choices: { 1219: 1 },
         outfit: () =>
           have($familiar`Space Jellyfish`) ? { familiar: $familiar`Space Jellyfish` } : {},
@@ -133,34 +96,13 @@ export function initQuest(): Quest {
         name: "Toot",
         completed: () => get("questM05Toot") !== "started" || get("_subaqua_toot_visited", false),
         do: (): void => {
-          // On the Sea path the Toot/council pages open a one-option
-          // acknowledgement dialog ("Right, okay") that mafia leaves
-          // pending; nothing downstream can act (e.g. the next task's
-          // `use` calls) until it is answered. Drain after each visit
-          // rather than once at the end so a second dialog can't stack.
           visitUrl("council.php");
           if (handlingChoice()) runChoice(1);
           visitUrl("tutorial.php?action=toot");
           if (handlingChoice()) runChoice(1);
           visitUrl("council.php");
           if (handlingChoice()) runChoice(1);
-          // On the overworld the item drops from the Toot Oriole page, so
-          // TutorialRequest's own flip fires there — it sets Quest.TOOT to
-          // FINISHED when its response contains "You acquire an item:" or
-          // "You've learned everything I can teach you"
-          // (TutorialRequest.java:24-29). On the Sea path the item comes
-          // from council.php instead, so that flip never fires. Re-visiting
-          // the quest log lets the other flip site catch it on paths where
-          // it can: QuestLogRequest's which=1 parse sets Quest.TOOT to
-          // FINISHED once the log no longer mentions "Toot!"
-          // (QuestLogRequest.java:121-123).
           visitUrl("questlog.php?which=1");
-          // But on the Sea path the quest log keeps listing "Toot!" even
-          // after the letter has been handed over, so questM05Toot never
-          // flips — the ash likewise just re-visits every day without
-          // checking the pref (UnderTheSea.ash:465-469). Completion is
-          // therefore the daily marker, same pattern as Pearl Guard's
-          // _subaqua_pearls_checked.
           set("_subaqua_toot_visited", true);
         },
         freeaction: true,
@@ -175,7 +117,6 @@ export function initQuest(): Quest {
           (!have($item`sushi-rolling mat`) || get("hasSushiMat")) &&
           (!have(catalog) || get("_2002MrStoreCreditsCollected")),
         do: (): void => {
-          // Ash UTS:995-1002.
           for (const it of [$item`letter from King Ralph XI`, $item`pork elf goodies sack`]) {
             if (have(it)) use(it);
           }
@@ -187,8 +128,6 @@ export function initQuest(): Quest {
       },
       {
         name: "Photobooth",
-        // Sheriff pieces fuel the Assert your Authority free kill
-        // (UTS:967-974); the abort essay is the ash's, verbatim in spirit.
         completed: () =>
           get("_photoBoothEquipment", 0) >= 3 || sheriffOutfit.every((it) => have(it)),
         do: (): void => {
@@ -208,9 +147,6 @@ export function initQuest(): Quest {
       {
         name: "Saber Upgrade",
         completed: () => !have($item`Fourth of May Cosplay Saber`) || get("_saberMod") !== 0,
-        // +10 familiar weight (choice 1386 option 4, ash UTS:1026-1042: the
-        // resistance chip only matters for pearl farming, and pearls are
-        // codpiece-smuggled). Spec §8: mafia's saber CLI, no raw may4 URL.
         do: () => void cliExecute("saber familiar"),
         freeaction: true,
         limit: { tries: 1 },
@@ -219,15 +155,10 @@ export function initQuest(): Quest {
         name: "Mayam",
         completed: () => !MayamCalendar.have() || get("_mayamSymbolsUsed") !== "",
         do: (): void => {
-          // Ash ring picks (UTS:1051-1059).
           cliExecute("mayam rings vessel yam cheese explosion");
           cliExecute("mayam rings fur lightning eyepatch yam");
           cliExecute("mayam rings eye meat yam clock");
         },
-        // The chest mimic soaks the yam4 xp; declared rather than hand-fielded
-        // (audit item 10). The `have()` gate stays in the delay: createOutfit()
-        // maps an unowned familiar to $familiar.none, which would actively put
-        // away whatever familiar is out — the current code leaves it alone.
         outfit: () => (have($familiar`Chest Mimic`) ? { familiar: $familiar`Chest Mimic` } : {}),
         freeaction: true,
         limit: { tries: 1 },
@@ -257,8 +188,6 @@ export function initQuest(): Quest {
             !have($familiar`Chest Mimic`) &&
             have($item`Apriling band tuba`)),
         do: (): void => {
-          // Tuba always (the NC forcer); second instrument per policy
-          // (UTS:1076-1084). Piccolo plays feed the mimic 3x40 exp.
           AprilingBandHelmet.joinSection($item`Apriling band tuba`);
           if (policy.aprilingSecond === "quad tom") {
             AprilingBandHelmet.joinSection($item`Apriling band quad tom`);
@@ -267,11 +196,6 @@ export function initQuest(): Quest {
             for (let i = 0; i < 3; i++) AprilingBandHelmet.play($item`Apriling band piccolo`);
           }
         },
-        // Piccolo lane only, and only when the mimic is owned — the same two
-        // gates the do() had (audit item 10). Both stay in the delay:
-        // createOutfit() maps an unowned familiar to $familiar.none, which would
-        // put away whatever familiar is out instead of leaving it alone, and
-        // the quad-tom lane never wanted the mimic fielded at all.
         outfit: () =>
           policy.aprilingSecond !== "quad tom" && have($familiar`Chest Mimic`)
             ? { familiar: $familiar`Chest Mimic` }
@@ -299,7 +223,6 @@ export function initQuest(): Quest {
         name: "2002 Credits",
         completed: () => !have(catalog) || get("availableMrStore2002Credits", 0) === 0,
         do: (): void => {
-          // UTS:1093-1102; skateboard first for non-high (corral McTwist).
           const store = $coinmaster`Mr. Store 2002`;
           if (policy.catalogCredits === "skateboard+vhs2" && !have($item`pro skateboard`)) {
             buy(store, 1, $item`pro skateboard`);
@@ -310,10 +233,30 @@ export function initQuest(): Quest {
         limit: { tries: 1 },
       },
       {
+        name: "Septapus Charms",
+        ready: () => have($item`Sept-Ember Censer`),
+        completed: () =>
+          !have($item`Sept-Ember Censer`) ||
+          itemAmount($item`Septapus summoning charm`) >= 3 ||
+          get("_subaqua_censer_done", false),
+        do: (): void => {
+          if (!get("_septEmberBalanceChecked", false)) visitUrl("shop.php?whichshop=september");
+          const wanted = Math.min(
+            3 - itemAmount($item`Septapus summoning charm`),
+            Math.floor(get("availableSeptEmbers", 0) / 2),
+          );
+          if (wanted > 0) {
+            buy($coinmaster`Sept-Ember Censer`, wanted, $item`Septapus summoning charm`);
+          }
+          set("_subaqua_censer_done", true);
+        },
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
         name: "Workshed",
         completed: () => get("_workshedItemUsed") || getWorkshed() !== $item.none,
         do: (): void => {
-          // Priority ladder UTS:1104-1120.
           const shed = worksheds.find((it) => have(it));
           if (shed) use(shed);
           if (getWorkshed() === $item`TakerSpace letter of Marque` && !have($item`anchor bomb`)) {
@@ -325,24 +268,12 @@ export function initQuest(): Quest {
       },
       {
         name: "Sea Gear Pulls",
-        // Once-per-day marker pref: completion cannot key off the pulls
-        // themselves — discretionaryPull legitimately refuses at low shiny,
-        // which would loop the task into its limit.
         completed: () => get("_subaqua_gear_pulled", false),
         do: (): void => {
-          // UTS:1122-1143 with gates: scale-mail skipped under Kramco
-          // (kramcoCoversScaleMail, IOTM:318-320); CMOI storage-only.
           for (const it of seaGearPulls) {
             if (have(it)) continue;
             if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
               continue;
-            // The sea lasso is ALWAYS pulled (deviation from the ash's
-            // Sword-lane skip, UTS:600): the ash trains its seven throws in
-            // shadow-rift free fights, which this route dropped, so the
-            // throws ride the paid Grandpa/Outpost/Abyss fights instead —
-            // and that only works with a lasso in hand from turn 3. Live
-            // 2026-08-28 the first lasso arrived at turn 30 and training ran
-            // on ~12 paid corral fights.
             discretionaryPull(it);
           }
           const cmoi = $item`Congressional Medal of Insanity`;
@@ -353,12 +284,6 @@ export function initQuest(): Quest {
         limit: { tries: 1 },
       },
       {
-        // Ash UTS:594-619: ten-leaf clover + large box pulls, crafted into a
-        // blessed large box and used for nine bang potions. Their identities
-        // (thrown in combat by the engine's opener, resources/bangpotions.ts)
-        // are what pins the dreadscroll seed from the seahorse name alone.
-        // Marker pref, not item state: at low shiny discretionaryPull refuses
-        // and the task must still complete.
         name: "Bang Potions",
         completed: () => get("_subaqua_bang_pulled", false),
         do: (): void => {
@@ -375,14 +300,12 @@ export function initQuest(): Quest {
         limit: { tries: 1 },
       },
       {
-        // Ash UTS:481-482: three waffles for the corral re-roll (CCS:829-843).
         name: "Waffle Day",
         ready: () =>
           policy.castWaffleDay &&
           have($skill`Aug. 24th: Waffle Day!`) &&
           !get("_aug24Cast", false) &&
           get("_augSkillsCast", 0) < 5,
-        // Complete OR not applicable (same shape as daily.ts's PYEC task).
         completed: () =>
           get("_aug24Cast", false) ||
           !policy.castWaffleDay ||

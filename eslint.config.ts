@@ -14,6 +14,15 @@ export default defineConfig(
   {
     files: ["**/*.ts", "**/*.tsx"],
     rules: {
+      "libram/verify-constants": [
+        "error",
+        {
+          data: {
+            familiars: ["Sword of S Words"],
+            skills: ["%fn, kill a lot of these guys"],
+          },
+        },
+      ],
       "block-scoped-var": "error",
       "eol-last": "error",
       eqeqeq: "error",

@@ -11,13 +11,6 @@ import { $effect, $item, get, have, set, ValueOf } from "libram";
 
 import { peridotTargetId } from "../resources/peridot";
 
-/**
- * Ash stashboxCheck (CH:9-20): walk the per-lockkey-monster search order,
- * answering the first hut location not yet checked today. Choices 313-315
- * have no mafia tracking (ChoiceAdventures.java:2174-2177) — the record is
- * ours alone, in _subaqua_stashbox_checked (comma-joined option list; the
- * comma-wrap test keeps exact matching). Solely owned by this bundle.
- */
 function stashboxCheck(order: number[]): void {
   const checked = get("_subaqua_stashbox_checked", "");
   for (const option of order) {
@@ -26,9 +19,6 @@ function stashboxCheck(order: number[]): void {
     set("_subaqua_stashbox_checked", checked === "" ? `${option}` : `${checked},${option}`);
     return;
   }
-  // All three checked and the choice fired again: answer *something*
-  // (invariant: every handler branch answers) — the outpost task aborts on
-  // this state before spending another turn.
   runChoice(order[0]);
 }
 
@@ -36,38 +26,31 @@ export function main(choice: number, page: string) {
   const options: { [key: number]: string } = availableChoiceOptions();
 
   if (choice === 923 && options[5]) {
-    runChoice(5); // All Over the Map (The Black Forest)
+    runChoice(5);
   } else if (choice === 780 && options[4]) {
-    runChoice(4); // Action Elevator
+    runChoice(4);
   } else if (choice === 785 && options[4]) {
-    runChoice(4); // Air Apparent
+    runChoice(4);
   } else if (choice === 788 && options[2]) {
-    runChoice(2); // Life is Like a Cherry of Bowls
+    runChoice(2);
   } else if (choice === 691 && options[4]) {
-    runChoice(4); // Second Chest
+    runChoice(4);
   } else if (choice === 1322) {
-    // If NEP quest is food or booze
     if (
       getProperty("_questPartyFairQuest") === "food" ||
       getProperty("_questPartyFairQuest") === "booze"
     ) {
-      runChoice(1); // Accept
+      runChoice(1);
     } else {
-      runChoice(2); // Decline
+      runChoice(2);
     }
-  }
-  // Random Lack of an Encounter
-  else if (choice === 182) {
+  } else if (choice === 182) {
     if (options[4] && !have($item`model airship`)) {
-      // Pick up a model airship
       runChoice(4);
     } else if (options[6]) {
-      // Bat Wings Skip
       runChoice(6);
     }
-  }
-  // Everfull dart handling
-  else if (choice === 1525) {
+  } else if (choice === 1525) {
     const priority: { [key: string]: number } = {
       "Throw a second dart quickly": 60,
       "Deal 25-50% more damage": 800,
@@ -107,60 +90,26 @@ export function main(choice: number, page: string) {
     }
 
     runChoice(choiceToRun);
-  }
-  // Tavern NCs
-  else if ((choice === 496 || choice === 513 || choice === 514 || choice === 515) && options[2]) {
-    // Manually select this option if avilable, in case we increased elemental dmg in prepare
+  } else if ((choice === 496 || choice === 513 || choice === 514 || choice === 515) && options[2]) {
     runChoice(2);
-  }
-  // Lil Doctor bag NC
-  else if (choice === 1340) {
+  } else if (choice === 1340) {
     runChoice(3);
-  }
-  // Using the Force (saber). The engine registers choiceAdventure1387=3 for
-  // the whole run, but that pref path cannot be trusted when the Force ends a
-  // fight that was itself entered from a choice THIS script answered (the
-  // peridot's 1557 -> sea cow -> Force, live 2026-08-29): mafia submits the
-  // script's runChoice through its shared CHOICE_HANDLER, whose 302 to the
-  // fight leaves responseText="". FightRequest then follows the Force's 302
-  // to choice.php on its own — it only VISITS 1387 (sets lastResponseText,
-  // no automation) — and when control returns to the 1557 loop mafia
-  // continues with the new choice number but validates the stale, empty
-  // CHOICE_HANDLER text: "No choice adventure in response text."
-  // (ChoiceManager.java processChoiceAdventure's "different choice" continue
-  // never refreshes request.responseText.) runChoice from here builds a
-  // fresh request and skips that validation. Mirror the registered pref
-  // when it is a real option; 3 ("drop your things") is the route's
-  // invariant and the fallback — every branch must answer.
-  else if (choice === 1387) {
+  } else if (choice === 1387) {
     const pref = parseInt(getProperty("choiceAdventure1387"));
     runChoice(pref >= 1 && pref <= 3 && options[pref] ? pref : 3);
-  }
-  //Sea stuff
-  else if (choice === 1565) {
+  } else if (choice === 1565) {
     runChoice(1);
   } else if (choice === 1566) {
-    // Summon a Wave (Sea *dent cast): "Do it". Same answer the engine
-    // registers globally (engine.ts initPropertiesManager); here too so the
-    // cast is answered even when mafia's pref path is bypassed.
     runChoice(1);
   } else if (choice === 1497) {
-    // Calling Rufus: option 2 = the artifact quest (ash CH:37-41 simple list).
     runChoice(2);
   } else if (choice === 1498) {
-    // Calling Rufus Back: hand the artifact in, else hang up (mafia's own
-    // RufusManager decision, mirrored so the script always answers).
     runChoice(get("questRufus") === "step1" ? 1 : 6);
   } else if (choice === 1500) {
-    // Like a Loded Stone (ash CH:257-265): the fountain's Shadow Waters
-    // first; the forest loot once the waters are up and it is unlooted.
     if (!have($effect`Shadow Waters`)) runChoice(2);
     else if (!get("_shadowForestLooted", false)) runChoice(3);
     else runChoice(2);
   } else if (choice === 312) {
-    // Post-currents the outpost hut becomes a shop; option 3 opens the healer
-    // stock (ash CH:55-59). Otherwise mafia auto-writes choiceAdventure312
-    // from the lockkey drop (ResultProcessor.java:2271-2283); 3 = healer default.
     if (get("intenseCurrents")) {
       runChoice(3);
     } else {
@@ -168,14 +117,11 @@ export function main(choice: number, page: string) {
       runChoice(lockkeyChoice >= 1 && lockkeyChoice <= 3 ? lockkeyChoice : 3);
     }
   } else if (choice === 313) {
-    stashboxCheck([1, 3, 2]); // burglar lockkey search order (ash CH:61)
+    stashboxCheck([1, 3, 2]);
   } else if (choice === 314) {
-    stashboxCheck([1, 2, 3]); // raider (CH:62)
+    stashboxCheck([1, 2, 3]);
   } else if (choice === 315) {
     if (get("intenseCurrents")) {
-      // Post-currents shopping (CH:63-75): beads, then dreadscroll spading
-      // scrolls (mafia parses clues 2/5 from thrown heal/killscrolls), then
-      // beads again — never leave the choice unanswered.
       if (availableAmount($item`Mer-kin prayerbeads`) < 3) runChoice(3);
       else if (availableAmount($item`Mer-kin killscroll`) === 0 && get("dreadScroll5", 0) === 0)
         runChoice(1);
@@ -183,44 +129,25 @@ export function main(choice: number, page: string) {
         runChoice(2);
       else runChoice(3);
     } else {
-      stashboxCheck([3, 1, 2]); // healer (CH:63-79)
+      stashboxCheck([3, 1, 2]);
     }
   } else if (choice === 396) {
-    // Woolly Scaly Bully: option 3 unlocks the janitor's closet (monitor
-    // fights, ChoiceControl.java:5084-5089); other options just lose HP.
     runChoice(3);
   } else if (choice === 397) {
-    // Bored of Education: option 2 unlocks the bathrooms (wordquiz NC 401,
-    // ChoiceControl.java:5091-5096).
     runChoice(2);
   } else if (choice === 398) {
-    // A Mer-kin Graffiti: option 1 unlocks the teacher's lounge — the
-    // merkinElementaryTeacherUnlock the library route needs
-    // (ChoiceControl.java:5098-5103).
     runChoice(1);
   } else if (choice === 399) {
-    // The Case of the Closet: fight the Mer-kin monitor (cheatsheet source);
-    // ash CH:126-131 takes option 1 too.
     runChoice(1);
   } else if (choice === 400) {
-    // No Rest for the Room: fight the Mer-kin teacher (ash CH:126-131).
     runChoice(1);
   } else if (choice === 401) {
-    // Raising Cane: option 2 takes a Mer-kin wordquiz (ash CH:134-140).
     runChoice(2);
   } else if (choice === 403) {
-    // Picking Sides (Skate Park): option 1 takes the skate blade, siding with
-    // the ice skaters — the lutz Fishy buff lives on the ice state. The ash's
-    // simple run_choice(1) list (CH:43); mafia's ChoiceAdventures.java 403.
-    // Live 2026-08-28: unhandled → "Manual control requested" mid-war.
     runChoice(1);
   } else if (choice === 701) {
-    // Ators Gonna Ate (Gymnasium): option 1 takes the item
-    // (ChoiceAdventures.java:3612-3619; ash simple-case list CH:44,55).
     runChoice(1);
   } else if (choice === 705) {
-    // Halls Passing in the Night: option 4 takes a wordquiz; mafia already
-    // deducted the hallpass on visit (ChoiceControl.java:7290-7291).
     runChoice(4);
   } else if (choice === 1562) {
     const getPriority = (option: string): number => MOBIUS_PRIORITIES[option as MobiusOption];
@@ -237,43 +164,18 @@ export function main(choice: number, page: string) {
         return;
       }
     }
-    // All entries known: take the first card (stats) rather than stalling the choice.
     runChoice(1);
   } else if (choice === 703) {
     const bestGuess = getDreadscrollGuess();
     const extra = `pro1=${bestGuess[0]}&pro2=${bestGuess[1]}&pro3=${bestGuess[2]}&pro4=${bestGuess[3]}&pro5=${bestGuess[4]}&pro6=${bestGuess[5]}&pro7=${bestGuess[6]}&pro8=${bestGuess[7]}`;
     runChoice(1, extra);
   } else if (choice === 310) {
-    // The Economist of Scales re-presents itself after every trade, and
-    // mafia invokes this script ONCE per choice number: when the page comes
-    // back as 310 again it falls through to the pref-based automation
-    // (ChoiceManager.java:268-290), and choiceAdventure310=0 means "Manual
-    // control requested" — live 2026-08-28, one pristine in, run aborted.
-    // So drain the trades here: 10 rough -> 1 pristine (option 2) while
-    // the rough scales last, then leave (option 6). Bounded so a trade that
-    // silently fails can't spin.
     for (let trades = 0; handlingChoice() && lastChoice() === 310 && trades < 30; trades++) {
       runChoice(have($item`rough fish scale`, 10) ? 2 : 6);
     }
   } else if (choice === 1599) {
-    // Legendary Digestion (legendary pasta wand's Summon Legendary Noodles;
-    // ChoiceControl.java:6884-6894 case 1599 — options 1-5 are Spleen /
-    // Amygdala / Skin / Heart / Stomach). Option 1 sets
-    // _legendaryNoodlesSpleen and banks a free spleen point; user rule: it
-    // should always be that.
     runChoice(1);
   } else if (choice === 1557) {
-    // Peering Through Your Peridot. This handler is the ONLY thing that may
-    // answer 1557, and it only ever submits an id the page is offering (one
-    // `<input type="hidden" name="bandersnatch" value="ID">` per monster,
-    // ChoiceAdventures.java:6717). It never defers to choiceAdventure1557:
-    // mafia falls back to that pref whenever the script leaves the same
-    // choice up, and a pref pointing at an unlisted monster resubmits
-    // forever (live 2026-08-27 Wreck: 2,531 loops; 2026-08-28 school: 2,937
-    // — the engine had registered no answer that time, so the user's stale
-    // 758 went out). Preference order: the engine's target for this task,
-    // then the registered pref's id, then decline (option 2, "I choose
-    // peace") with a red line — a wasted peridot beats a hung session.
     const offered: number[] = [];
     const re = /name="bandersnatch" value="(\d+)"/g;
     for (let m = re.exec(page); m !== null; m = re.exec(page)) offered.push(Number(m[1]));
@@ -293,11 +195,6 @@ export function main(choice: number, page: string) {
   }
 }
 
-/**
- * dreadScrollGuesses is mafia's guess log: comma-joined
- * `<8-digit-guess>:<wrong-count>` entries. Pull out just the codes we've
- * already submitted, so fallback guesses can avoid repeating one.
- */
 function parseGuessedCodes(): Set<string> {
   const guessed = new Set<string>();
   const pastGuesses = get("dreadScrollGuesses");
@@ -310,18 +207,6 @@ function parseGuessedCodes(): Set<string> {
   return guessed;
 }
 
-/**
- * Build a guess from the known clues (unknown positions default to "1"),
- * then — if that guess was already submitted per dreadScrollGuesses —
- * perturb the unknown positions like a base-4 odometer (digits 1->2->3->4,
- * carrying into the next-lowest-index unknown on overflow) until we find a
- * guess not yet tried. Used when there are too many unknowns to enumerate
- * (F10) and when guess history is contradictory, so neither fallback path
- * submits the identical wrong guess on every attempt and burns Deep-Tainted
- * Mind cycles for nothing. If every combination has already been guessed,
- * fall through and return the last one anyway — a branch must still always
- * answer.
- */
 function fallbackGuess(unknowns: number[]): string {
   const digits = Array.from({ length: 8 }, (_, i) => get(`dreadScroll${i + 1}`, 0) || 1);
   const guessed = parseGuessedCodes();
@@ -353,12 +238,6 @@ function getDreadscrollGuess(): string {
     if (get(`dreadScroll${i}`, 0) === 0) unknowns.push(i);
   }
   if (unknowns.length > 5) {
-    // Too blind to enumerate: 4^n candidates explodes past n=5 (4^6=4096
-    // is fine, but the scoring loop below is O(n^2) over the candidate
-    // pool and 4^7-4^8 hangs Rhino). The route never uses the scroll this
-    // blind (clues 1/6/8 gate acquisition), but a manual `use` shouldn't
-    // hang. Answer the known clues plus a guess-history-aware fallback
-    // (F10) instead of enumerating.
     return fallbackGuess(unknowns);
   }
 
@@ -370,7 +249,6 @@ function getDreadscrollGuess(): string {
         possibleCodes[j] = possibleCodes[j] + currentClue;
       }
     } else {
-      // Unknown clue: branch into all possibilities
       const newCodes: string[] = [];
       for (const code of possibleCodes) {
         for (let digit = 1; digit <= 4; digit++) {
@@ -387,7 +265,6 @@ function getDreadscrollGuess(): string {
       const [code, incorrectStr] = guess.split(":");
       const incorrectCount = parseInt(incorrectStr);
 
-      // filter out all codes that don't match previous dreadscroll guesses
       possibleCodes = possibleCodes.filter((candidate) => {
         let differences = 0;
         for (let i = 0; i < 8; i++) {
@@ -400,13 +277,8 @@ function getDreadscrollGuess(): string {
     }
   }
   if (possibleCodes.length === 0) {
-    // Contradictory guess history (e.g. a pref was hand-edited by hand);
-    // bestCode would be undefined below. Fall back to known clues plus a
-    // guess-history-aware perturbation (F10) rather than submitting
-    // "undefined".
     return fallbackGuess(unknowns);
   }
-  // Choose the code that minimizes expected errors among possible codes
   let bestCode = possibleCodes[0];
   let minExpectedErrors = 8;
   for (const candidate of possibleCodes) {
@@ -419,7 +291,6 @@ function getDreadscrollGuess(): string {
           matchCount++;
         }
       }
-      // Probability this position is wrong
       const errorProb = 1 - matchCount / possibleCodes.length;
       expectedErrors += errorProb;
     }

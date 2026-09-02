@@ -1,22 +1,59 @@
-import { cliExecute, Item, itemAmount } from "kolmafia";
-import { $item, get, have } from "libram";
+import {
+  canEquip,
+  equip,
+  equippedItem,
+  haveEquipped,
+  Item,
+  myFamiliar,
+  Slot,
+  toSlot,
+} from "kolmafia";
+import { $familiar, $item, $slot, CursedMonkeyPaw, have, unequip } from "libram";
 
-const paw = $item`cursed monkey's paw`;
+import { familiarWaterBreathingEquipment, waterBreathingEquipment } from "../engine/outfit";
 
-/** Five item wishes a day (mafia `_monkeyPawWishesUsed`). */
 export function pawWishesLeft(): number {
-  return have(paw) ? Math.max(0, 5 - get("_monkeyPawWishesUsed", 0)) : 0;
+  return CursedMonkeyPaw.have() ? CursedMonkeyPaw.wishes() : 0;
 }
 
-/**
- * One `monkeypaw wish <item>` (ash `monkeypaw()` call sites: rivets
- * UTS:1457-1463, prayerbeads UTS:1013-1014, sea lasso UTS:2516 at
- * HEAD 89982f5). Returns whether the item count actually rose — mafia's
- * command prints but does not throw on a refused wish.
- */
+function withSeaAccess<T>(action: () => T): T {
+  const restore: [Slot, Item][] = [];
+  const wear = (item: Item, slot: Slot = toSlot(item)): void => {
+    if (equippedItem(slot) === item) return;
+    restore.push([slot, equippedItem(slot)]);
+    equip(slot, item);
+  };
+  try {
+    if (!waterBreathingEquipment.some((it) => haveEquipped(it))) {
+      const gear = waterBreathingEquipment.find((it) => have(it) && canEquip(it));
+      if (gear) wear(gear);
+    }
+    const familiar = myFamiliar();
+    if (
+      familiar !== $familiar.none &&
+      !familiar.underwater &&
+      !familiarWaterBreathingEquipment.some((it) => haveEquipped(it))
+    ) {
+      const breather = familiarWaterBreathingEquipment.find((it) => have(it));
+      if (breather) wear(breather, $slot`familiar`);
+    }
+    return action();
+  } finally {
+    for (const [slot, item] of restore.reverse()) {
+      if (item === $item.none) unequip(slot);
+      else equip(slot, item);
+    }
+  }
+}
+
+const refusals = new Map<Item, number>();
+
+const MAX_ATTEMPTS = 2;
+
 export function pawWish(item: Item): boolean {
-  if (pawWishesLeft() === 0) return false;
-  const before = itemAmount(item);
-  cliExecute(`monkeypaw wish ${item.name}`);
-  return itemAmount(item) > before;
+  if (!CursedMonkeyPaw.have()) return false;
+  if ((refusals.get(item) ?? 0) >= MAX_ATTEMPTS) return false;
+  const granted = withSeaAccess(() => CursedMonkeyPaw.wishFor(item));
+  if (!granted) refusals.set(item, (refusals.get(item) ?? 0) + 1);
+  return granted;
 }

@@ -5,7 +5,6 @@ import { generateHTML, handleApiRequest, RelayPage } from "mafia-shared-relay";
 
 import { args } from "./args";
 
-/** Built incrementally (type → dropdown); matches `mafia-shared-relay` page components. */
 type MutableRelaySetting = RelaySetting & Partial<Pick<RelayDropdown, "dropdown">>;
 
 function convertArgsToHtml(): RelayPage[] {

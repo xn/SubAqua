@@ -2263,10 +2263,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"core-js@npm:^3.16.4, core-js@npm:^3.47.0":
+"core-js@npm:^3.47.0":
   version: 3.48.0
   resolution: "core-js@npm:3.48.0"
   checksum: 10c0/6c3115900dd7cce9fab74c07cb262b3517fc250d02e8fd2ff34f80bda5f43a28482a909dbc4491dc6e1ddd9807f57a7df4c3eeecd1f202b7d9c8bfe25f9d680c
+  languageName: node
+  linkType: hard
+
+"core-js@npm:^3.50.0":
+  version: 3.50.0
+  resolution: "core-js@npm:3.50.0"
+  checksum: 10c0/1bfcfb1dbdf45b0b1428a9fdcb03697d1fc52c7e9bc336f804a86ff2c2705a301dca7d9d6636d09d49d60298183273b9321681baeaf330c78db5393bc73f3f6a
   languageName: node
   linkType: hard
 
@@ -2804,15 +2811,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"grimoire-kolmafia@npm:^0.3.33":
-  version: 0.3.33
-  resolution: "grimoire-kolmafia@npm:0.3.33"
+"grimoire-kolmafia@npm:^0.3.35":
+  version: 0.3.35
+  resolution: "grimoire-kolmafia@npm:0.3.35"
   dependencies:
-    core-js: "npm:^3.16.4"
+    core-js: "npm:^3.50.0"
   peerDependencies:
     kolmafia: ^5.28100.0
-    libram: ^0.10.0
-  checksum: 10c0/a29c53875e6aaa397567857818366237fd80f28e08f0cfc86cd5358de3b7c1e1cdd55d860ec522ce794a39d211eea960e78be781690d190846f0bbf9424490c1
+    libram: ^0.11.0
+  checksum: 10c0/78762dcefb88073ab2981c8f21f718c5088593e6a2850b52aaae7042ce01ab192c9886328fa3ae194062af50c38ec04f030ab636d600fd59b8f4b1882cedced8
   languageName: node
   linkType: hard
 
@@ -3128,15 +3135,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"libram@npm:^0.11.23":
-  version: 0.11.23
-  resolution: "libram@npm:0.11.23"
+"libram@npm:^0.11.29":
+  version: 0.11.29
+  resolution: "libram@npm:0.11.29"
   dependencies:
     core-js: "npm:^3.47.0"
     entities: "npm:^7.0.0"
   peerDependencies:
     kolmafia: ^5.28100.0
-  checksum: 10c0/a6a3090191f4cb66c18a1a22c9413d2c134e4abcb7d9df3685f37564b29173618476cf04bd2e20158ee1542d50211bc51af7ed19b07345d0cb87f06260068487
+  checksum: 10c0/3bc1317444c9b25ae2172739bab0493d4ed6fce32fe155f2841e6fd9f9b830d27196bace535f8bbad5f2498ba6a9eb6c8aec8c7775f1c05d4cf6fc339c1a23b4
   languageName: node
   linkType: hard
 
@@ -3938,10 +3945,10 @@ __metadata:
     eslint-config-prettier: "npm:^10.1.8"
     eslint-plugin-libram: "npm:^0.6.0"
     garbo-lib: "npm:^1.0.3"
-    grimoire-kolmafia: "npm:^0.3.33"
+    grimoire-kolmafia: "npm:^0.3.35"
     jiti: "npm:^2.6.1"
     kolmafia: "npm:latest"
-    libram: "npm:^0.11.23"
+    libram: "npm:^0.11.29"
     mafia-shared-relay: "npm:^0.0.9"
     prettier: "npm:^3.8.1"
     rollup: "npm:^4.60.2"

@@ -29,12 +29,6 @@ import { CombatResource, Resource } from "./resource";
 
 export type CombatNCForceSource = CombatResource & { do: Macro };
 
-/**
- * In-combat NC forcers: cast during a fight, the next turn in the zone is a
- * forced noncombat. Consumed by Phase 3 task combat configs. Salvaged from
- * a8c4168 forcenc.ts (which was never wired) minus its McHugeLarge Love Gnats
- * prelude — the avalanche alone is the forcer.
- */
 export const combatNCForceSources: CombatNCForceSource[] = [
   {
     name: "Spikolodon Spikes",
@@ -59,23 +53,12 @@ export const combatNCForceSources: CombatNCForceSource[] = [
 
 export type NCForceSource = Resource & { force: () => void };
 
-/** The ash only spends pulls on forcers when no reusable forcer gear exists
- * on the account (iotm.ash NCforce():1019). */
 const reusableForcerGear = $items`McHugeLarge duffel bag, Jurassic Parka, Allied Radio Backpack`;
 
 function pullBackedFallbackActive(): boolean {
   return !reusableForcerGear.some((it) => have(it)) && pullsRemaining() > 0;
 }
 
-/**
- * Out-of-combat spend ladder, cheapest-first (iotm.ash NCforce():991-1037):
- * tuba → Cincho (free rests restore cinch) → Sneakisol (free, so it beats
- * anything costing a pull) → pull-backed radio/bell/jelly. The pull trio's
- * membership tests use the comma-delimited discipline the ash's own loop
- * forgot (iotm.ash:1024 — real substring-collision bug, fixed in this port),
- * and Clara's remaining() fixes the old repo's inversion (forcenc.ts salvage
- * note). Clara's bell is untradeable: pull-only, never mall-bought.
- */
 export const ncForceSources: NCForceSource[] = [
   {
     name: "Apriling tuba",
@@ -90,14 +73,7 @@ export const ncForceSources: NCForceSource[] = [
     remaining: () =>
       have($item`Cincho de Mayo`) ? Math.floor(CinchoDeMayo.totalAvailableCinch() / 60) : 0,
     force: () => {
-      // Self-dressing: ladder entries are invoked from arbitrary call sites
-      // (skatepark.ts among them), so no task `outfit` can reach here. The
-      // equip is transient — the skill fires immediately and the caller's own
-      // maximize is free to drop the accessory again.
       if (!haveEquipped($item`Cincho de Mayo`)) equip($slot`acc3`, $item`Cincho de Mayo`);
-      // Not in conflict with initPropertiesManager()'s free-rest ban: that ban
-      // strips "free rest" from mafia's AUTOMATIC restore lists; this is a
-      // deliberate cinch charge, which is the only way to reach 60.
       while (CinchoDeMayo.currentCinch() < 60 && totalFreeRests() > get("timesRested")) {
         cliExecute("rest free");
       }
@@ -156,13 +132,6 @@ export const ncForceSources: NCForceSource[] = [
   },
 ];
 
-/**
- * Ash NCForceEstimate() (iotm.ash:470-482). Base 2 stands in for the
- * always-pullable backstops; the Pill Keeper is DELIBERATELY excluded — this
- * estimate decides whether the day's free pill must be reserved for
- * Sneakisol, so counting it would be circular. Ash integer division floors,
- * hence Math.floor on the Cincho term.
- */
 export function ncForceEstimate(): number {
   let force = 2;
   if (have($item`Apriling band tuba`)) force += Math.max(0, 3 - get("_aprilBandTubaUses"));
@@ -174,8 +143,6 @@ export function ncForceEstimate(): number {
   return force;
 }
 
-/** Arm an out-of-combat NC forcer, cheapest-first. Returns true when a forcer
- * is armed afterwards, including one that was already pending. */
 export function forceNextNoncombat(): boolean {
   if (get("noncombatForcerActive")) return true;
   const source = ncForceSources.find((s) => s.available());

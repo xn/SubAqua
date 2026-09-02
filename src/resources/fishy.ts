@@ -33,22 +33,14 @@ import { pullSequence } from "./pulls";
 
 const fishy = $effect`Fishy`;
 
-/** The nine mall pastas the ash price-scans for the Fishy meal (UTS:32-35,
- * 817-825). Pre-verified against items.txt; lint is the authority. */
 const fishyPastas = $items`Frutti di Scatoletta, Pesto alla Marziano, Arrattabbattabiata, Orzo di Riso, Pasta Grimavera, Linguini Ubriacapa, Gnocci Domani, Formica e Pepe, Tubetto Gelatto`;
 
-/** The three sushi-mat nigiri are concoctions.txt SUSHI pseudoitems
- * (fullness.txt marks them `pseudoitem`): no real item id, so $item`` can't
- * resolve the sushi name itself — only its real-item fish-meat ingredient. */
 const nigiris: [string, Item][] = [
   ["beefy nigiri", $item`beefy fish meat`],
   ["glistening nigiri", $item`glistening fish meat`],
   ["slick nigiri", $item`slick fish meat`],
 ];
 
-/** Ash eatSushi() (UTS:650-662): first nigiri whose fish meat is on hand.
- * Sushi is made-and-eaten in one step off the rolling mat; mafia's `eat`
- * command knows sushi names. Returns true if a sushi was eaten. */
 export function eatSushi(): boolean {
   if (!get("hasSushiMat")) return false;
   if (!have($item`white rice`)) {
@@ -57,13 +49,6 @@ export function eatSushi(): boolean {
   cliExecute("refresh inventory");
   for (const [sushi, meat] of nigiris) {
     if (availableAmount(meat) > 0 && availableAmount($item`white rice`) > 0) {
-      // `make`, not `eat`: sushi are pseudo-items with no item id, and
-      // mafia's eat command refuses them outright ("For now, you must
-      // 'create <sushi>'", UseItemCommand.java:138-143 — live 2026-08-28 it
-      // printed "[beefy nigiri] cannot be eaten." and the run aborted at
-      // Teflon/Digpick). SushiRequest's create IS the eat (sushi.php roll +
-      // eat), which is why the ash's eatSushi() runs `make <sushi>`
-      // (Globals:635-647).
       cliExecute(`make ${sushi}`);
       if (have(fishy)) return true;
     }
@@ -76,20 +61,10 @@ type Fishysource = {
   available: () => boolean;
   turns: number;
   use?: () => void;
-  /** Overrides item.fullness in fishyOpportunityCost() — for a pseudo-item
-   * rung (e.g. nigiri) whose `item` is a priced stand-in with the wrong
-   * fullness stat for the real thing being consumed. */
   fullness?: number;
 };
 
 const FISHY_SOURCES: Fishysource[] = [
-  // The nigiri themselves have no item id/mall price (see the pseudoitem
-  // note above), so `item` here is their real fish-meat ingredient instead
-  // — a real, priced stand-in for the opportunity cost of burning it as
-  // sushi rather than something else. `use` (not the `item` field) is what
-  // useFishySource() actually consumes. fullness overrides the fish meat's
-  // own fullness (1) with the nigiri's true fullness.txt value (2), since
-  // that term dominates fishyOpportunityCost().
   {
     item: $item`beefy fish meat`,
     available: () => have($item`beefy fish meat`) && get("hasSushiMat"),
@@ -214,10 +189,6 @@ const FISHY_SOURCES: Fishysource[] = [
     available: () => have($item`Herringtini`),
     turns: 15,
   },
-  // "super-sweet fish goo" (unspoiled) has no item id in items.txt — only
-  // "super-sweet fish goo (spoiled)" exists, and statuseffects.txt confirms
-  // chewing it grants Fishy. A duplicate rung under the unspoiled name was
-  // removed rather than renamed, since this rung already covers the item.
   {
     item: $item`super-sweet fish goo (spoiled)`,
     available: () => have($item`super-sweet fish goo (spoiled)`),
@@ -229,11 +200,6 @@ const FISHY_SOURCES: Fishysource[] = [
     turns: 10,
   },
   {
-    // Stocked for free by the init "Sea Jelly" task (the garbo fork dailySea.ts:18-30):
-    // one place.php visit with the Space Jellyfish out, 0 turns, 1/day
-    // (_seaJellyHarvested). Nothing else in the run acquires one, so before
-    // that task this rung never fired; `available()` needs no change — the
-    // harvest is what puts the jelly in inventory.
     item: $item`sea jelly`,
     available: () => have($item`sea jelly`),
     turns: 10,
@@ -250,15 +216,6 @@ const FISHY_SOURCES: Fishysource[] = [
   },
 ];
 
-/**
- * Item.adventures is a string, not a number: a flat food/booze/spleen item
- * reports a plain integer ("5"), but a ranged one reports "N-M" (e.g.
- * "2-3", "4-8"). toInt() on a ranged string logs "The string ... is not an
- * integer; returning 0" and silently returns 0 — which made the (7 -
- * toInt(...)) term in fishyOpportunityCost() a no-op 7 for every ranged
- * item. Average the range instead so the term reflects the real expected
- * adventure yield.
- */
 function averageAdventures(item: Item): number {
   const raw = item.adventures;
   if (!raw) return 0;
@@ -287,10 +244,6 @@ function fishyOpportunityCost(source: Item, fullnessOverride?: number): number {
 function cheapestFishySource(): Fishysource | null {
   const available = FISHY_SOURCES.filter((source) => {
     if (!source.available()) return false;
-    // Spleen rungs need the room, same guard rung 3 below already carries: a
-    // chew() with no spleen left fails, the ladder finds Fishy still missing,
-    // and — now that the daily harvest keeps a sea jelly reliably on hand — the
-    // optimizer would pick that same rung again on the next call.
     const spleen = source.item.spleen;
     if (spleen > 0 && mySpleenUse() + spleen > spleenLimit()) return false;
     return true;
@@ -322,45 +275,26 @@ function useFishySource(source: Fishysource): boolean {
   return have(fishy);
 }
 
-/**
- * The in-run Fishy ladder (ash post_adv UTS:811-843), called from
- * engine.prepare() before every underwater adventuring task. Restore-at-zero,
- * like the ash: underwater turns cost 2 without Fishy
- * (AdventureRequest.getAdventuresUsed, AdventureRequest.java:1294-1295).
- *
- * Deviation from ash, documented: the fishy pipe rung drops the ash's
- * high-kit gate (payphone+Monodent+PYEC, UTS:812) — the pipe is a zero-turn
- * +10 Fishy daily with no competing in-run use, so the net-turn principle
- * (spec §9) says spend it first on every account that owns one.
- */
 export function maintainFishy(): void {
   if (have(fishy)) return;
 
-  // Rung 1: fishy pipe — zero turns, +10 Fishy, 1/day.
   if (!get("_fishyPipeUsed") && (have($item`fishy pipe`) || storageAmount($item`fishy pipe`) > 0)) {
     if (!have($item`fishy pipe`)) pullSequence($item`fishy pipe`);
     if (have($item`fishy pipe`)) use($item`fishy pipe`);
     if (have(fishy)) return;
   }
 
-  // Rung 1.5: Lutz the Ice Skate — free 30-turn Fishy once the skate war
-  // resolved for ice (statuseffects.txt:552; SkateParkRequest state2buff1).
-  // Ahead of the optimizer below: a free buff always beats consuming a source.
   if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
     cliExecute("skate lutz");
     if (have(fishy)) return;
   }
 
-  // Rung 1.6: Do some automatic fishy optimization.
   const source = cheapestFishySource();
   if (source) {
     useFishySource(source);
   }
   if (have(fishy)) return;
 
-  // Rung 2: pull-meal — cheapest pasta + Aldebaran sardines (UTS:816-829).
-  // Policy-gated (high/low yes, mid no); pullSequence's pulled-today
-  // bookkeeping enforces once per day.
   if (currentPolicy().fishyPullMeal && fullnessLimit() - myFullness() >= 4) {
     const pasta = fishyPastas.reduce((a, b) => (mallPrice(a) <= mallPrice(b) ? a : b));
     if (availableAmount(pasta) > 0 || pullSequence(pasta)) cliExecute(`eat 1 ${pasta.name}`);
@@ -370,7 +304,6 @@ export function maintainFishy(): void {
     if (have(fishy)) return;
   }
 
-  // Rung 3: fish sauce chew (spleen; UTS:830-832).
   if (mySpleenUse() < spleenLimit()) {
     if (availableAmount($item`fish sauce`) > 0 || pullSequence($item`fish sauce`)) {
       chew(1, $item`fish sauce`);
@@ -378,9 +311,6 @@ export function maintainFishy(): void {
     if (have(fishy)) return;
   }
 
-  // Rung 4: sea sushi off the rolling mat (UTS:838-840). The ash's
-  // worktea-sushi variant (dreadscroll clue 7, UTS:833-837) is Phase 4's
-  // dreadscroll concern — see the deferrals list.
   if (eatSushi()) return;
 
   abort(
@@ -389,13 +319,6 @@ export function maintainFishy(): void {
   );
 }
 
-/**
- * Asdon Driving Waterproofly upkeep (ash post_adv UTS:799-809): effect-based
- * breathing that frees every gear slot. Only relevant when the Asdon is the
- * workshed. Fuel comes from the ash's dedicated pull ("pie man was not meant
- * to eat", one pull ≈ 150 fuel — a one-pull item), then the soda-bread
- * route below once that is spent.
- */
 export function maintainWaterproofly(): void {
   if (!AsdonMartin.installed()) return;
   if (have($effect`Driving Waterproofly`)) return;
@@ -411,20 +334,6 @@ export function maintainWaterproofly(): void {
 const SODA_BREAD_MEAT_FLOOR = 15000;
 const SODA_BREAD_LOAVES = 23;
 
-/**
- * Soda-bread refuel once the day's pie man is spent (user directive
- * 2026-08-28; the same route as pearlo lib.ts fuelUp()): the pie is a
- * one-pull item, so after Waterproofly + a bumper + Waterproofly (~150 fuel)
- * the tank is dry for the rest of the run and every underwater slot goes
- * back to breathing gear. Route: Desert Bus pass from the General Store
- * (5,000, npcstores.txt ROW657) if neither it nor the bitchin' meatcar opens
- * the Gift Shop; one all-purpose flower there (2,000) → wads of dough; soda
- * water from the General Store (70 each); cook loaves (one adventure for
- * the batch — session log 2026-08-27 `[71] Cook 42 wad of dough + 42 soda
- * water`, or free under Holiday Multitasking); `asdonmartin fuel`. ~6 fuel a
- * loaf, so 23 loaves ≈ 140 fuel ≈ four more drives. Only above a 15k meat
- * floor so it never competes with the run's own purchases.
- */
 function sodaBreadRefuel(): void {
   if (myMeat() < SODA_BREAD_MEAT_FLOOR) return;
   if (myAscensions() < 10) return;
@@ -447,11 +356,6 @@ function sodaBreadRefuel(): void {
     cliExecute(`asdonmartin fuel ${availableAmount(bread)} loaf of soda bread`);
 }
 
-/**
- * Ash's path-55 zero-adventure diet (post_adv UTS:781-796): crack the astral
- * six-pack, shrug Donho's for the Ode slot, Ode to Booze, drink a pilsner.
- * Called from engine post(); aborts with the ash's message when dry.
- */
 export function emergencyDiet(): void {
   if (myAdventures() > 0) return;
   if (availableAmount($item`astral pilsner`) === 0 && availableAmount($item`astral six-pack`) > 0) {
