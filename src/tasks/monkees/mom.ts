@@ -1,6 +1,8 @@
 import {
   abort,
+  adv1,
   availableAmount,
+  Effect,
   buy,
   canAdventure,
   handlingChoice,
@@ -24,23 +26,38 @@ import {
   $monster,
   $skill,
   $stat,
+  CombatLoversLocket,
   get,
   have,
   Macro,
 } from "libram";
 
-import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
+import { CombatStrategy, killMacro, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
-
-import { screechTurn } from "./outpost";
+import { rivetHuntActive } from "../../resources/saber";
+import { summonsAvailable } from "../../resources/summon";
+import { CombatFilter } from "../sorceress/fights";
 
 const abyss = $location`The Caliginous Abyss`;
 const glass = $item`black glass`;
 const vhs = $item`Spooky VHS Tape`;
 const eagle = $familiar`Patriotic Eagle`;
+const glover = $familiar`Glover`;
+
+function cyberKit(): boolean {
+  return have(eagle) && have($item`server room key`) && have($skill`OVERCLOCK(10)`) && have(glover);
+}
+
+function famWeightEffects(): Effect[] {
+  const effects: Effect[] = [];
+  if (have($skill`Leash of Linguini`)) effects.push($effect`Leash of Linguini`);
+  if (have($skill`Empathy of the Newt`)) effects.push($effect`Empathy`);
+  return effects;
+}
+
 const habitatTargets = [$monster`slithering thing`, $monster`eye in the darkness`];
 const school = $monster`school of many`;
 const vhsTargets = [...habitatTargets, school];
@@ -50,14 +67,6 @@ const crystalBall = $item`miniature crystal ball`;
 function schoolBanished(): boolean {
   return get("banishedMonsters").includes("school of many");
 }
-function schoolMacro(): Macro {
-  return Macro.trySkill($skill`Sea *dent: Throw a Lightning Bolt`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`)
-    .trySkill($skill`Garbage Nova`);
-}
-
 function momDone(): boolean {
   return get("questS02Monkees") === "finished";
 }
@@ -81,8 +90,29 @@ function habitatDrawable(): boolean {
   return habitat === $monster.none || !phylumBanished(habitat.phylum);
 }
 
+function habitatIsMomTarget(): boolean {
+  return habitatTargets.some((target) => target === get("_monsterHabitatsMonster"));
+}
+
+const golem = $monster`Black Crayon Golem`;
+const bakery = $location`Madness Bakery`;
+
+const screech = $skill`%fn, Release the Patriotic Screech!`;
+
+function screechFilter(): CombatFilter {
+  return (_round, _monster, text) =>
+    get("screechCombats", 0) === 0 && text.includes("Release the Patriotic Screech")
+      ? Macro.trySkill(screech).toString()
+      : killMacro(false).toString();
+}
+
+function screechGolemFromLocket(): boolean {
+  if (!CombatLoversLocket.canReminisce(golem)) return false;
+  return !rivetHuntActive() || summonsAvailable() >= 2;
+}
+
 function cyberLaneStuck(): boolean {
-  if (!have(eagle) || !have($item`server room key`)) return false;
+  if (!cyberKit()) return false;
   if (get("_monsterHabitatsFightsLeft", 0) === 0) return false;
   if (habitatTargets.some((target) => target === get("_monsterHabitatsMonster"))) return false;
   return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
@@ -99,10 +129,7 @@ function initialMomProgress(): number {
 }
 
 const abyssCombat = () =>
-  new CombatStrategy()
-    .macro(monsterMacro(vhsMacro, vhsTargets))
-    .macro(schoolMacro(), school)
-    .kill();
+  new CombatStrategy().macro(monsterMacro(vhsMacro, vhsTargets)).banish(school).kill();
 
 const abyssOutfit = () => ({
   modifier: "item",
@@ -171,7 +198,6 @@ function scaleMailPrep(): void {
 }
 
 export function momQuest(opts: { cyber: boolean }): Quest {
-  const cyberKit = () => have(eagle) && have($item`server room key`);
   return {
     name: "Mom",
     tasks: [
@@ -213,16 +239,15 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 momDone() ||
                 get("_cyberFreeFights", 0) >= 10 ||
                 get("banishedPhyla").includes("construct"),
-              do: $location`Madness Bakery`,
-              combat: new CombatStrategy()
-                .macro(() =>
-                  openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`)),
-                )
-                .kill(),
+              do: (): void => {
+                if (screechGolemFromLocket()) CombatLoversLocket.reminisce(golem, screechFilter());
+                else adv1(bakery, -1, screechFilter());
+              },
+              combat: new CombatStrategy().kill(),
               outfit: { familiar: eagle },
               prepare: (): void => {
                 recover();
-                if (!canAdventure($location`Madness Bakery`)) {
+                if (!screechGolemFromLocket() && !canAdventure(bakery)) {
                   visitUrl("shop.php?whichshop=armory&action=talk");
                   if (handlingChoice()) runChoice(1);
                 }
@@ -267,31 +292,26 @@ export function momQuest(opts: { cyber: boolean }): Quest {
             {
               name: "Cyber Mom",
               ready: () =>
-                cyberKit() && get("_monsterHabitatsFightsLeft", 0) > 0 && habitatDrawable(),
+                cyberKit() &&
+                get("_monsterHabitatsFightsLeft", 0) > 0 &&
+                habitatIsMomTarget() &&
+                habitatDrawable(),
               completed: () =>
                 momDone() ||
                 get("_monsterHabitatsFightsLeft", 0) === 0 ||
                 get("_cyberFreeFights", 0) >= 10,
               do: $location`Cyberzone 1`,
               combat: new CombatStrategy()
-                .macro(
-                  monsterMacro(
-                    () =>
-                      screechTurn()
-                        ? openerOnce(Macro.trySkill($skill`%fn, Release the Patriotic Screech!`))
-                        : new Macro(),
-                    $monster`Black Crayon Golem`,
-                  ),
-                )
                 .macro(monsterMacro(vhsMacro, vhsTargets))
                 .macro(Macro.trySkillRepeat($skill`Throw Cyber Rock`), habitatTargets)
                 .kill(),
-              outfit: () => ({
+              outfit: {
                 modifier: "moxie",
+                familiar: glover,
                 equip: $items`shark jumper, Monodent of the Sea`,
                 avoid: $items`miniature crystal ball`,
-                ...(screechTurn() ? { familiar: eagle } : {}),
-              }),
+              },
+              effects: famWeightEffects,
               prepare: (): void => {
                 recover();
                 if (myBuffedstat($stat`Moxie`) < 500) {

@@ -115,12 +115,12 @@ function equipResource(
   outfit: Outfit,
   equipment: Item | Familiar | OutfitSpec | OutfitSpec[],
 ): boolean {
-  if (Array.isArray(equipment)) {
-    let ok = true;
-    for (const spec of equipment) ok = outfit.equip(spec) && ok;
-    return ok;
-  }
-  return outfit.equip(equipment);
+  const apply = (target: Outfit): boolean =>
+    Array.isArray(equipment)
+      ? equipment.reduce((ok, spec) => target.equip(spec) && ok, true)
+      : target.equip(equipment);
+  if (!apply(outfit.clone())) return false;
+  return apply(outfit);
 }
 
 function fallbackMacro(options: { fish?: boolean } = {}): Macro {
@@ -252,8 +252,8 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       }
     }
     if (combat.can("killFree")) {
-      const source = selectFreeKill({ location });
-      if (source && (source.equip === undefined || equipResource(outfit, source.equip))) {
+      const source = firstEquippable(outfit, (exclude) => selectFreeKill({ location, exclude }));
+      if (source) {
         resources.provide("killFree", {
           prepare: source.prepare,
           do: () => {
@@ -318,9 +318,10 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       const upgradeKill = (monster?: Monster): void => {
         const dropsMatter = freeKillTargetDropsMatter(location, monster);
         if (dropsMatter === undefined) return;
-        const source = selectFreeKill({ location, target: monster, dropsMatter });
+        const source = firstEquippable(outfit, (exclude) =>
+          selectFreeKill({ location, target: monster, dropsMatter, exclude }),
+        );
         if (!source) return;
-        if (source.equip !== undefined && !equipResource(outfit, source.equip)) return;
         const step =
           monster === undefined && reserved.length > 0
             ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, source.do)

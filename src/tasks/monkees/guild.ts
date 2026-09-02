@@ -1,4 +1,4 @@
-import { Location, myPrimestat, Stat, storageAmount, visitUrl } from "kolmafia";
+import { Familiar, Location, myPrimestat, Stat, storageAmount, visitUrl } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -19,12 +19,14 @@ import { Quest } from "../../engine/task";
 import { questStepOf, recover } from "../../lib";
 import { sneakEffects } from "../../lib/moods";
 import { selectFreeKill } from "../../resources/freekill";
+import { bootsRunAvailable } from "../../resources/freerun";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 import { summon, summonsAvailable } from "../../resources/summon";
 
 const sword = $familiar`Sword of S Words`;
 const payphone = $item`closed-circuit pay phone`;
 const gothKid = $familiar`Artistic Goth Kid`;
+const boots = $familiar`Pair of Stomping Boots`;
 const gap = $item`Greatest American Pants`;
 
 const guildQuestProp: Map<Stat, string> = new Map([
@@ -39,6 +41,12 @@ const guildTestZone: Map<Stat, Location> = new Map([
 ]);
 
 const crayonMonsters = $monsters`Black Crayon Beast, Black Crayon Beetle, Black Crayon Constellation, Black Crayon Crimbo Elf, Black Crayon Demon, Black Crayon Elemental, Black Crayon Fish, Black Crayon Flower, Black Crayon Frat Orc, Black Crayon Goblin, Black Crayon Golem, Black Crayon Hippy, Black Crayon Hobo, Black Crayon Man, Black Crayon Manloid, Black Crayon Mer-kin, Black Crayon Penguin, Black Crayon Pirate, Black Crayon Shambling Monstrosity, Black Crayon Slime, Black Crayon Spiraling Shape, Black Crayon Undead Thing`;
+
+function guildTestFamiliar(): Familiar | undefined {
+  const zone = guildTestZone.get(myPrimestat());
+  if (have(boots) && bootsRunAvailable(zone)) return boots;
+  return have(gothKid) ? gothKid : sneakFamiliar();
+}
 
 function prop(): string {
   return guildQuestProp.get(myPrimestat()) ?? "questG09Muscle";
@@ -86,7 +94,7 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         combat: new CombatStrategy().kill(crayonMonsters).freeRun(),
         outfit: () => ({
           modifier: "-combat",
-          familiar: have(gothKid) ? gothKid : sneakFamiliar(),
+          familiar: guildTestFamiliar(),
           equip: $items`Monodent of the Sea`,
         }),
         effects: sneakEffects,

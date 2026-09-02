@@ -215,14 +215,16 @@ export function selectFreeKill(
     target?: Monster;
     dropsMatter?: boolean;
     onceDaily?: boolean;
+    exclude?: ReadonlySet<string>;
   } = {},
 ): FreeKillSource | undefined {
-  const { location, target, dropsMatter = false, onceDaily = true } = options;
+  const { location, target, dropsMatter = false, onceDaily = true, exclude } = options;
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
   return freeKillSources.find(
     (source) =>
+      !exclude?.has(source.name) &&
       usableFreeKill(source, { location, dropsMatter, onceDaily }) &&
       freeKillBudgetAllows(source, location),
   );
