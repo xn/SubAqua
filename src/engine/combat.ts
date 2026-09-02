@@ -1,6 +1,6 @@
 import { ActionDefaults, CombatStrategy as BaseCombatStrategy } from "grimoire-kolmafia";
 import { availableAmount, haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
-import { $effect, $item, $phylum, $skill, have, Macro } from "libram";
+import { $effect, $item, $monsters, $phylum, $skill, have, Macro } from "libram";
 
 import { freeMonsters } from "../resources/backup";
 import { bangPotionRounds } from "../resources/bangpotions";
@@ -287,6 +287,22 @@ export function runMacro(): Macro {
 }
 
 /**
+ * The six Shadow Rift bosses (wiki, Free_fights: "shadow cauldron, shadow
+ * matrix, shadow orrery, shadow scythe, shadow spire, shadow tongue are
+ * inherently free fights, but require 11 visits to a Shadow Rift to
+ * encounter"). Ids 2298-2303, all phylum `horror`.
+ *
+ * Two reasons they never want a resource spent on them, and fishMacro() is
+ * only the sharper one: Talk to Some Fish REFUSES at a boss and takes the
+ * macro down with it, and they are inherently free fights, so a run, a banish
+ * or a free kill spent here buys nothing. Only the fish guard is wired up
+ * today — folding them into `freeMonsters` itself would also change the
+ * banish/free-run provides and the opportunistic free-kill upgrade, which is a
+ * bigger call than this fix.
+ */
+const shadowRiftBosses = $monsters`shadow cauldron, shadow matrix, shadow orrery, shadow scythe, shadow spire, shadow tongue`;
+
+/**
  * Sea *dent: Talk to Some Fish (Monodent, CCS:551 and the sites listed in the
  * 2026-08-28 parity report G3): turns a non-target monster into "some fish"
  * (monsters.txt: pristine fish scale 10%, rough 20%, dull 30%; the original
@@ -320,14 +336,17 @@ export function fishMacro(): Macro {
   // lost by skipping: a fish cannot be turned into `some fish`, which is the
   // only reason to cast it.
   //
-  // The skill refuses at bosses and insta-kill-immune monsters too (same
-  // page). Those are out of scope by construction here — boss fights in this
-  // route are adv1-filter tasks that declare no CombatStrategy — with ONE
-  // gap: a Shadow Rift boss on the 11th+ rift visit would land in
-  // riftCombat(), which carries this macro. Left unguarded rather than
-  // hard-coding a monster list that has never been fought here.
+  // The skill refuses at BOSSES and insta-kill-immune monsters too (same
+  // page), which is why the Shadow Rift bosses ride the same guard. Every
+  // other boss in this route is out of scope by construction — they are
+  // adv1-filter tasks that declare no CombatStrategy — but the rift bosses
+  // are not: they arrive on the 11th+ rift visit of the day, inside the very
+  // zone riftCombat() farms, and this route spends up to 16 rift fights.
+  // Phylum cannot separate them (all six are `horror`, exactly like the
+  // shadow guy and shadow slab the macro DOES want to fish), so they go in by
+  // name.
   return Macro.ifNot(
-    freeMonsters,
+    [...freeMonsters, ...shadowRiftBosses],
     Macro.ifNot($phylum`fish`, openerOnce(Macro.trySkill($skill`Sea *dent: Talk to Some Fish`), 3)),
   );
 }
