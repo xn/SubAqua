@@ -6,11 +6,11 @@ gold@37 +3`.
 
 **The whole Δ is two leaks, and it closes to the turn:**
 
-| cause | turns | where | fixable? |
-| --- | --- | --- | --- |
-| skate blade never pulled → an extra `Picking Sides` NC | +1 | Skate Park `[23]` | **yes, fixed** |
-| 2 fewer bat-wings procs on a 1/(X+2) roll | +2 | Colosseum | **no — variance** |
-| **total** | **+3** | = the Colosseum row's Δ, carried to Mom Finish/Shub (+3) | |
+| cause                                                  | turns  | where                                                    | fixable?          |
+| ------------------------------------------------------ | ------ | -------------------------------------------------------- | ----------------- |
+| skate blade never pulled → an extra `Picking Sides` NC | +1     | Skate Park `[23]`                                        | **yes, fixed**    |
+| 2 fewer bat-wings procs on a 1/(X+2) roll              | +2     | Colosseum                                                | **no — variance** |
+| **total**                                              | **+3** | = the Colosseum row's Δ, carried to Mom Finish/Shub (+3) |                   |
 
 `Skate Park +6` is NOT six lost turns. Five of it is position: we interleaved the gym between skate
 park visits, so the last NC landed at `[31]` instead of `[25]`. The ledger flags the row
@@ -20,24 +20,24 @@ park visits, so the last NC landed at `[31]` instead of `[25]`. The ledger flags
 
 Counted from `[N] The Skate Park` markers.
 
-| # | gold | ours |
-| --- | --- | --- |
-| 1 | `[22]` Sickpipe, the Skate Board Member | `[22]` Sickpipe, the Skate Board Member |
-| 2 | `[23]` Prayer of the Roller Skates | `[23]` **Picking Sides** ← the extra turn |
-| 3 | `[24]` Rollerbawl | `[24]` Prayer of the Roller Skates |
-| 4 | `[25]` Holey Rollers | `[25]` Rollerbawl |
-| 5 | `[25]` sausage goblin (free) | `[31]` Holey Rollers |
-| 6 | `[25]` sausage goblin (free) | — |
-| | **4 paid** | **5 paid** |
+| #   | gold                                    | ours                                      |
+| --- | --------------------------------------- | ----------------------------------------- |
+| 1   | `[22]` Sickpipe, the Skate Board Member | `[22]` Sickpipe, the Skate Board Member   |
+| 2   | `[23]` Prayer of the Roller Skates      | `[23]` **Picking Sides** ← the extra turn |
+| 3   | `[24]` Rollerbawl                       | `[24]` Prayer of the Roller Skates        |
+| 4   | `[25]` Holey Rollers                    | `[25]` Rollerbawl                         |
+| 5   | `[25]` sausage goblin (free)            | `[31]` Holey Rollers                      |
+| 6   | `[25]` sausage goblin (free)            | —                                         |
+|     | **4 paid**                              | **5 paid**                                |
 
-`skatepark.ts:77` already states the rule: *"Holey Rollers only fires with a skate blade EQUIPPED —
-bladeless serves Picking Sides instead, costing an extra turn and forcer."* Gold pulled the blade
+`skatepark.ts:77` already states the rule: _"Holey Rollers only fires with a skate blade EQUIPPED —
+bladeless serves Picking Sides instead, costing an extra turn and forcer."_ Gold pulled the blade
 (`gold:7667`) and equipped it before its first visit (`gold:7670`). We arrived bladeless, drew
 `Picking Sides`, and took the blade as its consolation prize (`:7772` `Took choice 403/1: skate
 blade`) — then equipped it for every visit after (`:7854`, `:7922`, `:8503`).
 
 This is the same leak `2026-08-31-gold-trace/D-yog-gym-skate.md` flagged (**Picking Sides**, +1).
-The fix made then was to add a skate-blade *reservation* to `pulls.ts:214`. It did not hold.
+The fix made then was to add a skate-blade _reservation_ to `pulls.ts:214`. It did not hold.
 
 **Why the pull never fired.** `skateParkTurn()` opens with
 `if (availableAmount(blade) === 0 && pullBudgetAllows(blade)) pullSequence(blade)`. The blade is its
@@ -55,18 +55,18 @@ by any route: `null-day exploit`, `Mer-kin pinkslip`, `ink bladder`, `Mer-kin kn
 
 17 visits each, fight for fight. "free" = `This combat did not cost a turn`.
 
-| | gold | ours |
-| --- | --- | --- |
-| entrance | `[31]` Your Big Entrance (paid) | `[32]` Your Big Entrance (paid) |
-| Club 'Em Back in Time | 5 free (`[31]`×5) | 5 free (`[32]`×5) |
-| **bat-wings free fights** | **3** (`[32]`, `[32]`, `[36]`) | **1** (`[33]`) |
-| paid gladiator rounds | 8 | 10 |
-| finish | `[38]` Been There, Won That | `[41]` Been There, Won That |
-| **totals** | **9 paid / 8 free** | **11 paid / 6 free** |
+|                           | gold                            | ours                            |
+| ------------------------- | ------------------------------- | ------------------------------- |
+| entrance                  | `[31]` Your Big Entrance (paid) | `[32]` Your Big Entrance (paid) |
+| Club 'Em Back in Time     | 5 free (`[31]`×5)               | 5 free (`[32]`×5)               |
+| **bat-wings free fights** | **3** (`[32]`, `[32]`, `[36]`)  | **1** (`[33]`)                  |
+| paid gladiator rounds     | 8                               | 10                              |
+| finish                    | `[38]` Been There, Won That     | `[41]` Been There, Won That     |
+| **totals**                | **9 paid / 8 free**             | **11 paid / 6 free**            |
 
 Both runs spent the Club 'Em cap (5/day) identically. The entire difference is the bat wings:
-`gold:9075`, `:9133`, `:9356` — *"You flap your bat wings gustily and launch yourself to your next
-adventure in an instant"*, `_batWingsFreeFights` 0→1→2→3, each ending in `This combat did not cost a
+`gold:9075`, `:9133`, `:9356` — _"You flap your bat wings gustily and launch yourself to your next
+adventure in an instant"_, `_batWingsFreeFights` 0→1→2→3, each ending in `This combat did not cost a
 turn`. Gold's maximize names them outright: `equip Mer-kin gladiator mask, equip bat wings, equip
 Mer-kin gladiator tailpiece`.
 
@@ -81,15 +81,15 @@ and every single round in our block is preceded by `equip back bat wings` — 23
 run against gold's 6, and 68 maximize lines naming the wings against gold's 36. **We wore them more
 than gold did and procced less.**
 
-The mechanic is a decaying random roll. Per the wiki (bat wings): *"Causes up to 5 combats per day
+The mechanic is a decaying random roll. Per the wiki (bat wings): _"Causes up to 5 combats per day
 to not take a turn… The proc rate is currently estimated at 1/(X+2), where X is the current number
-of activations today."* So the 1st proc is ~1/2, the 2nd ~1/3, the 3rd ~1/4 — about 20 turn-taking
+of activations today."_ So the 1st proc is ~1/2, the 2nd ~1/3, the 3rd ~1/4 — about 20 turn-taking
 fights to collect all five. Gold rolled 3 procs inside its Colosseum block; we rolled 1 with the
 same gear worn. Gold spent 4 charges all day, we spent 2 (Yog-Urt `[22]`, Colosseum `[33]`).
 
 Two more things the same wiki note settles, both in our favour:
 
-- The wings *cannot* proc on inherently-free monsters, so wearing them in the Shadow Rift for
+- The wings _cannot_ proc on inherently-free monsters, so wearing them in the Shadow Rift for
   `Swoop like a Bat` is not burning charges on already-free fights. Neither run procced there:
   gold's first activation is `gold:9075` in the Colosseum, ours `:7512` at Yog-Urt.
 - `engine.ts:350-353`'s bank (wings only on `task.batWings`) plus the explicit `-equip bat wings` in
