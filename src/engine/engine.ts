@@ -202,7 +202,7 @@ function withMacro(macro: Macro, action: () => void): void {
 }
 
 export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
-  constructor(tasks: Task[], options: EngineOptions<CombatActions, Task> = {}) {
+  constructor(tasks: Task[], options: EngineOptions<CombatActions, void, Task> = {}) {
     if (!options.combat_defaults) options.combat_defaults = new MyActionDefaults();
     super(tasks, options);
   }
