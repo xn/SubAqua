@@ -50,14 +50,7 @@ type PullReservation = {
   needed: () => boolean;
 };
 
-const escapeGear = $items`peppermint parasol, navel ring of navel gazing, Greatest American Pants`;
-
 const pullReservations: PullReservation[] = [
-  {
-    name: "escape gear",
-    item: $item`peppermint parasol`,
-    needed: () => !escapeGear.some((it) => availableAmount(it) > 0),
-  },
   {
     name: "crayon shavings",
     item: $item`crayon shavings`,
