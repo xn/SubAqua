@@ -220,22 +220,28 @@ export function shadowRiftQuest(): Quest {
           // fights carrying `lassoTrainingCount` 0->20 entirely free
           // (G:4887-5292).
           //
-          // DEFERRING COSTS NOTHING. Shadow Affinity is a budget of rift
-          // COMBATS, not a wall-clock timer: "Adventuring in Shadow Rifts will
-          // consume turns of this instead of Adventures", and "one duration of
-          // this effect will be lost at the end of any combat in Shadow Rift,
-          // even if the fight would already be free" (wiki). So paid turns
-          // spent elsewhere — the corral turns this gate waits through — do not
-          // erode it, and the eleven free fights are still eleven whenever we
-          // get to them. The logs corroborate the combat-only rule: 20 rift
-          // adventures in the 09-01 affinity window produced only 15
-          // decrements (run log :4142-5708), the other five being the rift's
-          // non-combats (the Labyrinth NCs and Loded Stones).
+          // WHAT DEFERRING COSTS — and the bit that is NOT established.
+          // The wiki says rift adventuring "will consume turns of [Shadow
+          // Affinity] instead of Adventures" and that a duration is lost "at
+          // the end of any combat in Shadow Rift". It does NOT say the effect
+          // is inert elsewhere, and KoL effects normally tick once per
+          // adventure spent anywhere. Do not assume it is a pure rift-combat
+          // budget: the logs cannot settle it either way, because across all
+          // three runs there is not ONE paid turn while affinity is active
+          // (every non-rift adventure in the window is a free fight — 28 in
+          // gold at `[16]`, 7 on 09-01 at `[13]` — and free fights do not tick
+          // effects).
           //
-          // The live risk is the OTHER effect: Shadow Waters is an ordinary
-          // ~30-turn buff and `Rift Fights` requires it, so a corral that runs
-          // very long could still strand the day's bricks. 09-01 had ~15 turns
-          // of margin; a corral blowout would eat it.
+          // It is mostly moot on the happy path: this gate waits only for hat
+          // and chaps, which come out of the corral OPENER, itself a free
+          // fight — 09-01 ran opener :5065 -> chaps :5316 -> hat :5335 without
+          // spending a turn. The exposure is the unhappy path, where the
+          // opener misses its bundle and the leather comes from the paid grind
+          // instead: then the deferral spans real turns, and if affinity does
+          // tick outside the rift we lose a free fight for each. That is the
+          // same failure the ~30-turn Shadow Waters buff is exposed to, since
+          // `Rift Fights` requires it — both risks reduce to "the corral
+          // opener failed", which is worth guarding on its own account.
           (!have(waters) || trainingGearReady()) &&
           (riftFightsFree() ||
             get("encountersUntilSRChoice", 11) === 0 ||
