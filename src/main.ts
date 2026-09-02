@@ -32,7 +32,6 @@ export function main(command = ""): void {
     abort(`Unknown command "${args.command}". Try "subaqua help".`);
   }
 
-  // Path-only script (spec scope): every my_path()==0 branch of the ash is cut.
   if (myPath() !== seaPath) {
     abort(
       "subaqua only runs inside the 11,037 Leagues Under the Sea path. " +
@@ -70,11 +69,6 @@ export function main(command = ""): void {
 
   const remaining = tasks.filter((task) => !task.completed());
   print(`Spent ${turnsPlayed() - startTurns} turns; ${remaining.length} tasks remaining.`, "blue");
-  // Trigger on the ROUTE's terminal condition, not on an empty remainder: a
-  // handful of tasks are legitimately not-applicable rather than complete on
-  // any given account (no PYEC, no Source Terminal, no Skate Park map, a prep
-  // whose stock the boss fight consumed), so `remaining.length === 0` could
-  // never hold and the hook was unreachable.
   if (routeComplete() && args.postloopCommand !== "") {
     print(`Route complete — running: ${args.postloopCommand}`, "blue");
     cliExecute(args.postloopCommand);

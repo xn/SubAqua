@@ -6,29 +6,14 @@ import { detectTier } from "./lib/tier";
 
 const supportedIotms = $items`Monodent of the Sea, The Eternity Codpiece, closed-circuit pay phone, 2002 Mr. Store Catalog, cursed monkey's paw, august scepter, Fourth of May Cosplay Saber, Peridot of Peril, blood cubic zirconia, Baseball Diamond, Heartstone, backup camera, Jurassic Parka, spring shoes, Everfull Dart Holster, Mayam Calendar, Leprecondo, Cincho de Mayo, McHugeLarge duffel bag, Apriling band helmet, April Shower Thoughts shield, bat wings, server room key, Time-Spinner, January's Garbage Tote, Powerful Glove, combat lover's locket, Lil' Doctor™ bag, mumming trunk, Kremlin's Greatest Briefcase, Cargo Cultist Shorts, Eight Days a Week Pill Keeper, Sept-Ember Censer, vampyric cloake, unwrapped knock-off retro superhero cape, Roman Candelabra, miniature crystal ball, latte lovers member's mug, V for Vivala mask, designer sweatpants, tearaway pants, autumn-aton, cosmic bowling ball`;
 
-// Meteor Lore is the passive mafia can see outside combat; the Micro/
-// Macrometeorite combat skills are only learned from a fight page, so
-// have_skill() reads them as absent at startup (upstream 97dc599).
 const supportedSkills = $skills`Just the Facts, Map the Monsters, Meteor Lore, Feel Nostalgic`;
 
-// eslint-plugin-libram's data snapshot predates the 2026 Sword of S Words IOTM
-// (real: mafia familiars.txt id 330); remove the disable when the plugin updates.
-// eslint-disable-next-line libram/verify-constants
 const supportedFamiliars = $familiars`Grouper Groupie, Red-Nosed Snapper, Jill-of-All-Trades, Chest Mimic, Patriotic Eagle, Sword of S Words, Peace Turkey, Disgeist, Jumpsuited Hound Dog, Glover, Foul Ball, Space Jellyfish, Pocket Professor, Tiny Plastic Santa Claus Skeleton`;
 
-// No FLUDA: the shadow-rift lane (tasks/monkees/shadow.ts) does not port the
-// Douse Foe rider. The antidote is Yog-Urt's Gummiheart escape (upstream
-// YogHpCheck, 6b7cd80).
 const routePulls = $items`Mer-kin sneakmask, sea lasso, ten-leaf clover, large box, shark jumper, scale-mail underwear, Congressional Medal of Insanity, Mer-kin digpick, lodestone, comb jelly, Elf Guard SCUBA tank, rusty rivet, sea cowbell, Mer-kin prayerbeads, Mer-kin healscroll, Mer-kin killscroll, Mer-kin worktea, Mer-kin knucklebone, Mer-kin cheatsheet, Mer-kin hallpass, Mer-kin hidepaint, pro skateboard, software glitch, pulled yellow taffy, stuffed yam stinkbomb, waffle, skate blade, null-day exploit, New Age healing crystal, soggy used band-aid, soft green echo eyedrop antidote, damp old wallet, fish sauce, Aldebaran sardines, pie man was not meant to eat, handheld Allied radio, Clara's bell, stench jelly, peppermint parasol, ink bladder, Mer-kin pinkslip, Louder Than Bomb, anchor bomb`;
 
 const catalogCovered = $items`pro skateboard, software glitch`;
 
-/**
- * Permable skills the route leans on (upstream skillChecklist(), G:2011-2114
- * at 89982f5, trimmed to what SubAqua actually casts: the shadow-slab and
- * Kokomo entries went with their subsystems). A skill an IOTM grants belongs
- * in supportedSkills above; these survive a perm. Informational only.
- */
 type SkillTier = "required" | "big turn saver" | "optional";
 const routeSkills: [Skill, SkillTier, string][] = [
   [
@@ -123,7 +108,6 @@ export function printSimChecklist(): void {
     "a workshed",
   );
   total++;
-  // getCampground() is keyed by item NAME strings; the $item tag still lint-validates the name.
   owned += checkRow($item`Source terminal`.name in getCampground(), "Source Terminal");
   print(`IOTM check: ${owned} of ${total} supported IOTMs owned.`);
 

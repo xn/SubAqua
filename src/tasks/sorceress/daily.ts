@@ -8,8 +8,6 @@ import { pullSequence } from "../../resources/pulls";
 
 const pyec = $item`Platinum Yendorian Express Card`;
 
-/** Free +30% item, up to 3/day with CRAM+SCRAM chips (ChoiceControl.java:
- * 9070-9072); called from item-farm task prepares (ash mood hook UTS:74-77). */
 export function sourceEnhanceItems(): void {
   if (!SourceTerminal.have()) return;
   if (have(SourceTerminal.Buffs.Items)) return;
@@ -22,26 +20,11 @@ export function sorceressDailies(): Quest {
     name: "Sorceress Dailies",
     tasks: [
       {
-        // PYEC (ash UTS:2323-2330, !highShiny gate -> usePyec policy). The
-        // storage take is a real ronin pull — pullSequence keeps the books.
-        // Affinity gate (B F2): the card EXTENDS running effects, so it must
-        // fire while Shadow Affinity is up — gold used it mid-rift (G:4801,
-        // after the Labyrinth at G:3427) and got 16 free rift fights to the
-        // 08-30 run's 11 (PYEC after the rift, runplans order). This quest
-        // now sits ahead of shadowRiftQuest in the plan, so grimoire picks
-        // this task the moment the first rift entry raises the affinity.
-        // No deadlock on riftless tiers: usePyec is false for high shiny.
-        // Missed-window fallback: if the affinity is already spent (claimed
-        // today, effect gone), fire anyway — a late PYEC still extends the
-        // day's other effects, and an unready-forever task stalls the plan.
         name: "PYEC",
         ready: () =>
           currentPolicy().usePyec &&
           haveAnywhere(pyec) &&
           (have($effect`Shadow Affinity`) || get("_shadowAffinityToday", false)),
-        // Complete OR not applicable: an account with no PYEC anywhere (and a
-        // tier whose policy declines it) would otherwise sit
-        // incomplete-but-unavailable for the whole run.
         completed: () =>
           get("expressCardUsed", false) || !currentPolicy().usePyec || !haveAnywhere(pyec),
         do: (): void => {
@@ -52,13 +35,8 @@ export function sorceressDailies(): Quest {
         limit: { tries: 1 },
       },
       {
-        // Slot duplicate.edu (ash sourceEducate G:984-988): 1/day in-path;
-        // spent by the school monitor macro (Task 10).
         name: "Terminal Educate",
         ready: () => SourceTerminal.have(),
-        // Terminal-less accounts report complete rather than
-        // incomplete-but-unavailable (and getSkills() is never asked about a
-        // terminal that isn't there).
         completed: () =>
           !SourceTerminal.have() ||
           SourceTerminal.getSkills().includes(SourceTerminal.Skills.Duplicate),

@@ -33,9 +33,6 @@ export const args = Args.create(
       help: "Abort at ≤17 turns played if dreadscroll clue 7 is still unknown (top-turncount insurance).",
       default: false,
     }),
-    // Args.boolean, NOT Args.flag: a flag can only be SET (grimoire throws
-    // "Flag X cannot be assigned a value"), so a default-true flag could
-    // never be turned off — live 2026-08-31, `subaqua gold=false`.
     seedScan: Args.boolean({
       help: "Enable the dreadscroll seed-space scan (native seedfinder port). seedScan=false if the one-time 9M-seed scan is too slow on your machine; the Mastermind solver still works without it.",
       default: true,

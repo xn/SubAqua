@@ -6,66 +6,8 @@ import { banishSources } from "../resources/banish";
 import { freeKillSources } from "../resources/freekill";
 import { freeRunSources } from "../resources/freerun";
 
-/**
- * The gold-standard run is the spec. Every quest group carries the turncount
- * by which the reference run (UTS 2026-08-21, 41 turns, zero interventions;
- * verbatim log: docs/superpowers/research/runs/gold-uts-2026-08-21.log) had
- * finished it. A PAID turn spent on a group past its checkpoint + slack is a
- * deviation from the gold run and aborts the script, so a wrong task costs a
- * handful of turns instead of a hundred. Free actions never trip it: a task
- * that runs late but spends nothing is a scheduling difference, not a turn
- * sink, and the accounting table below still records it.
- *
- * WHAT A CHECKPOINT IS, exactly: gold's TRUE turncount when it left the group,
- * re-derived from the per-zone paid-turn spine of the gold log (which
- * reconciles to "Run End Adventures used: 41"):
- *
- *   Haunted Pantry 1-5 -> 5 | Wreck 6 -> 6 | Marinara 7-9 -> 9 |
- *   Outpost 10-15 -> 15 | Corral 0 -> 15 | School 16-19 -> 19 |
- *   Library 20 + dreadscroll 21 -> 21 | Skate Park 22-25 -> 25 |
- *   Right Door 26 -> 26 | Gymnasium 27-30 -> 30 | Colosseum 31-37 -> 37 |
- *   Abyss 38-40 -> 40 | Left Door 41 -> 41 | Center Door 0 paid -> 41
- *
- * It used to be read off the `[N]` marker at each `UTS: phase:` banner. Mafia
- * logs `[getCurrentRun()+1]` and the marker does not advance on a free fight,
- * so entries silently mixed `gold_end` and `gold_end + 1` and no single offset
- * could correct them: Grandpa, School and Finale were one high; Helmet, Mom,
- * Shadow Rift, Corral, Sorceress Dailies and Teflon were one high the other
- * way (16 for a phase gold left at 15); Outpost, Library, Colosseum, Mom
- * Finish and Shub were already exact.
- *
- * TWO TABLES, because there are two consumers with different needs.
- * `goldTurncounts` is the SCOREBOARD: what gold actually did, one row per
- * group, printed as `gold@`. `goldCheckpoints` is the GUARD: the turncount a
- * paid turn may not pass. They differ for exactly three groups.
- *
- * THE REORDERED BLOCK. Gold runs Skate Park (22-25) -> Right Door (26) ->
- * Gymnasium (27-30); we run Yog-Urt -> Gladiator Gear -> Skate Park. No
- * per-group checkpoint is valid for both orderings — but the three are
- * CONTIGUOUS in both, bounded by the Library below and the Colosseum above, so
- * the BLOCK bound (gold left all three by turn 30) guards all three under
- * either order. That is what the guard uses. The scoreboard keeps the true
- * per-group numbers and marks the rows, since a Δ against a block bound would
- * be meaningless.
- *
- * (An earlier pass deleted these three outright, on the grounds that the
- * 2026-09-01 ledger showed an impossible `Skate Park -2` beside
- * `Gladiator Gear +1`. That pair was an artifact of the old table's wrong
- * Skate Park value of 30 — gold's is 25 — which the same pass was already
- * fixing. Deleting them removed two working block guards; only `Yog-Urt: 22`
- * was actually wrong, and in the dangerous direction: four turns too STRICT,
- * so an on-pace run spending its Yog-Urt turn at 26 would have false-aborted.)
- *
- * Resuming after an abort: the first paid turn of an invocation sets a
- * session drift = how far past its checkpoint the run already was, and every
- * later limit carries that drift. Without it a run that tripped once could
- * never spend another turn in that group, and the only way on would be
- * goldSlack big enough to blind every later checkpoint too. The accounting
- * table still shows the raw Δ against gold.
- */
 export const GOLD_RUN = "UTS 2026-08-21 (41 turns)";
 
-/** SCOREBOARD: gold's true turncount when it left each group. */
 export const goldTurncounts: Record<string, number> = {
   Openers: 5,
   Pellet: 5,
@@ -90,14 +32,9 @@ export const goldTurncounts: Record<string, number> = {
   Finale: 41,
 };
 
-/** Groups our route runs in a different ORDER from gold. Guarded as one block
- * (see the header); their scoreboard Δ is annotated rather than trusted. */
 const REORDERED_BLOCK = new Set(["Yog-Urt", "Gladiator Gear", "Skate Park"]);
 const REORDERED_BLOCK_END = 30;
 
-/** GUARD: the turncount a paid turn on this group may not pass (before
- * tolerance and drift). Identical to goldTurncounts except that the reordered
- * block members all carry the block bound. */
 export const goldCheckpoints: Record<string, number> = Object.fromEntries(
   Object.entries(goldTurncounts).map(([group, turncount]) => [
     group,
@@ -105,12 +42,7 @@ export const goldCheckpoints: Record<string, number> = Object.fromEntries(
   ]),
 );
 
-/** Deliberate tolerance on every guard limit, so a checkpoint is never strict.
- * Named for what it is: this is policy, not an accounting correction. The
- * previous name (GUARD_TOLERANCE) described a log-marker artifact that no longer
- * exists now the checkpoints are exact turncounts. */
 const GUARD_TOLERANCE = 1;
-/** Tasks the route re-runs late by design; never checked against their group. */
 const FLOATING = new Set(["Mom/Banish Constructs"]);
 
 export function groupOf(taskName: string): string {
@@ -128,23 +60,6 @@ type GroupLedger = {
 const ledger = new Map<string, GroupLedger>();
 const order: string[] = [];
 
-/**
- * The ledger SURVIVES a restart, because the run does.
- *
- * It used to live only in these two module-level values, so every `subaqua`
- * invocation started counting from zero and the report was headed "this
- * session only". A run that aborts and is restarted — which is most of them:
- * two aborts on 2026-09-02 alone — then reports a total that is short by
- * everything the earlier invocations spent. The 45-turn run of 2026-09-02
- * printed 40, missing exactly the five turns of Init/Openers/Pellet/Big
- * Brother that the first invocation had already banked.
- *
- * A daily preference is the whole mechanism: mafia clears `_`-prefixed
- * preferences at rollover AND on ascension, which is precisely the ledger's
- * lifetime — one run, one day. (A run that crosses rollover would restart the
- * count; this route is a 41-turn day, so that trade buys simplicity for a
- * case it never sees.)
- */
 const LEDGER_PREF = "_subaqua_ledger";
 type LedgerState = { order: string[]; rows: Record<string, GroupLedger> };
 let ledgerLoaded = false;
@@ -163,9 +78,6 @@ function loadLedger(): void {
       order.push(group);
     }
   } catch {
-    // A half-written or hand-edited value must never take the run down from
-    // inside post(): drop it and count this invocation from zero, which is
-    // exactly the old behaviour.
     print(`Gold ledger: ${LEDGER_PREF} was unreadable; counting from this invocation.`, "yellow");
   }
 }
@@ -176,7 +88,6 @@ function saveLedger(): void {
   set(LEDGER_PREF, JSON.stringify({ order, rows }));
 }
 
-/** Record one task execution in the per-group ledger (call from post()). */
 export function recordTask(taskName: string, turnsSpent: number, fought: boolean): void {
   loadLedger();
   const group = groupOf(taskName);
@@ -192,24 +103,14 @@ export function recordTask(taskName: string, turnsSpent: number, fought: boolean
     row.combats += 1;
     if (turnsSpent === 0) row.free += 1;
   }
-  // FLOATING tasks are maintenance the route legitimately re-runs late
-  // (assertOnGoldPace exempts them for the same reason). Letting one bump
-  // lastTurn stamps a permanent false Δ on its group: `Mom/Banish Constructs`
-  // re-firing at turn 100 would report Mom as finishing there. Their turns and
-  // combats still count; only the position marker is theirs to skip.
   if (!FLOATING.has(taskName)) row.lastTurn = myTurncount();
   saveLedger();
 }
 
-/** True when a combat (free or paid) started since the snapshot: mafia stamps
- * `_lastCombatStarted` (yyyyMMddHHmmss) at every fight start, so it moves on a
- * repeat of the same monster where `lastEncounter` would not. */
 export function fightHappened(preCombatStarted: string): boolean {
   return get("_lastCombatStarted") !== preCombatStarted;
 }
 
-/** Turns the run was already behind gold when this invocation spent its
- * first paid turn; undefined until then. */
 let sessionDrift: number | undefined;
 
 export function ledgerLines(): string[] {
@@ -227,19 +128,11 @@ export function ledgerLines(): string[] {
     const gold = goldTurncounts[group];
     const delta =
       gold === undefined ? "" : `${row.lastTurn - gold >= 0 ? "+" : ""}${row.lastTurn - gold}`;
-    // The reordered block's Δ compares positions our route reaches in a
-    // different sequence from gold's, so it is reported but flagged.
     const note = REORDERED_BLOCK.has(group) ? " (reordered)" : "";
     lines.push(
       `${group} | ${row.tasks} | ${row.turns} | ${row.combats} | ${row.free} | ${row.lastTurn} | ${gold ?? "-"} | ${delta}${note}`,
     );
   }
-  // The cross-check that would have caught the 2026-09-02 shortfall on sight:
-  // my_turncount() is turns spent THIS ASCENSION, so with every turn attributed
-  // it equals the ledger total. Anything left over was spent where the ledger
-  // could not see it — before the script was first started, or by hand in the
-  // relay browser (the two macro aborts of 2026-09-02 were both finished that
-  // way).
   const unattributed = myTurncount() - turns;
   const gap =
     unattributed > 0
@@ -249,7 +142,6 @@ export function ledgerLines(): string[] {
   return lines;
 }
 
-/** Print the ledger and persist it to data/subaqua_lastrun.txt for post-run review. */
 export function reportLedger(): void {
   loadLedger();
   if (order.length === 0) return;
@@ -277,22 +169,12 @@ function ladderState(): string[] {
   ];
 }
 
-/**
- * Gold guard, called from post() after the ledger is updated. Throws (abort)
- * when this task just spent a paid turn on a group the gold run had already
- * finished more than `goldSlack` turns ago. `gold=false` disables it.
- */
 export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
   if (!args.gold || turnsSpent <= 0 || FLOATING.has(taskName)) return;
   const checkpoint = goldCheckpoints[groupOf(taskName)];
   if (checkpoint === undefined) return;
   const now = myTurncount();
   if (sessionDrift === undefined) {
-    // NOT `- GUARD_TOLERANCE`: subtracting it here and adding it to `limit`
-    // below cancels exactly, and the whole check collapses to
-    // `turnsSpent <= goldSlack` — the checkpoint drops out and the tolerance
-    // buys nothing. With goldSlack=0 a resumed run then aborts on its first
-    // paid turn, which is precisely what drift exists to prevent.
     sessionDrift = Math.max(0, now - turnsSpent - checkpoint);
     if (sessionDrift > 0) {
       print(

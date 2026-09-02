@@ -37,103 +37,27 @@ import { bczAffordable } from "../resources/freekill";
 
 import { currentTier } from "./tier";
 
-/**
- * Ports the ash mood() regimes (UnderTheSeaGlobals.ash mood(), UTS:67-170 at
- * HEAD) as castable-effect lists for grimoire's task.effects (the engine
- * acquireEffects each via ensureEffect, engine.js:162-181).
- *
- * Only effects whose source the account owns are returned — libram's
- * ensureEffect THROWS when the cli default fails to land the effect
- * (lib.js:563-572), where the ash's bare cli_execute(ef.default) fails
- * silently. So every entry carries the ash's own gate (skill known / item
- * owned / IOTM present / daily-limit pref), and a handful of ash entries whose
- * success is genuinely not predictable are dropped with a note rather than
- * risking an abort mid-run.
- */
-
-/** getClanLounge() costs a clan_viplounge.php load, so read it once. An empty
- * map (no VIP key, no clan) simply gates every lounge effect off. */
 let loungeCache: { [item: string]: number } | undefined;
 function loungeHas(name: string): boolean {
   loungeCache ??= getClanLounge();
   return name in loungeCache;
 }
 
-/** The Clan VIP photo booth ("photobooth effect …" defaults); its three daily
- * grants are deterministic once the booth is in the lounge. */
 const photoBooth = $item`photo booth sized crate`;
 function photoBoothReady(): boolean {
   return loungeHas(photoBooth.name) && get("_photoBoothEffects", 0) < 3;
 }
 
-/** The Clan VIP Olympic-sized swimming pool ("swim sprints"). */
 const swimmingPool = $item`Olympic-sized Clan crate`;
 
-/**
- * The song shrine's capacity, mirroring mafia's own UseSkillRequest.songLimit()
- * (UseSkillRequest.java:1197-1205): `3 + (Four Songs ? 1 : 0) + Additional
- * Song`. libram ships exactly that formula as getSongLimit() (lib.js:13-17),
- * so this defers to it rather than reimplementing the two modifier reads.
- *
- * It replaces grimoire's own `have($skill`Mariachi Memory`) ? 4 : 3`
- * (engine.js:416-418), which sees only ONE of the shrine's sources: "Four
- * Songs" also rides Brimstone Beret / Sombrero De Vida / plexiglass pendant /
- * Scandalously Skimpy Bikini (modifiers.txt:131, 499, 3573, 3722) and
- * "Additional Song" also rides the zombie accordion and La Hebilla del
- * Cinturón de López (modifiers.txt:2151, 3364) beside Mariachi Memory
- * (modifiers.txt:8963) — and it reads the modifier that is actually in effect
- * rather than mere skill ownership.
- *
- * NB the live 2026-08-27 `failed The Ballad of Richie Thingfinder … (songs
- * 3/4, MP 922/50, skill known)` line was NOT a cap bug: 3 songs against a cap
- * of 4 is a free slot either way. See hoboSongCastable() below for what really
- * refused that cast.
- */
 function maxSongs(): number {
   return getSongLimit();
 }
 
-/**
- * The five Hobopolis Accordion Thief songs — The Ballad of Richie Thingfinder,
- * Benetton's Medley of Diversity, Elron's Explosive Etude, Chorale of
- * Companionship, Prelude of Precision — are castable ONLY by an Accordion
- * Thief of level 15+, on top of their 10-a-day cap. mafia enforces it in
- * UseSkillRequest.getMaximumCast() (UseSkillRequest.java:577-587:
- * `if (!KoLCharacter.isAccordionThief() || KoLCharacter.getLevel() < 15)
- * return 0`), which makes `cast 1 <song>` fail its own sim check inside
- * EffectDatabase.getDefaultAction() (EffectDatabase.java:178-197) — so the
- * request is never even sent and libram's ensureEffect throws on the unchanged
- * effect (lib.js:563-572).
- *
- * Live evidence (chartreusenator 2026-08-27, `Class: Pastamancer` at session
- * log:432, `_thingfinderCasts=0`, Mariachi Memory and Richie both in the known
- * skill dump at :847-887): every single mood application from log:88496 to
- * log:89661 emitted `failed The Ballad of Richie Thingfinder: Ensure Error`,
- * and the session contains no `cast 1 The Ballad of Richie Thingfinder` line
- * at all — the cast never left mafia. `have(skill)` is true for a permed
- * cross-class song; it is not the gate.
- */
 function hoboSongCastable(): boolean {
   return myClass() === $class`Accordion Thief` && myLevel() >= 15;
 }
 
-/**
- * grimoire THROWS "Too many AT songs" when a task's effects list carries more
- * songs than the shrine allows (engine.js:165-168, maxSongs()); the ash never
- * hits it because cli_execute just shoves a song out. Trim to the cap the same
- * way the ash's casts settle: it casts each mood in order and every cast past
- * the cap evicts the OLDEST song, so the songs that survive are the LAST ones
- * listed. Keeping the first N instead would invert the ash at every site that
- * runs mood("combat") before mood("itdrop") (UTS:2698-2699), evicting the
- * +item songs off an +item grind to keep Cantata.
- *
- * Every exported list in this file already returns a trimmed result, but a
- * task can set `effects` to some other list entirely (e.g. Pellet/Garden
- * Pellet's bare `itemDropEffects` — no combineMoods() in sight). trimSongs is
- * exported so the engine's acquireEffects override (engine.ts) can trim
- * task.effects at the one place every mood list funnels through on its way to
- * grimoire, regardless of which function (or hand-written array) built it.
- */
 export function trimSongs(effects: Effect[]): Effect[] {
   const cap = maxSongs();
   const total = effects.filter((effect) => isSong(effect)).length;
@@ -146,32 +70,12 @@ export function trimSongs(effects: Effect[]): Effect[] {
   });
 }
 
-/** Currently active AT songs, by isSong() — same myEffects()-walk shape as
- * activeBadEffects() below, kept next to trimSongs()/maxSongs() since it
- * serves the same song-cap accounting. */
 function activeSongs(): Effect[] {
   return Object.keys(myEffects())
     .map((name) => toEffect(name))
     .filter((effect) => isSong(effect));
 }
 
-/**
- * Shrug active songs the given list doesn't want, until the wanted songs plus
- * whatever's left active fits the shrine cap — the same algorithm grimoire's
- * own ContextualEngine.acquireEffects runs for task.effects (engine.js:162-
- * 181), reproduced here for applyEffects(), which casts OUTSIDE that path (a
- * task's prepare(), after dress() — squintEffects()'s own doc comment — and
- * the self-dressing gymnasiumTurn() helper) and so gets none of grimoire's
- * protection.
- *
- * The case this covers: gym.ts/colosseum.ts call
- * applyEffects(combineMoods(combatEffects(), survivalEffects())) directly, so
- * a wanted song can arrive with the shrine already full of songs nobody in the
- * wanted list asked for. trimSongs() only caps the REQUESTED list; it has no
- * idea what is already active, and ensureEffect() throws rather than letting
- * KoL evict for it. (The 2026-08-27 Richie aborts were misread as this; they
- * were hoboSongCastable() — see there.)
- */
 export function shrugForSongs(wanted: Effect[]): void {
   const wantedSongs = wanted.filter((effect) => isSong(effect));
   if (wantedSongs.length === 0) return;
@@ -184,25 +88,10 @@ export function shrugForSongs(wanted: Effect[]): void {
   }
 }
 
-/** Concatenate mood regimes for a task that wants several (the ash calls
- * mood() twice in a row at such sites, e.g. UTS:1746-1747, 2698-2699).
- * De-duplicates and re-applies the song cap across the union. */
 export function combineMoods(...groups: Effect[][]): Effect[] {
   return trimSongs([...new Set(groups.flat())]);
 }
 
-/**
- * "-combat" mood (ash mood():99-114), untrimmed. Split out from
- * sneakEffects() so a caller that only wants to ask "does this list contain
- * a sneak effect" (engine.ts's usesSneakEffects()) can do that membership
- * check WITHOUT going through trimSongs()/the mood-building path at all —
- * that caller runs from customize(), which fires after acquireEffects()
- * already cast (and, via shrugForSongs(), possibly shrugged) the task's real
- * mood for the turn (engine.js:95 vs customize() before dress() at :98-108).
- * A membership check has no business re-deriving a trimmed list at that
- * point; rawSneakEffects() keeps the check pure by construction rather than
- * relying on trimSongs() itself staying side-effect-free.
- */
 export function rawSneakEffects(): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`The Sonata of Sneakiness`)) effects.push($effect`The Sonata of Sneakiness`);
@@ -211,8 +100,6 @@ export function rawSneakEffects(): Effect[] {
   if (have($skill`Hide From Seekers`)) effects.push($effect`Hiding From Seekers`);
   if (itemAmount($item`Life Goals Pamphlet`) > 0) effects.push($effect`Life Goals`);
   if (have($skill`Smooth Movement`)) effects.push($effect`Smooth Movements`);
-  // The ash gates on the helmet plus nextAprilBandTurn; canChangeSong() is
-  // libram's spelling of exactly that pair.
   if (AprilingBandHelmet.have() && AprilingBandHelmet.canChangeSong()) {
     effects.push($effect`Apriling Band Patrol Beat`);
   }
@@ -224,44 +111,21 @@ export function rawSneakEffects(): Effect[] {
   return effects;
 }
 
-/** "-combat" mood (ash mood():99-114). */
 export function sneakEffects(): Effect[] {
   return trimSongs(rawSneakEffects());
 }
 
-/**
- * "itdrop" mood (ash mood():76-97), in the ash's own order.
- *
- * Two ash entries are deliberately absent:
- *  - Thoughtful Empathy. Its default is "cast 1 Empathy of the Newt ^
- *    Thoughtful Empathy" — the SAME cast that grants plain Empathy (already in
- *    this list), and which of the two lands is account state, not a choice.
- *    ensureEffect would throw whenever the cast produced the other one.
- *  - The Source Terminal enhance and the Kremlin's Greatest Briefcase tab buff
- *    that the ash tops up alongside the list (sourceEnhance()/briefcase(),
- *    mood():88-95). Neither is an effect a mood list can express; the
- *    briefcase is unowned on this account besides.
- */
 export function itemDropEffects(): Effect[] {
   const effects: Effect[] = [];
-  // Not an ash itdrop entry (it is +meat, not +item) but long-standing local
-  // behavior; listed FIRST so the keep-last song trim sheds it before any ash
-  // song.
   if (have($skill`The Polka of Plenty`)) effects.push($effect`Polka of Plenty`);
   if (have($skill`Who's Going to Pay This Drunken Sailor?`))
     effects.push($effect`Who's Going to Pay This Drunken Sailor?`);
   if (have($skill`Fat Leon's Phat Loot Lyric`)) effects.push($effect`Fat Leon's Phat Loot Lyric`);
-  // Lubricating Sauce is cast by Sauce Contemplation, not by a same-named skill
-  // (statuseffects.txt:2989), so to_skill() is none in the ash and the ash's
-  // have_skill gate never fires — the real requirement is the caster skill.
   if (have($skill`Sauce Contemplation`)) effects.push($effect`Lubricating Sauce`);
   if (have($skill`Singer's Faithful Ocelot`)) effects.push($effect`Singer's Faithful Ocelot`);
   if (have($skill`Leash of Linguini`)) effects.push($effect`Leash of Linguini`);
   if (have($skill`Empathy of the Newt`)) effects.push($effect`Empathy`);
   if (have($skill`Donho's Bubbly Ballad`)) effects.push($effect`Donho's Bubbly Ballad`);
-  // hoboSongCastable(): a permed Richie on a non-AT is `have()`-true and
-  // uncastable, and every mood application then aborts the effect with an
-  // EnsureError. dailylimits.txt:204 caps it at 10 casts a day besides.
   if (
     have($skill`The Ballad of Richie Thingfinder`) &&
     hoboSongCastable() &&
@@ -272,17 +136,6 @@ export function itemDropEffects(): Effect[] {
   return trimSongs(effects);
 }
 
-/**
- * "superitdrop" mood (ash mood():71-75), minus Steely-Eyed Squint — see
- * squintEffects() for why that one cannot ride in task.effects. The ash's
- * switch case FALLS THROUGH into "itdrop", so callers get both: use
- * combineMoods(superItemDropEffects(), itemDropEffects()) at the ash's
- * mood("superitdrop") sites.
- *
- * Hustlin' is deliberately absent: its default is "pool 3", one stylish game at
- * the clan pool table, and the effect only lands on a WIN. ensureEffect throws
- * on a loss, so the ash's optimism is not portable here.
- */
 export function superItemDropEffects(): Effect[] {
   const effects: Effect[] = [];
   if (
@@ -292,55 +145,21 @@ export function superItemDropEffects(): Effect[] {
   ) {
     effects.push($effect`Party Soundtrack`);
   }
-  // dailylimits.txt:126 caps Heartstone: %pals at 5/day; past that the cast
-  // fails and ensureEffect throws (libram lib.js:566-570).
   if (have($skill`Heartstone: %pals`) && get("_heartstonePalsUsed", 0) < 5)
     effects.push($effect`Best Pals`);
   return trimSongs(effects);
 }
 
-/**
- * The rest of the ash's "superitdrop": Steely-Eyed Squint, which DOUBLES the
- * item bonus in force at the moment it is cast and is once a day
- * (_steelyEyedSquintUsed). grimoire acquires a task's effects BEFORE it builds
- * and wears the outfit (engine.js:95 vs :98-101), so an `effects` entry would
- * spend the day's squint on the bare-gear bonus. `prepare` runs AFTER dress()
- * (engine.js:101 vs :108), which is where the ash casts it too — after
- * tempEquipment at UTS:1402/1433.
- *
- * Apply with applyEffects(squintEffects()) at the tail of a task's prepare(),
- * after recover() has topped the MP back up.
- */
 export function squintEffects(): Effect[] {
   if (!have($skill`Steely-Eyed Squint`) || get("_steelyEyedSquintUsed")) return [];
   return [$effect`Steely-Eyed Squint`];
 }
 
-/**
- * Is this effect permanently out of reach THIS RUN — its source skill costs
- * more MP than the character's max MP could ever hold, no matter how much
- * gets restored? (Live case: a level-2 Sauceror's 40 max MP against The
- * Ballad of Richie Thingfinder's 50 MP cost.) Item-sourced effects
- * (toSkill() === $skill.none) are never gated here — only a skill cast can be
- * unaffordable in this permanent sense.
- */
 export function exceedsMaxMp(effect: Effect): boolean {
   const skill = toSkill(effect);
   return skill !== $skill.none && mpCost(skill) > myMaxmp();
 }
 
-/**
- * Resolve a raw wanted-effects list into what a caller will actually try to
- * cast, and describe every drop as a one-line reason string for the caller to
- * print. Two drops, in order: (1) exceedsMaxMp() — permanently unaffordable
- * this run — and (2) the song cap (trimSongs' keep-last rule), evaluated
- * AFTER (1) so an unaffordable song doesn't spend a cap slot that an
- * affordable one would otherwise keep (see the desk-check in the engine
- * override for the case this ordering matters). Shared by the engine's
- * acquireEffects() (task.effects) and applyEffects() (the self-dressing
- * helpers' path) so both give the same "what did this call actually try to
- * get" transparency (user rule 2026-08-27).
- */
 export function resolveWantedEffects(effects: Effect[]): {
   wanted: Effect[];
   skipLines: string[];
@@ -364,42 +183,11 @@ export function resolveWantedEffects(effects: Effect[]): {
   return { wanted, skipLines };
 }
 
-/**
- * Is this thrown value libram's ensureEffect() giving up on a buff?
- *
- * The fail-soft catches around ensureEffect() (applyEffects below, and the
- * engine's acquireEffects() override) exist to honour "buffs are optional"
- * (user rule 2026-08-27) — NOT to swallow anything else that comes out of the
- * runtime. In mafia's JS runtime an abort() surfaces as a catchable exception,
- * so a blanket `catch` would print `failed <effect>: …` and march on past a
- * real abort. Only an EnsureError is fail-soft; everything else rethrows.
- *
- * The name check is not redundant. libram's EnsureError extends the built-in
- * Error, and this script is transpiled by Babel, whose _wrapNativeSuper /
- * _callSuper path only preserves the subclass prototype when Reflect.construct
- * is available; without it the thrown value is a plain Error that still carries
- * EnsureError's own `this.name = "Ensure Error"` (libram lib.ts:550-555). Rhino's
- * Reflect support is not something this script should bet a run on, and the cost
- * of a missed `instanceof` is the exact regression this guard is meant to
- * prevent in reverse — a hard abort on an optional buff.
- */
 export function isEnsureError(e: unknown): e is Error {
   if (e instanceof EnsureError) return true;
   return typeof e === "object" && e !== null && (e as { name?: unknown }).name === "Ensure Error";
 }
 
-/**
- * Diagnostic tail for a `failed <effect>: …` line (live case: `failed The
- * Ballad of Richie Thingfinder: Ensure Error: Failed to ensure …`, which
- * gives no clue WHY the cast failed). Reports the three things that make a
- * skill-sourced ensureEffect() fail after resolveWantedEffects() already
- * cleared the obvious cases: the song shrine is still full (another cast
- * filled a slot resolveWantedEffects counted as free), MP got spent between
- * the pre-check and the cast, or the skill isn't actually known (a caller
- * bypassed the mood lists and handed applyEffects/acquireEffects a raw
- * effect list). Item-sourced effects (toSkill() === $skill.none) report 0/0
- * MP and "skill n/a" rather than a misleading skill-known/unknown verdict.
- */
 export function effectFailureContext(effect: Effect): string {
   const skill = toSkill(effect);
   const cap = maxSongs();
@@ -409,20 +197,6 @@ export function effectFailureContext(effect: Effect): string {
   return `songs ${activeCount}/${cap}, MP ${myMp()}/${cost}, skill ${skillState}`;
 }
 
-/**
- * Acquire a mood list by hand, for the two places the engine's own
- * acquireEffects() cannot serve: a task's prepare() (which is the only hook
- * that runs after dress()) and the self-dressing gymnasiumTurn() helper.
- *
- * Buffs are optional (user rule 2026-08-27): a cast that still fails after
- * resolveWantedEffects() has already dropped the unaffordable/over-cap
- * entries — a song bumped back over cap by the character's own mood, a
- * daily limit raced by something outside this file's gates, etc. — is
- * fail-soft, same as the engine's acquireEffects() override.
- *
- * @param context optional label for the transparency line below (e.g. a task
- * or call-site name); omitted callers just get "Effects: …".
- */
 export function applyEffects(effects: Effect[], context?: string): void {
   reserveMpFor(effects);
   const { wanted, skipLines } = resolveWantedEffects(effects);
@@ -437,29 +211,18 @@ export function applyEffects(effects: Effect[], context?: string): void {
   for (const effect of wanted) {
     const skill = toSkill(effect);
     if (!have(effect) && skill !== $skill.none && myMp() < mpCost(skill)) {
-      // Skip rather than cast: ensureEffect would throw, and worse, several
-      // defaults name an ITEM as their second branch — Elron's Explosive Etude
-      // is "cast 1 Elron's Explosive Etude|use 1 recording of Elron's Explosive
-      // Etude" (statuseffects.txt:535), and EffectDatabase.getDefaultAction
-      // (:178-197) picks the branch that works, so an unaffordable cast turns
-      // into a spent item. A missing buff is cheaper than either.
       print(`skipped ${effect}: needs ${mpCost(skill)} MP, have ${myMp()}`, "yellow");
       continue;
     }
     try {
       ensureEffect(effect);
     } catch (e) {
-      // Only libram's own "could not get this buff" is optional; anything else
-      // (an abort() in particular) has to keep propagating. See isEnsureError.
       if (!isEnsureError(e)) throw e;
       print(`failed ${effect}: ${e} (${effectFailureContext(effect)})`, "yellow");
     }
   }
 }
 
-/** MP the casts in this list still need: skill-granted entries we do not
- * already have, at their current cost. Non-skill entries (cli defaults, item
- * defaults) contribute nothing to price. */
 export function moodMpCost(effects: Effect[]): number {
   return effects.reduce((sum, effect) => {
     if (have(effect)) return sum;
@@ -468,31 +231,13 @@ export function moodMpCost(effects: Effect[]): number {
   }, 0);
 }
 
-/**
- * Top the pool up BEFORE a mood is cast (the garbo fork's reserveMp, lib.ts:468-474 +
- * mood.ts:61, in the shape our engine needs).
- *
- * recover()'s 250 floor runs AFTER the casts, so it guarantees the fight starts
- * at 250 — not that the casts were affordable. ensureEffect THROWS on a cast
- * that fails (libram lib.js:563-572), and a task's effects are acquired before
- * prepare() ever runs (grimoire engine.js:95 vs :108), so a pool drained by the
- * previous fight would abort the run on the next mood. Ask for the mood's own
- * cost plus one nuke, capped at max MP; MP is the one resource this run may
- * spend freely.
- */
 export function reserveMpFor(effects: Effect[]): void {
-  // No mood, no reservation. The engine calls this for EVERY task through
-  // acquireEffects(), and most tasks carry no effects at all — crafting,
-  // pulls, plain visits. Restoring a nuke's worth of MP on those would be a
-  // behaviour change nobody asked for; parity for an effect-less task is
-  // "do nothing", exactly as before.
   if (effects.length === 0) return;
   const nuke = have($skill`Saucegeyser`) ? mpCost($skill`Saucegeyser`) : 0;
   const target = Math.min(myMaxmp(), moodMpCost(effects) + nuke);
   if (myMp() < target) restoreMp(target);
 }
 
-/** "combat" mood (ash mood():116-134). */
 export function combatEffects(): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`Carlweather's Cantata of Confrontation`))
@@ -504,16 +249,8 @@ export function combatEffects(): Effect[] {
   if (AprilingBandHelmet.have() && AprilingBandHelmet.canChangeSong()) {
     effects.push($effect`Apriling Band Battle Cadence`);
   }
-  // The ash holds the photo booth's grants back until Yog-Urt is down — before
-  // that the three-a-day budget belongs to her prep (mood():124-126).
   if (get("yogUrtDefeated") && photoBoothReady()) effects.push($effect`Towering Muscles`);
   if (have($skill`Attract Snakes`)) effects.push($effect`Attracting Snakes`);
-  // BCZ: Blood Bath is an equipment-granted skill, so have() is already an
-  // "is it castable right now" test. Skipped at low shiny per the ash — and
-  // gated on affordability (libram BloodCubicZirconia knows the per-skill
-  // substat: Blood Bath drains submuscle), which the ash itself omits here:
-  // a BCZ skill you cannot pay for simply fails, and ensureEffect turns that
-  // into an abort. Same 150-mainstat floor the ash uses for Sweat Bullets.
   if (
     have($skill`BCZ: Blood Bath`) &&
     currentTier() !== "low" &&
@@ -524,12 +261,6 @@ export function combatEffects(): Effect[] {
   return trimSongs(effects);
 }
 
-/**
- * Elemental-resistance mood for the pearl/res zones (ash mood():136-153): the
- * generic multi-element buffs; per-element gear comes from the task maximizer
- * string. Scarysauce sits in the ash's sleaze/cold branch only, but it is
- * resistance either way and this repo has one shared res mood.
- */
 export function resEffects(): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`Astral Shell`)) effects.push($effect`Astral Shell`);
@@ -540,14 +271,6 @@ export function resEffects(): Effect[] {
   return trimSongs(effects);
 }
 
-/**
- * Does this effect hit the monster on its own, without us acting? The four
- * modifiers the garbo fork enumerates for exactly this question (mood.ts:335-341).
- * Two consumers: the damage-free Shub filter (fights.ts shubFilter — delevel
- * items deal no damage because his retaliation doubles on damage) and the
- * bladeswitcher's reflect stall (fights.ts:56-61), where a passive tick is
- * damage we cannot see coming.
- */
 export function dealsPassiveDamage(effect: Effect): boolean {
   return (
     numericModifier(effect, "Thorns") > 0 ||
@@ -557,45 +280,6 @@ export function dealsPassiveDamage(effect: Effect): boolean {
   );
 }
 
-/**
- * Damage-mitigation mood for the fights that can actually be lost (the garbo fork
- * mood.ts:104-126 "Sea farming survivability", :83-86). Sea cow Atk 600 /
- * cowboy 750 / rustler 700 (monsters.txt:583,584,441) against an in-run moxie
- * of ~200 means every corral round lands for 110-175 (CCS:227) into a 570 HP
- * floor; the gym, the colosseum and the two temple bosses are the same shape.
- * MP only — every entry is a castable skill buff.
- *
- * Astral Shell and Elemental Saucesphere overlap resEffects(); combineMoods()
- * de-duplicates, so a task may carry both lists.
- *
- * Three of the garbo fork's entries are deliberately absent:
- *  - Blood Bubble. It is a Vampyre book skill costing 30 HP a cast
- *    (SkillDatabase.getHPCost, :1291 — mpcost 0 in classskills.txt:4042) with
- *    a THREE turn duration, so it would recast on nearly every adventure and
- *    pay in HP, which our restore then buys back. The MP-only rule excludes it.
- *    Note it is excluded for that reason alone: mafia models it as
- *    "Avoid Attack: 1" (modifiers.txt:5852), NOT as Thorns or a Damage Aura,
- *    so dealsPassiveDamage() would not have caught it on the Shub task.
- *  - Shield of the Pastalord. One cast, two possible effects — Flimsy Shield
- *    of the Pastalord (10% physical DR) and Shield of the Pastalord (30%),
- *    statuseffects.txt:1443-1444, both with default "cast 1 Shield of the
- *    Pastalord" — and which one lands is account state. That is exactly the
- *    Thoughtful Empathy case this file already drops: ensureEffect would throw
- *    whenever the cast produced the other one. mafia models neither
- *    numerically (modifiers.txt:6575, :7823 are comments), so nothing else is
- *    lost by leaving it out.
- *  - Get Big / Song of Bravado / Carol of the Bulls / Disco over Matter, which
- *    the garbo fork casts only in its OVERDRUNK branch (mood.ts:104-118); the sober
- *    sea branch (:122-126) is Ghostly Shell + Shield of the Pastalord alone.
- *
- * Tenacity of the Snapper is kept although mafia models it as Weapon Damage
- * +8 (modifiers.txt:8230), not mitigation: on these fights a faster kill IS
- * mitigation (fewer rounds taken), and it costs only MP.
- *
- * `damageFree` drops anything that would hit the monster by itself — the Shub
- * filter's premise (fights.ts:392-397). Nothing in the list trips it today;
- * the filter is here so a later addition cannot silently break that fight.
- */
 export function survivalEffects(opts: { damageFree?: boolean } = {}): Effect[] {
   const effects: Effect[] = [];
   if (have($skill`Ghostly Shell`)) effects.push($effect`Ghostly Shell`);
@@ -607,34 +291,8 @@ export function survivalEffects(opts: { damageFree?: boolean } = {}): Effect[] {
   );
 }
 
-/**
- * "colosseum" mood (ash mood():158-168), never ported until now. The round's
- * own maximize prices spell damage against mysticality (colosseum.ts coeff),
- * so the two big entries are Carol of the Hells (+100 spell damage percent,
- * modifiers.txt:6004) and Ultraheart (+50 flat and +50% to all three stats,
- * :8436).
- *
- * Three ash entries are dropped, each for a rule this file already applies:
- *  - Tubes of Universal Meat and Mariachi Moisture. Their defaults are
- *    "cast 1 Manicotti Meditation ^ Tubes of Universal Meat" and "cast 1 Moxie
- *    of the Mariachi ^ Mariachi Moisture" (statuseffects.txt:2988, 2991) — the
- *    same cast grants either the plain or the upgraded effect, the Thoughtful
- *    Empathy problem, and ensureEffect throws on the other outcome.
- *  - Everybody Calls Him Gorgon. Its default is "fortune buff gorgonzola", the
- *    clan fortune teller (FortuneCommand:30-52), which needs that specific
- *    lounge furnishing; the ash also gates it to lowShiny accounts only. Not
- *    predictable enough for ensureEffect.
- *  - Favored by Lyle. Its default is the "monorail buff" CLI command
- *    (MonorailCommand:15-18), and there is no predicate for "the monorail is
- *    reachable on this path" — `_lyleFavored` only says we have not had it
- *    TODAY. A cast that silently does nothing is an ensureEffect throw, so the
- *    buff is taken the ash's way instead: a bare, fail-silent cli_execute in
- *    colosseumRoundTurn().
- */
 export function colosseumEffects(): Effect[] {
   const effects: Effect[] = [];
-  // dailylimits.txt:127 caps Heartstone: %buff at 5/day, and the ash gates on
-  // the unlock pref (mood():165).
   if (
     have($skill`Heartstone: %buff`) &&
     get("heartstoneBuffUnlocked", false) &&
@@ -643,9 +301,6 @@ export function colosseumEffects(): Effect[] {
     effects.push($effect`Ultraheart`);
   }
   if (have($skill`Carol of the Hells`)) effects.push($effect`Carol of the Hells`);
-  // dailylimits.txt:94 caps Elron's at 10 casts a day; past that the cast fails
-  // and ensureEffect throws, and fifteen colosseum rounds can get there.
-  // Elron's is one of the five hobo AT songs too (hoboSongCastable()).
   if (have($skill`Elron's Explosive Etude`) && hoboSongCastable() && get("_elronsCasts", 0) < 10) {
     effects.push($effect`Elron's Explosive Etude`);
   }
@@ -655,20 +310,8 @@ export function colosseumEffects(): Effect[] {
   return trimSongs(effects);
 }
 
-/**
- * The route's own casts that the bad-effect sweep below would otherwise strip:
- * Scarysauce is in resEffects() (ash mood():145-153) and carries Thorns 1
- * (modifiers.txt:7769); Scariersauce is its velour-viscometer upgrade (:7768,
- * UseSkillRequest:393-397). Shrugging them after every task would just fight
- * the next task's own mood, burning MP a turn.
- */
 export const routeDamageEffects = $effects`Scarysauce, Scariersauce`;
 
-/** Every bad effect currently up, by the garbo fork's own four categories
- * (mood.ts:335-352): passive damage, "Alters Page Text", teleportitis
- * ("Adventure Randomly"), and Blind / Always Fumble. Walks myEffects() rather
- * than Effect.all() — the same set intersected with what we have, at ~20
- * lookups a call instead of ~3000. */
 function activeBadEffects(): Effect[] {
   return Object.keys(myEffects())
     .map((name) => toEffect(name))
@@ -682,39 +325,11 @@ function activeBadEffects(): Effect[] {
     );
 }
 
-/**
- * mafia's hardcoded shruggable list (UneffectRequest.isShruggable:146-172),
- * by effect id (EffectPool.java:189-198, 214, 279, 281, 311-318, 369-371):
- * Timer 1-10, Just the Best Anapests, Reassured, Hare-Brained, Record Hunger,
- * Drunk and Avuncular, Shrieking Weasel, Power Man, Lucky Struck, Ministrations
- * in the Dark, Superdrifting, Eldritch Attunement, Cartographically
- * Charged/Aware/Rooted. None of them maps to a buff skill, so the derivation
- * below would call them un-shruggable and red-line them after every task.
- * The one that actually matters here is Just the Best Anapests (id 1003), which
- * carries "Alters Page Text" (modifiers.txt:7067) — i.e. it is in the sweep's
- * own bad list and our CombatFilters read page text.
- */
 const alwaysShruggable = [
   873, 874, 875, 876, 877, 878, 879, 880, 881, 882, 1003, 1492, 1515, 2128, 2129, 2131, 2132, 2133,
   2134, 2135, 2147, 2600, 2601, 2602,
 ];
 
-/**
- * Is this effect one mafia will SHRUG (charsheet.php action=unbuff, free)
- * rather than cure with an item? Mirrors UneffectRequest.isShruggable
- * (:145-200): songs always, otherwise the effect must map to a skill that is a
- * buff. (statuseffects.txt has no "remove" column — the `default` column is
- * the action that GRANTS the effect, e.g. "use 1 wussiness potion" for
- * Wussiness — so shruggability has to be derived the way mafia derives it.)
- *
- * The `toEffect(skill) === effect` tail covers isShruggable's last clause: an
- * effect reached through a buff skill but only WITH a casting aid is not
- * shruggable (UseSkillRequest.requiredItemForSkillEffect:473-493 over the
- * replaceEffects/additionalEffects tables at :386-460). Those upgraded
- * variants — Scariersauce, Snarl of Three Timberwolves, Tubes of Universal
- * Meat … — map back to a skill whose own to_effect() is the BASE effect, so
- * this comparison rejects exactly them.
- */
 function shruggable(effect: Effect): boolean {
   if (effect.attributes.includes("noremove")) return false;
   if (alwaysShruggable.includes(effect.id)) return true;
@@ -724,30 +339,11 @@ function shruggable(effect: Effect): boolean {
   return toEffect(skill) === effect;
 }
 
-/** moodList() is a property read, not a page load, but the sweep runs after
- * every task — read it once. */
 let moodCache: string[] | undefined;
 function myMoodList(): string[] {
   return (moodCache ??= moodList());
 }
 
-/**
- * Would mafia's own removal path spend an ITEM on this effect, however
- * shruggable it is? UneffectRequest.getAction() (:683-706) reads the player's
- * CURRENT MOOD for a "gain_effect" trigger first, and run() (:810-820)
- * executes it verbatim unless it starts with uneffect / shrug / remedy — so a
- * user whose mood says `gain_effect | Foo | use 1 hot dog` would have us eat a
- * hot dog. mood_list() is that same trigger list (RuntimeLibrary:5413-5423,
- * "type | name | action"), so we can see it coming and decline.
- *
- * Belt-and-braces since the engine now forces `currentMood` to "apathetic"
- * (engine.ts initPropertiesManager) — mafia's built-in trigger-free mood, so
- * moodList() should read empty for the whole run and this should never fire.
- * It stays anyway: currentMood is one property write, and this is what
- * caught the live bug in the first place (the user's own mood was re-casting
- * a song we had just shrugged, out from under grimoire's/our own
- * shrug-before-cast — see shrugForSongs() above and its cite).
- */
 export function moodWouldSpend(effect: Effect): boolean {
   const prefix = `gain_effect | ${effect.name} | `;
   return myMoodList().some((line) => {
@@ -757,22 +353,6 @@ export function moodWouldSpend(effect: Effect): boolean {
   });
 }
 
-/**
- * the garbo fork's shrugBadEffects() (mood.ts:345-358), narrowed to the one removal
- * that is free: the shrug. The garbo fork uneffect()s the whole list, which in ronin
- * means spending a soft green echo eyedrop antidote / anti-anti-antidote / hot
- * dog on the effects that cannot be shrugged. Per the run's rule that only
- * shrugs are free, anything item-cured is left alone — and, at the one site
- * where it actually breaks a fight, warned about (shub.ts).
- *
- * Why it earns its place in-run: (a) any passive-damage effect breaks the
- * deliberately damage-free Shub filter (fights.ts:392-397) and feeds the
- * bladeswitcher's reflect (fights.ts:56-61); (b) teleportitis and Always
- * Fumble silently burn turns in every zone.
- *
- * @param exclude effects to leave alone (the route's own casts).
- * @returns the bad effects still up afterwards — the ones no shrug can reach.
- */
 export function shrugBadEffects(...exclude: Effect[]): Effect[] {
   const left: Effect[] = [];
   for (const effect of activeBadEffects()) {
@@ -781,11 +361,6 @@ export function shrugBadEffects(...exclude: Effect[]): Effect[] {
       left.push(effect);
       continue;
     }
-    // libram's uneffect() is cliExecute("uneffect <name>"), which reaches
-    // UneffectRequest; for a shruggable effect that request is built against
-    // charsheet.php?action=unbuff (:69-90) and run() takes the "Shrugging off
-    // your buff" branch (:833) before any cure item is ever considered. No
-    // item, no meat.
     uneffect(effect);
     if (have(effect)) left.push(effect);
   }

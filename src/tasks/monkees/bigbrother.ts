@@ -15,11 +15,6 @@ export function bigBrotherQuest(): Quest {
     name: "Big Brother",
     tasks: [
       {
-        // Forced-NC lane (ash UTS:1852-1858): the Wreck's only live NC at
-        // step1 is Down at the Hatch (299 -> option 1 -> step2 +
-        // bigBrotherRescued, ChoiceControl.java:5019-5032), so an NC forcer
-        // lands the rescue in exactly one turn, wearing +item instead of
-        // -combat. Estimate >= 4 is the ash's reserve threshold.
         name: "Wreck Rescue (forced)",
         ready: () =>
           monkeesStep() === 1 && (get("noncombatForcerActive") || ncForceEstimate() >= 4),
@@ -35,12 +30,10 @@ export function bigBrotherQuest(): Quest {
         limit: { soft: 10 },
       },
       {
-        // Fallback -combat walk (ash UTS:1859-1862).
         name: "Wreck Rescue (sneak)",
         ready: () => monkeesStep() === 1,
         completed: () => monkeesStep() >= 2,
         do: wreck,
-        // ash free_run(page_text, true) here, CCS:586-598
         freeRunBanishes: true,
         combat: new CombatStrategy().freeRun(),
         outfit: () => ({
@@ -54,9 +47,6 @@ export function bigBrotherQuest(): Quest {
         limit: { soft: 12, message: "Down at the Hatch is hiding; check -combat sources." },
       },
       {
-        // step2 -> who=2 (bubblin' stone -> step3, ResultProcessor.java:1854)
-        // -> who=1 ("Wanna help me find Grandpa?" -> step4,
-        // QuestManager.java:1441-1442). Ash UTS:1865-1868.
         name: "Bubblin' Stone",
         ready: () => monkeesStep() >= 2,
         completed: () => monkeesStep() >= 4,

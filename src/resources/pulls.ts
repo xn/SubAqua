@@ -17,33 +17,16 @@ import { shubPrepShort } from "../lib/shub";
 
 import { currentPolicy } from "./policy";
 
-/** Items Hagnk's refuses in 11,037 Leagues (`docs/unpullable-items.txt`, from
- * the user 2026-09-01). Without this gate pullSequence() mall-buys the item
- * into storage and then fails takeStorage: meat spent for nothing, and a
- * reservation slot held all run for a pull that can never land.
- *
- * The sea cowbell is NOT on this list: it was banned here on a 2026-08-29
- * report, but the gold run pulls one mid-corral and it lands
- * (`pull: 1 sea cowbell`, `_roninStoragePulls` gains 4196,
- * docs/gold-star-run.txt:5381). User directive 2026-09-01: pull it. */
 const unpullableInPath = $items`rough fish scale, pristine fish scale, rusty diving helmet, aerated diving helmet, teflon ore, teflon swim fins, sea leather, sea cowboy hat, sea chaps, Mer-kin bunwig, crappy Mer-kin mask, crappy Mer-kin tailpiece, Mer-kin gladiator mask, Mer-kin scholar mask, Mer-kin gladiator tailpiece, Mer-kin scholar tailpiece, Mer-kin headguard, Mer-kin waistrope, Mer-kin facecowl, Mer-kin thighguard, Mer-kin dodgeball, Mer-kin dragnet, Mer-kin switchblade, unblemished pearl`;
 
-/** False for anything the path bans from Hagnk's. */
 export function pullable(item: Item): boolean {
   return !unpullableInPath.includes(item);
 }
 
-/** _roninStoragePulls holds today's pulled item ids, comma-separated. Exact-id
- * membership needs the comma-wrap trick (iotm.ash:368): id 360 must not
- * substring-match a list containing 3604. */
 export function pulledToday(item: Item): boolean {
   return `,${get("_roninStoragePulls")},`.includes(`,${toInt(item)},`);
 }
 
-/** Ash pullSequence() (iotm.ash:363-379) minus its user_confirm: the
- * mall-price guard aborts with instructions instead of prompting (spec §4).
- * Returns false when the pull is unavailable (already pulled today / no pulls
- * left) so callers fall back to farming, exactly like the ash. */
 export function pullSequence(item: Item): boolean {
   if (!pullable(item)) return false;
   if (pullsRemaining() === 0) return false;
@@ -63,24 +46,12 @@ export function pullSequence(item: Item): boolean {
 
 type PullReservation = {
   name: string;
-  /** The pull that would satisfy this reservation. */
   item: Item;
-  /** Recomputed live; the reservation releases the moment the need lapses. */
   needed: () => boolean;
 };
 
 const escapeGear = $items`peppermint parasol, navel ring of navel gazing, Greatest American Pants`;
 
-/**
- * Ash reservedPulls() (UnderTheSea.ash:181-235). Each item can be pulled once
- * per day in-run, so every entry reserves at most one slot. The Shub null-day
- * exploit entry is deliberately absent: it needs shubPrepShort()'s delevel
- * math, which lands with Phase 4's sorceress module — The null-day entry
- * below is that Phase 4 addition. The first two entries skip the
- * pulled-today check on purpose,
- * mirroring the ash (any of the three escape items serves; shavings are
- * farmable).
- */
 const pullReservations: PullReservation[] = [
   {
     name: "escape gear",
@@ -93,10 +64,6 @@ const pullReservations: PullReservation[] = [
     needed: () => availableAmount($item`crayon shavings`) < 9,
   },
   {
-    // Shub null-day exploit (ash reservedPulls() globals.ash:235-239): hold a
-    // slot for Null Afternoon while Shub is undefeated and the delevel stock
-    // projects short. Yog-Urt's fight may throw up to two crayon shavings
-    // first, so they are spoken for (shubPrepShort(2)).
     name: "null-day exploit",
     item: $item`null-day exploit`,
     needed: () =>
@@ -128,17 +95,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`comb jelly`),
   },
   {
-    // Training-lasso safety net (live 2026-08-31): the rift's free-fight
-    // training needs a lasso IN HAND, and both normal suppliers can be gone
-    // at once — the corral opener bundle (missed on a resumed run) and the
-    // paw wishes. Why the 08-31 wishes were refused is unsettled (paw.ts: the
-    // dry-land outfit and a spent allowance fit the same evidence), so this net
-    // stays load-bearing either way — the paw does genuinely cap at 5/day, and
-    // gold budgets THREE of those five on lassos (G:5125, :5207,
-    // :6096). Live whenever the training
-    // gear exists, training is short, and no lasso is anywhere; releases at
-    // training 20 or on the first lasso. The init-time ALWAYS-pull this
-    // replaces was dropped per B F3.
     name: "sea lasso (training)",
     item: $item`sea lasso`,
     needed: () =>
@@ -149,11 +105,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`sea lasso`),
   },
   {
-    // Gold pulls one cowbell into the taming phase (G:5381, `pull: 1 sea
-    // cowbell`, id 4196) rather than farming the third off a paid sea cow —
-    // the tame throws cowbell/cowbell then cowbell/lasso, so three must be in
-    // hand and the cow is the only farm source (10% drop). Releases the slot
-    // the moment the third arrives or the seahorse is tamed.
     name: "sea cowbell",
     item: $item`sea cowbell`,
     needed: () =>
@@ -163,11 +114,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`sea cowbell`),
   },
   {
-    // B F3/D: gold pulled the digpick (G:4751, 14th pull); the 08-30 run
-    // farmed it at 2 paid Anemone Mine turns because idle reservations kept
-    // pullBudgetAllows' strict `>` branch refusing the discretionary pull.
-    // Needed-condition mirrors mine.ts oreSecured() (ore/fins/tailpiece),
-    // inlined so needed() stays a pure item/pref read.
     name: "Mer-kin digpick",
     item: $item`Mer-kin digpick`,
     needed: () =>
@@ -182,17 +128,10 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`Mer-kin digpick`),
   },
   {
-    // C F1: the hallpass supply IS the cowl/rope hunt — each "Halls Passing
-    // in the Night" superlikely consumes one pass for one piece. Reserve one
-    // whenever the lounge is open, a piece is missing, and passes are short
-    // of the missing count, so the pull at school.ts's prepare clears
-    // pullBudgetAllows' `>=` self-branch (the strict `>` discretionary
-    // branch refused it all of 08-30: 16 pulls used, 5 reservations idle).
     name: "Mer-kin hallpass",
     item: $item`Mer-kin hallpass`,
     needed: () =>
       get("merkinElementaryTeacherUnlock", false) &&
-      // A scholar piece fills a slot too (school.ts cowlAndRope()).
       availableAmount($item`Mer-kin hallpass`) <
         Number(
           availableAmount($item`Mer-kin facecowl`) === 0 &&
@@ -205,12 +144,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`Mer-kin hallpass`),
   },
   {
-    // Skate-war Fishy: hold the blade while the war is live and Holey Rollers
-    // hasn't been queued (ash also gated on path 55 — always true here).
-    // The map gate is skateWarOpen()'s (skatepark.ts): skateParkStatus keeps
-    // its defaults.txt "war" value forever on a map-less account, which would
-    // otherwise hold this slot for the whole run. Inlined rather than imported
-    // so `needed()` stays a pure pref read — skateWarOpen() page-loads.
     name: "skate blade",
     item: $item`skate blade`,
     needed: () =>
@@ -221,13 +154,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`skate blade`),
   },
   {
-    // Dreadscroll clue 4 (library.ts "Knucklebone"). The ash pulls this
-    // unconditionally (UTS ab1105e:2629-2637) — on the short route these two
-    // library pulls ARE the route, so they get reservation slots instead of
-    // competing with them: pullBudgetAllows is strict `>` for a discretionary
-    // pull, and reservedPulls() can hold 4-6 slots late in a day, which would
-    // abort the task with pulls still on the books. Listed here, the call
-    // site's pullBudgetAllows takes the `>=` self-reservation branch.
     name: "Mer-kin knucklebone",
     item: $item`Mer-kin knucklebone`,
     needed: () =>
@@ -237,10 +163,6 @@ const pullReservations: PullReservation[] = [
       !pulledToday($item`Mer-kin knucklebone`),
   },
   {
-    // Dreadscroll clue 7 (library.ts "Worktea Sushi"), same reasoning. The
-    // vocabulary clause mirrors that task's own `ready`: at >= 90 the 703
-    // handler brute-forces the single unknown and no tea is ever pulled, so
-    // the slot releases instead of riding to the end of the run.
     name: "Mer-kin worktea",
     item: $item`Mer-kin worktea`,
     needed: () =>
@@ -256,35 +178,6 @@ export function reservedPulls(): number {
   return pullReservations.filter((reservation) => reservation.needed()).length;
 }
 
-/**
- * Budget gate. Strict `>` for discretionary pulls; a RESERVED item may take any
- * pull that is left.
- *
- * The reservation count is a floor for discretionary spending, and nothing
- * more. It was also applied to reserved items themselves — `pullsRemaining()
- * >= reservedPulls()` — which reads as "a reservation may spend down to the
- * line", and only untangles the one case where the count exactly equals the
- * pulls left (the trap the ash documents at the skate-blade site,
- * UnderTheSea.ash:1331-1333). The moment reservations OUTNUMBER the pulls left,
- * that test fails for every reserved item at once and the queue freezes: no
- * reservation can pull, so no reservation is ever satisfied, so the count never
- * drops, so the slots expire unused at end of run.
- *
- * Live 2026-09-02, and it cost a turn. At turncount 22 the run had spent 17 of
- * 20 pulls with four-plus reservations still live, so `3 >= 4` refused the
- * skate blade — which is itself a reservation, and the one pull with a
- * guaranteed payoff (skatepark.ts: Holey Rollers only fires with the blade
- * equipped; bladeless serves `Picking Sides` instead, an extra turn AND an
- * extra forcer). The blade arrived anyway as that NC's consolation prize, and
- * the run ended with three pulls unspent and not one `pull:` line after turn 22
- * (docs/superpowers/research/2026-09-02-trace/skate-colosseum.md).
- *
- * So: a reserved item competes only against the hard cap. Among reserved items
- * this is first-come-first-served, which can let an early reservation take the
- * slot a later one wanted — strictly better than the previous behaviour, where
- * a full queue meant nobody pulled at all. If the ordering ever matters, the
- * fix is priorities on the reservations, not a floor that blocks them all.
- */
 export function pullBudgetAllows(item: Item): boolean {
   if (!pullable(item)) return false;
   const isOwnReservation = pullReservations.some(
@@ -293,10 +186,6 @@ export function pullBudgetAllows(item: Item): boolean {
   return isOwnReservation ? pullsRemaining() >= 1 : pullsRemaining() > reservedPulls();
 }
 
-/** Policy- and budget-gated convenience for non-essential pulls (low shiny
- * farms instead — ash `lowShiny() == false && pulls_remaining() >
- * reservedPulls()`). Reserved pulls call pullSequence directly after a
- * pullBudgetAllows check. */
 export function discretionaryPull(item: Item): boolean {
   if (!currentPolicy().allowDiscretionaryPulls) return false;
   if (!pullBudgetAllows(item)) return false;
