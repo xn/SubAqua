@@ -74,9 +74,18 @@ const inkBladder = $item`ink bladder`;
  * Keyed on `seahorseName`, not `corralUnlocked`: the corral only unlocks
  * around turn 11 and the bladder was already gone by then.
  *
- * SIZE OF THE PRIZE: ONE turn, not three. The tail is reached at most once per
- * fight and the bladder is consumed, so one held bladder frees one of the three
- * paid cow turns. The `<= 2` ceiling is nominally gold's corral count but the
+ * THE BLADDER IS 80% FREE, NOT FREE (wiki, ink bladder): used underwater the
+ * combat ALWAYS ends, but only the "you QUICKLY swim away" message — 80% of
+ * the time — costs no adventure; the other 20% ends the fight and takes the
+ * turn anyway. It is still a run, not a gamble that can strand a fight: either
+ * message ends the combat, so a miss never falls through to the kill ladder
+ * the way a failed parasol roll does. Gold's two corral bladders both landing
+ * free is a 64% outcome, not the baseline.
+ *
+ * SIZE OF THE PRIZE: 0.8 of a turn, not one — and not three. The tail is
+ * reached at most once per fight and the bladder is consumed either way, so
+ * one held bladder frees, in expectation, four fifths of one of the three paid
+ * cow turns. The `<= 2` ceiling is nominally gold's corral count but the
  * route never reaches it — 09-01 acquired exactly one (:1884), gold two
  * (G:1974, G:2011), and pulls.ts only tops up from ZERO — so "a third and
  * beyond is free for anyone" describes a state we never see and the predicate

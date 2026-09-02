@@ -1,6 +1,6 @@
 import { ActionDefaults, CombatStrategy as BaseCombatStrategy } from "grimoire-kolmafia";
 import { availableAmount, haveEquipped, Location, Monster, mpCost, myLevel } from "kolmafia";
-import { $effect, $item, $skill, have, Macro } from "libram";
+import { $effect, $item, $phylum, $skill, have, Macro } from "libram";
 
 import { freeMonsters } from "../resources/backup";
 import { bangPotionRounds } from "../resources/bangpotions";
@@ -308,9 +308,27 @@ export function runMacro(): Macro {
 export function fishMacro(): Macro {
   if (!have($skill`Sea *dent: Talk to Some Fish`)) return new Macro();
   if (availableAmount($item`pristine fish scale`) >= 6) return new Macro();
+  // NEVER at a fish-phylum monster. The skill REFUSES there — "Against fish:
+  // Maybe finishing[sic] fighting this fish before you start a conversation"
+  // (wiki, Sea *dent: Talk to Some Fish) — and a submitted instruction that
+  // takes no action is what KoL kills the macro over. Live 2026-09-02, Find
+  // Grandpa at The Marinara Trench: the run ladder was dry, the free-kill
+  // fallthrough threw a dart that missed the bullseye, this cast then hit a
+  // fisherfish (monsters.txt id 764, phylum fish) and the whole macro died
+  // one instruction later — "You're on your own, partner. ((Macro
+  // aborted.))" — with `attack;repeat` still unreached below it. Nothing is
+  // lost by skipping: a fish cannot be turned into `some fish`, which is the
+  // only reason to cast it.
+  //
+  // The skill refuses at bosses and insta-kill-immune monsters too (same
+  // page). Those are out of scope by construction here — boss fights in this
+  // route are adv1-filter tasks that declare no CombatStrategy — with ONE
+  // gap: a Shadow Rift boss on the 11th+ rift visit would land in
+  // riftCombat(), which carries this macro. Left unguarded rather than
+  // hard-coding a monster list that has never been fought here.
   return Macro.ifNot(
     freeMonsters,
-    openerOnce(Macro.trySkill($skill`Sea *dent: Talk to Some Fish`), 3),
+    Macro.ifNot($phylum`fish`, openerOnce(Macro.trySkill($skill`Sea *dent: Talk to Some Fish`), 3)),
   );
 }
 
