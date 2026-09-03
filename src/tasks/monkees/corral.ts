@@ -108,9 +108,13 @@ function tamingMacro(): Macro {
     : Macro.item(cowbell).item(cowbell).item(cowbell).item(lasso).abort();
 }
 
+// The wild seahorse rejects 80% of corral adventures regardless of banishes (wiki), so once
+// the banishes are spent every draw is a ~20% lottery. A waffle is one more roll inside a
+// fight that is already free; the ash throws one whenever it holds one (UnderTheSeaCCS:633),
+// and gold tamed on its third (gold-uts-2026-08-21.log:5751-6044). Never gate it on how
+// many draws are still unbanished: that state is exactly when the waffle matters.
 function waffleMacro(): Macro {
   if (itemAmount(waffle) === 0) return new Macro();
-  if (draws.filter((draw) => !banishActive(draw)).length < 2) return new Macro();
   return openerOnce(Macro.ifNot(seahorse, Macro.tryItem(waffle))).if_(seahorse, seahorseMacro());
 }
 

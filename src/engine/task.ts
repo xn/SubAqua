@@ -20,4 +20,6 @@ export type Task = {
   saberPurpose?: ForcePurpose;
   freeRunBanishes?: boolean | (() => boolean);
   batWings?: boolean;
+  /** Set false to keep the bang-potion identification throws off this task's fights. */
+  bangPotions?: boolean;
 } & BaseTask<CombatActions>;
