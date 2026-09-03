@@ -92,6 +92,11 @@ export function guildTasks(opts: { phonelessSwordOnly: boolean; unlockGuild: boo
         completed: () => questStepOf(prop()) !== 0,
         do: guildTestZone.get(myPrimestat()) ?? $location`The Outskirts of Cobb's Knob`,
         combat: new CombatStrategy().kill(crayonMonsters).freeRun(),
+        // The potion-ID throws take up to 4 rounds, and the Stomping Boots' stomp kills the
+        // pantry monsters before the free run fires (2026-09-03 run :1123, :1182 = 2 paid
+        // turns). The next free fights (flytrap, golem back-ups) last rounds anyway and the
+        // dreadscroll seed scan only needs the IDs by the corral.
+        bangPotions: false,
         outfit: () => ({
           modifier: "-combat",
           familiar: guildTestFamiliar(),

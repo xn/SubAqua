@@ -1,4 +1,4 @@
-import { availableAmount, cliExecute } from "kolmafia";
+import { adv1, availableAmount, cliExecute } from "kolmafia";
 import {
   $familiar,
   $item,
@@ -163,7 +163,13 @@ export function outpostQuest(): Quest {
         name: "Prayerbeads",
         ready: () => monkeesStep() >= 9 && get("intenseCurrents"),
         completed: () => availableAmount(beads) >= 3,
-        do: outpost,
+        // Grimoire checks `completed` before `prepare` and never again before `do`, so a
+        // wish that completes the count in `prepare` was still followed by a paid healer
+        // (2026-09-03 run :4006 wish, :4014 fight). Re-check here.
+        do: (): void => {
+          if (availableAmount(beads) >= 3) return;
+          adv1(outpost, -1, "");
+        },
         saberPurpose: "healer",
         freeRunBanishes: true,
         combat: new CombatStrategy().forceItems($monster`Mer-kin healer`).freeRun(),

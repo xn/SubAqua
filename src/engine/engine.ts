@@ -216,6 +216,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     if (
       !undelay(task.freeaction) &&
+      task.bangPotions !== false &&
       !combat.can("forceItems") &&
       !combat.can("killFree") &&
       !combat.can("yellowRay") &&

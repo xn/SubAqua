@@ -3,14 +3,13 @@ import {
   adv1,
   availableAmount,
   buy,
-  cliExecute,
   equip,
   itemAmount,
   maximize,
   useFamiliar,
   visitUrl,
 } from "kolmafia";
-import { $coinmaster, $item, $items, $location, $slot, get, have } from "libram";
+import { $coinmaster, $item, $items, $location, $slot, applyModes, get, have, Modes } from "libram";
 
 import {
   ensureHelperBreathing,
@@ -39,11 +38,15 @@ export function gymnasiumTurn(): void {
   applyEffects(combineMoods(combatEffects(), survivalEffects()), "Guard Grind");
   const warOpen = skateWarOpen();
   const pieces: string[] = [];
+  const modes: Partial<Modes> = {};
   if (warOpen) {
     if (have($item`McHugeLarge left ski`) && get("_mcHugeLargeAvalancheUses", 0) < 3) {
       pieces.push("+equip McHugeLarge left ski");
     } else if (have($item`Jurassic Parka`) && get("_spikolodonSpikeUses", 0) < 5) {
-      cliExecute("parka spikolodon");
+      // The maximizer re-picks the parka tab when it equips the parka (2026-09-03 run
+      // :8321-8330 flipped spikolodon back to kachungasaur four times), so the mode is
+      // pinned AFTER maximize, the way grimoire's Outfit.dress applies `modes`.
+      modes.parka = "spikolodon";
       pieces.push("+equip Jurassic Parka");
     }
   }
@@ -65,6 +68,7 @@ export function gymnasiumTurn(): void {
   if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
     maximize(terms.join(", "), false);
   }
+  applyModes(modes);
   ensureHelperBreathing("the Mer-kin Gymnasium");
   recover(800);
   adv1($location`Mer-kin Gymnasium`, -1, gladiatorFilter({ gym: true, warOpen }));
