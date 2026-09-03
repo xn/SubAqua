@@ -9,7 +9,7 @@ import {
   use,
   useSkill,
 } from "kolmafia";
-import { $item, $location, $skill, $stat, get, have, uneffect } from "libram";
+import { $familiar, $item, $location, $skill, $stat, get, have, uneffect } from "libram";
 
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
@@ -106,7 +106,7 @@ export function shubQuest(): Quest {
         outfit: () => ({
           modifier: "damage absorption, mus",
           equip: [$item`Mer-kin gladiator mask`, $item`Mer-kin gladiator tailpiece`],
-          familiar: expFamiliar(),
+          familiar: have($familiar`Peace Turkey`) ? $familiar`Peace Turkey` : expFamiliar(),
         }),
         underwater: true,
         limit: {
