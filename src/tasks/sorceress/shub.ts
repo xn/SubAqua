@@ -104,7 +104,9 @@ export function shubQuest(): Quest {
         },
         do: () => void adv1($location`Mer-kin Temple (Left Door)`, -1, shubFilter()),
         outfit: () => ({
-          modifier: "damage absorption, mus",
+          modifier: `damage absorption, mus, ${
+            myBuffedstat($stat`Muscle`) >= myBuffedstat($stat`Moxie`) ? "+melee" : "-melee"
+          }`,
           equip: [$item`Mer-kin gladiator mask`, $item`Mer-kin gladiator tailpiece`],
           familiar: have($familiar`Peace Turkey`) ? $familiar`Peace Turkey` : expFamiliar(),
         }),
