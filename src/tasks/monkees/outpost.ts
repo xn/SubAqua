@@ -30,6 +30,12 @@ function stashboxDone(): boolean {
 
 const farmBanished = $monsters`Mer-kin burglar, Mer-kin raider`;
 
+export const LOCKKEY_GATE = 25;
+
+export function lockkeyGateOpen(): boolean {
+  return outpost.turnsSpent >= LOCKKEY_GATE;
+}
+
 const golem = $monster`Black Crayon Golem`;
 const eagle = $familiar`Patriotic Eagle`;
 
@@ -110,7 +116,7 @@ export function outpostQuest(): Quest {
         ready: () => monkeesStep() >= 9,
         completed: () => get("merkinLockkeyMonster") !== null || stashboxDone(),
         do: outpost,
-        backup: farmBackup,
+        backup: () => (lockkeyGateOpen() ? undefined : farmBackup()),
         combat: farmCombat(),
         outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
         effects: itemDropEffects,
@@ -118,7 +124,11 @@ export function outpostQuest(): Quest {
           assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");
           recover();
         },
-        limit: { soft: 25, message: "No lockkey after a long grind; verify drops and rerun." },
+        limit: {
+          turns: LOCKKEY_GATE + 15,
+          message:
+            "No lockkey 15 Outpost adventures past the drop gate; check that the healer still carries it.",
+        },
       },
       {
         name: "Outpost Stashbox",
