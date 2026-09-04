@@ -1,6 +1,5 @@
 import {
   abort,
-  adv1,
   availableAmount,
   Effect,
   buy,
@@ -30,16 +29,18 @@ import {
   get,
   have,
   Macro,
+  set,
 } from "libram";
 
-import { CombatStrategy, killMacro, monsterMacro, openerOnce } from "../../engine/combat";
+import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
 import { rivetHuntActive } from "../../resources/saber";
 import { summonsAvailable } from "../../resources/summon";
-import { CombatFilter } from "../sorceress/fights";
+
+import { habitatGolemsLive, screechReady } from "./outpost";
 
 const abyss = $location`The Caliginous Abyss`;
 const glass = $item`black glass`;
@@ -99,11 +100,16 @@ const bakery = $location`Madness Bakery`;
 
 const screech = $skill`%fn, Release the Patriotic Screech!`;
 
-function screechFilter(): CombatFilter {
-  return (_round, _monster, text) =>
-    get("screechCombats", 0) === 0 && text.includes("Release the Patriotic Screech")
-      ? Macro.trySkill(screech).toString()
-      : killMacro(false).toString();
+function constructScreechOpener(): Macro {
+  return screechReady() ? openerOnce(Macro.trySkill(screech)) : new Macro();
+}
+
+function clubEmGolemPending(): boolean {
+  return get("clubEmNextWeekMonster") === golem;
+}
+
+function wandererScreech(monsterPref: string): boolean {
+  return get(monsterPref) === golem.name && screechReady() && !habitatGolemsLive();
 }
 
 function screechGolemFromLocket(): boolean {
@@ -234,23 +240,39 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ? ([
             {
               name: "Banish Constructs",
-              ready: () => cyberKit() && get("_monsterHabitatsFightsLeft", 0) === 0,
+              ready: () =>
+                cyberKit() && get("_monsterHabitatsFightsLeft", 0) === 0 && !clubEmGolemPending(),
               completed: () =>
                 momDone() ||
                 get("_cyberFreeFights", 0) >= 10 ||
                 get("banishedPhyla").includes("construct"),
-              do: (): void => {
-                if (screechGolemFromLocket()) CombatLoversLocket.reminisce(golem, screechFilter());
-                else adv1(bakery, -1, screechFilter());
+              do: () => {
+                if (screechGolemFromLocket()) {
+                  CombatLoversLocket.reminisce(golem);
+                  return undefined;
+                }
+                return bakery;
               },
-              combat: new CombatStrategy().kill(),
+              combat: new CombatStrategy().macro(constructScreechOpener).kill(),
               outfit: { familiar: eagle },
               prepare: (): void => {
                 recover();
+                set("_subaqua_screech_combat", get("_lastCombatStarted", ""));
                 if (!screechGolemFromLocket() && !canAdventure(bakery)) {
                   visitUrl("shop.php?whichshop=armory&action=talk");
                   if (handlingChoice()) runChoice(1);
                 }
+              },
+              post: (): void => {
+                if (get("banishedPhyla").includes("construct") || get("screechCombats", 0) > 0)
+                  return;
+                if (get("_lastCombatStarted", "") === get("_subaqua_screech_combat", "")) return;
+                throw (
+                  `Banish Constructs fought ${get("lastEncounter")} with the Patriotic Eagle out and the screech ` +
+                  "did not land (screechCombats still 0, construct unbanished). KoL did not cast skill 7451 " +
+                  "from the opener. Turn mafia's debug log on, fight one Bakery construct with the eagle, " +
+                  "and check whether 'Release the Patriotic Screech' is in the fight page, then rerun."
+                );
               },
               limit: { tries: 4 },
             },
@@ -348,8 +370,18 @@ export function wandererTasks(): Task[] {
     completed: () => !get(monsterPref),
     do: () => grandpaZone(),
     underwater: true,
-    combat: new CombatStrategy().kill(),
-    outfit: () => ({ modifier: `item, ${pearlResModifier()}` }),
+    combat: new CombatStrategy()
+      .macro(
+        monsterMacro(
+          () => (wandererScreech(monsterPref) ? constructScreechOpener() : new Macro()),
+          golem,
+        ),
+      )
+      .kill(),
+    outfit: () => ({
+      modifier: `item, ${pearlResModifier()}`,
+      familiar: wandererScreech(monsterPref) ? eagle : undefined,
+    }),
     effects: () => combineMoods(itemDropEffects(), resEffects()),
     prepare: () => recover(),
     limit: { soft: 4 },

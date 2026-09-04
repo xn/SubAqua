@@ -7,6 +7,7 @@ import {
   $monster,
   $monsters,
   $skill,
+  CrystalBall,
   get,
   have,
   Macro,
@@ -39,15 +40,19 @@ export function lockkeyGateOpen(): boolean {
 const golem = $monster`Black Crayon Golem`;
 const eagle = $familiar`Patriotic Eagle`;
 
-export function screechTurn(): boolean {
+const screech = $skill`%fn, Release the Patriotic Screech!`;
+
+export function screechReady(): boolean {
   return (
     have(eagle) &&
     have($item`server room key`) &&
     !get("banishedPhyla").includes("construct") &&
-    get("_monsterHabitatsFightsLeft", 0) === 1 &&
-    get("_monsterHabitatsMonster") === golem &&
-    get("_monsterHabitatsRecalled", 0) >= 2
+    get("screechCombats", 0) === 0
   );
+}
+
+export function habitatGolemsLive(): boolean {
+  return get("_monsterHabitatsFightsLeft", 0) > 0 && get("_monsterHabitatsMonster") === golem;
 }
 
 function recallPending(): boolean {
@@ -58,12 +63,24 @@ function recallPending(): boolean {
   );
 }
 
+export function screechTurn(): boolean {
+  if (!screechReady() || recallPending()) return false;
+  const left = get("_monsterHabitatsFightsLeft", 0);
+  const lastHabitatGolem = left === 1 && get("_monsterHabitatsMonster") === golem;
+  const predictedGolem = left === 0 && CrystalBall.getPrediction().get(outpost) === golem;
+  return lastHabitatGolem || predictedGolem;
+}
+
+export function screechOpener(): Macro {
+  return screechTurn() ? openerOnce(Macro.trySkill(screech)) : new Macro();
+}
+
 function golemRecallMacro(): Macro {
   const macro = new Macro();
   if (recallPending()) {
     macro.trySkill($skill`Recall Facts: Monster Habitats`);
   }
-  if (screechTurn()) macro.trySkill($skill`%fn, Release the Patriotic Screech!`);
+  if (screechTurn()) macro.trySkill(screech);
   return macro.components.length > 0 ? openerOnce(macro) : macro;
 }
 
@@ -136,10 +153,14 @@ export function outpostQuest(): Quest {
         completed: () => stashboxDone(),
         do: outpost,
         freeRunBanishes: true,
-        combat: new CombatStrategy().kill($monster`Mer-kin healer`).freeRun(),
+        combat: new CombatStrategy()
+          .macro(monsterMacro(screechOpener, golem))
+          .kill($monster`Mer-kin healer`)
+          .kill(golem)
+          .freeRun(),
         outfit: () => ({
           modifier: "-combat",
-          familiar: sneakFamiliar(),
+          familiar: screechTurn() ? eagle : sneakFamiliar(),
           equip: $items`Monodent of the Sea`,
           avoid: $items`miniature crystal ball`,
         }),
@@ -172,10 +193,14 @@ export function outpostQuest(): Quest {
         },
         saberPurpose: "healer",
         freeRunBanishes: true,
-        combat: new CombatStrategy().forceItems($monster`Mer-kin healer`).freeRun(),
+        combat: new CombatStrategy()
+          .macro(monsterMacro(screechOpener, golem))
+          .forceItems($monster`Mer-kin healer`)
+          .kill(golem)
+          .freeRun(),
         outfit: () => ({
           modifier: "-combat, item",
-          familiar: sneakFamiliar(),
+          familiar: screechTurn() ? eagle : sneakFamiliar(),
           equip: $items`Monodent of the Sea`,
         }),
         effects: sneakEffects,
