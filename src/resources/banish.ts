@@ -2,7 +2,6 @@ import {
   abort,
   appearanceRates,
   getFuel,
-  haveEquipped,
   Item,
   Location,
   Monster,
@@ -13,6 +12,8 @@ import {
   toMonster,
 } from "kolmafia";
 import { $class, $effect, $item, $skill, AsdonMartin, get, have, Macro } from "libram";
+
+import { haveGem, wornOrMounted } from "../lib/codpiece";
 
 export type BanishSource = {
   name: string;
@@ -103,7 +104,7 @@ export const banishSources: BanishSource[] = [
     skill: $skill`Heartstone: %banish`,
     equip: $item`Heartstone`,
     available: () =>
-      have($item`Heartstone`) &&
+      haveGem($item`Heartstone`) &&
       get("heartstoneBanishUnlocked", false) &&
       get("_heartstoneBanishUsed", 0) < 5,
   },
@@ -135,7 +136,7 @@ export function banishChainMacro(location?: Location, opts: { paid?: boolean } =
   const macro = new Macro();
   for (const source of banishSources) {
     if (source.paid && !opts.paid) continue;
-    if (source.equip && !haveEquipped(source.equip)) continue;
+    if (source.equip && !wornOrMounted(source.equip)) continue;
     if (!source.available()) continue;
     if (location) {
       const current = banishedBy(source);

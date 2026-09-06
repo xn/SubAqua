@@ -4,11 +4,13 @@ import {
   getProperty,
   handlingChoice,
   lastChoice,
+  lastMonster,
   print,
   runChoice,
 } from "kolmafia";
 import { $effect, $item, get, have, set, ValueOf } from "libram";
 
+import { clubTargetNames } from "../resources/club";
 import { peridotTargetId } from "../resources/peridot";
 
 function stashboxCheck(order: number[]): void {
@@ -175,6 +177,27 @@ export function main(choice: number, page: string) {
     }
   } else if (choice === 1599) {
     runChoice(1);
+  } else if (choice === 1589) {
+    // Clubbed 'Em Into...: roll a second monster's table. Prefer the engine's wanted list, the
+    // first entry that is not the monster just clubbed; otherwise any monster beats "nothing".
+    const entries = Object.entries(options);
+    const offering = (name: string) =>
+      entries.find(([, text]) => text.toLowerCase().includes(name.toLowerCase()));
+    const clubbed = lastMonster().name;
+    const wanted = clubTargetNames();
+    const pick =
+      wanted
+        .filter((name) => name !== clubbed)
+        .map(offering)
+        .find((hit) => hit) ??
+      wanted.map(offering).find((hit) => hit) ??
+      entries.find(([, text]) => !text.toLowerCase().startsWith("nothing"));
+    if (pick) {
+      print(`Club 'Em: clubbing the ${clubbed} into ${pick[1]}`, "blue");
+      runChoice(Number(pick[0]));
+    } else {
+      runChoice(1);
+    }
   } else if (choice === 1557) {
     const offered: number[] = [];
     const re = /name="bandersnatch" value="(\d+)"/g;

@@ -1,4 +1,7 @@
 import {
+  cliExecute,
+  equip,
+  equippedItem,
   Item,
   itemAmount,
   Location,
@@ -13,9 +16,11 @@ import {
   Stat,
   storageAmount,
 } from "kolmafia";
-import { $item, $location, $stat, get, have } from "libram";
+import { EternityCodpiece, $item, $location, $stat, get, have, unequip } from "libram";
 
 import { args } from "../args";
+
+const pearl = $item`unblemished pearl`;
 
 export * from "./tier";
 
@@ -87,4 +92,18 @@ const grandpaZones: Map<Stat, Location> = new Map([
 
 export function grandpaZone(): Location {
   return grandpaZones.get(myPrimestat()) ?? $location`Anemone Mine`;
+}
+
+export function emptyCodpiece() {
+  for (const slot of EternityCodpiece.SLOTS) {
+    if (equippedItem(slot) === pearl) unequip(slot);
+  }
+  cliExecute("refresh inv");
+}
+
+export function slotPearls() {
+  for (const slot of EternityCodpiece.SLOTS) {
+    if (equippedItem(slot) !== pearl) equip(slot, pearl);
+  }
+  cliExecute("refresh inv");
 }
