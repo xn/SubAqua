@@ -347,7 +347,15 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           ...freeMonsters,
         ]),
       ];
+      // The rung goes in as a default (non-monster) macro, guarded by monster id, rather than
+      // a per-monster one: grimoire compiles per-monster macros ahead of default macros, and
+      // the tasks register their openers (Recall Facts, the screech, McTwist) through
+      // monsterMacro() as default macros. A per-monster rung therefore ran first and ended
+      // the fight before the opener: 2026-09-05 `:3258` Shattering Punch #2 killed the last
+      // habitat golem with the screech still queued behind it, and the screech then went on
+      // a paid baguette lady. Free monsters never get a rung: they cost no turn to kill.
       const upgradeKill = (monster?: Monster): void => {
+        if (monster && freeMonsters.includes(monster)) return;
         const dropsMatter = freeKillTargetDropsMatter(location, monster);
         if (dropsMatter === undefined) return;
         const source = firstEquippable(outfit, (exclude) =>
@@ -357,11 +365,15 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         if (source) rungs.step(source.do);
         rungs.step(clubRung);
         if (rungs.components.length === 0) return;
-        const step =
-          monster === undefined && reserved.length > 0
+        if (monster !== undefined) {
+          combat.macro(Macro.if_(`monsterid ${monster.id}`, rungs));
+          return;
+        }
+        combat.macro(
+          reserved.length > 0
             ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, rungs)
-            : rungs;
-        combat.macro(step, monster);
+            : rungs,
+        );
       };
       if (combat.getDefaultAction() === "kill") {
         upgradeKill();

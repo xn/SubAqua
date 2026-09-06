@@ -153,9 +153,14 @@ export function outpostQuest(): Quest {
         completed: () => stashboxDone(),
         do: outpost,
         freeRunBanishes: true,
+        // Healers are run, not killed: the lockkey has dropped by the time this task is
+        // ready (2026-09-05 `:3206` key, `:3218` first stashbox adventure) and healscrolls
+        // are long since plentiful, so a healer here is only a fight between us and the tent
+        // NC. The free-run chain takes a banish (freeRunBanishes) or a free kill, whichever
+        // is left; the three paid healers of 2026-09-05 (`:3334` `:3383` `:3441`) were
+        // .kill() with the ladder already spent and three Snokebombs in hand.
         combat: new CombatStrategy()
           .macro(monsterMacro(screechOpener, golem))
-          .kill($monster`Mer-kin healer`)
           .kill(golem)
           .freeRun(),
         outfit: () => ({
