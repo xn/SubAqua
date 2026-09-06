@@ -22,4 +22,9 @@ export type Task = {
   batWings?: boolean;
   /** Set false to keep the bang-potion identification throws off this task's fights. */
   bangPotions?: boolean;
+  /**
+   * Monsters worth a Club 'Em Across the Battlefield table roll, best first. When set and the
+   * club has uses left, the engine wears the club and clubs after the free kills fail.
+   */
+  clubTarget?: Monster | Monster[] | (() => Monster | Monster[] | undefined);
 } & BaseTask<CombatActions>;

@@ -6,6 +6,7 @@ import {
   Item,
   Monster,
   monsterAttack,
+  monsterHp,
   mpCost,
   myBuffedstat,
   myClass,
@@ -50,13 +51,25 @@ const gladiators = [
   $monster`Ringogeorge, the Bladeswitcher`,
 ];
 
-function reflectStall(monster: Monster, text: string): number {
-  if (monster !== bladeswitcher) return 0;
-  if (text.includes("twirling his blade around himself")) return 10;
-  if (text.includes("an especially dope move")) return 11;
-  return 0;
+// The bladeswitcher's bust (wiki, Mer-kin bladeswitcher): "an especially dope move" is the
+// wind-up, and the action submitted after it still lands; "twirling his blade around
+// himself" is the reflect going live, after which the monster takes 1 damage from every
+// source and hands our damage back to us, nominally for ten rounds. In practice the logged
+// fights (08-16, 08-24, 08-25, 08-27, 08-28, 09-05) show the reflect lapsing and re-arming in
+// windows of 3-8 rounds, so a fixed countdown that re-arms on every twirl stalls straight
+// through the clear windows and then dies on the round-30 limit or the attack floor. The
+// state is therefore read off evidence each round: a round in which the monster lost more
+// than 1 HP (the familiar's hit went through) means the reflect is off.
+function reflectTell(monster: Monster, text: string): "windup" | "twirl" | undefined {
+  if (monster !== bladeswitcher) return undefined;
+  if (text.includes("twirling his blade around himself")) return "twirl";
+  if (text.includes("an especially dope move")) return "windup";
+  return undefined;
 }
 
+// One round that deals no damage. Thrown heals first, then Curse of Weaksauce, which
+// delevels without damaging; a plain attack into a live reflect is a 400-500 HP hit to us
+// (09-05 t36: three of them lost the fight), so it is the floor only once the MP is gone.
 function stallAction(): string {
   if (myHp() * 2 < myMaxhp() && stallSpare($item`sea gel`)) {
     return Macro.tryItem($item`sea gel`).toString();
@@ -69,6 +82,10 @@ function stallAction(): string {
     return Macro.tryItem($item`Doc Galaktik's Pungent Unguent`).toString();
   }
   if (stallSpare($item`sea gel`)) return Macro.tryItem($item`sea gel`).toString();
+  const weaksauce = $skill`Curse of Weaksauce`;
+  if (have(weaksauce) && myMp() >= mpCost(weaksauce)) {
+    return Macro.trySkill(weaksauce).toString();
+  }
   return Macro.attack().toString();
 }
 
@@ -108,8 +125,9 @@ export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
 }
 
 export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {}): CombatFilter {
-  let stallLeft = 0;
-  let stalled = 0;
+  let reflectLive = false;
+  let reflectRound = -1;
+  let lastMonsterHp = -1;
   let openersDone = false;
   let microUsed = false;
   let spinnerUsed = false;
@@ -133,23 +151,27 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
         );
     } else {
       stuck = 0;
-      if (stallLeft > 0) {
-        stallLeft -= 1;
-        stalled += 1;
-      }
     }
     lastRound = here;
 
     const ours = opts.gym ? monster.phylum === $phylum`mer-kin` : gladiators.includes(monster);
     if (!ours) return killMacro(false).toString();
 
-    const renewed = reflectStall(monster, text);
-    if (renewed > 0 && stalled < 14 && renewed > stallLeft) stallLeft = renewed;
-    if (stallLeft === 0 && monster === bladeswitcher && lastHp >= 0 && lastHp - myHp() > 400) {
-      stallLeft = 10;
+    const foeHp = monsterHp();
+    if (reflectLive) {
+      const landed = lastMonsterHp >= 0 && lastMonsterHp - foeHp > 1;
+      if (landed || here - reflectRound >= 10) reflectLive = false;
+    }
+    const tell = reflectTell(monster, text);
+    const bitten = monster === bladeswitcher && lastHp >= 0 && lastHp - myHp() > 400;
+    if (tell === "twirl" || bitten) {
+      reflectLive = true;
+      reflectRound = here;
     }
     lastHp = myHp();
-    if (stallLeft > 0) return stallAction();
+    lastMonsterHp = foeHp;
+    if (reflectLive) return stallAction();
+    // A wind-up is not a stall: the next hit still lands, and a kill here skips the reflect.
 
     if (opts.gym) {
       if (get("dreadScroll2", 0) === 0 && itemAmount($item`Mer-kin healscroll`) > 0) {

@@ -143,7 +143,11 @@ export function kramcoIfDue(): Item[] {
 export function chooseItemFamiliar(): Familiar {
   const jill = $familiar`Jill-of-All-Trades`;
   const haveUnderwaterFamEquipment = familiarWaterBreathingEquipment.some((item) => have(item));
-  if (have(jill) && (jill.underwater || haveUnderwaterFamEquipment)) return jill;
+  // Jill is only a 1x fairy until her LED candle drops; before that the Red-Nosed Snapper
+  // (1.5x underwater, mafia's Fairy: [1+0.5*env(underwater)]) wins the scoring below.
+  if (have(jill) && have($item`LED candle`) && (jill.underwater || haveUnderwaterFamEquipment)) {
+    return jill;
+  }
   const candidates = Familiar.all()
     .filter(
       (fam) =>

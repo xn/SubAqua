@@ -6,6 +6,7 @@ import {
   itemAmount,
   Location,
   Monster,
+  myBasestat,
   myFamiliar,
   Skill,
 } from "kolmafia";
@@ -23,6 +24,8 @@ import {
   Macro,
 } from "libram";
 
+import { haveGem, wornOrMounted } from "../lib/codpiece";
+
 import { currentPolicy } from "./policy";
 import { activeHolders, ChargeReservation } from "./reservation";
 import { CombatResource } from "./resource";
@@ -36,8 +39,13 @@ export type FreeKillSource = CombatResource & {
   avoidAt?: Location[];
 };
 
+// libram's availableCasts wants the BCZ in inventory; a mounted gem is out of inventory but
+// still casts through the worn codpiece, so the affordability check is redone here.
 export function bczAffordable(skill: Skill, mainstatFloor: number): boolean {
-  return BloodCubicZirconia.availableCasts(skill, mainstatFloor) > 0;
+  if (!haveGem($item`blood cubic zirconia`)) return false;
+  const substat = BloodCubicZirconia.substatUsed(skill);
+  if (!substat) return false;
+  return myBasestat(substat) - BloodCubicZirconia.skillCost(skill) >= mainstatFloor ** 2;
 }
 
 function bczSweatBulletsAffordable(): boolean {
@@ -94,8 +102,8 @@ export const freeKillSources: FreeKillSource[] = [
   },
   {
     name: "BCZ: Sweat Bullets",
-    available: () => have($item`blood cubic zirconia`) && bczSweatBulletsAffordable(),
-    remaining: () => (have($item`blood cubic zirconia`) && bczSweatBulletsAffordable() ? 1 : 0),
+    available: bczSweatBulletsAffordable,
+    remaining: () => (bczSweatBulletsAffordable() ? 1 : 0),
     equip: $item`blood cubic zirconia`,
     do: Macro.trySkill($skill`BCZ: Sweat Bullets`),
     colosseumSafe: false,
@@ -232,7 +240,7 @@ export function selectFreeKill(
 
 function gearWorn(equip: FreeKillSource["equip"]): boolean {
   if (equip === undefined) return true;
-  if (equip instanceof Item) return haveEquipped(equip);
+  if (equip instanceof Item) return wornOrMounted(equip);
   if (equip instanceof Familiar) return myFamiliar() === equip;
   const specs = Array.isArray(equip) ? equip : [equip];
   return specs.every((spec) => (spec.equip ?? []).every((item) => haveEquipped(item)));

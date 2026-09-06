@@ -54,6 +54,7 @@ import {
   uneffect,
 } from "libram";
 
+import { codpiece, gemMounted } from "../lib/codpiece";
 import { dreadSeedCheck } from "../lib/dreadscroll";
 import { assertOnGoldPace, fightHappened, recordTask, reportLedger } from "../lib/gold";
 import {
@@ -72,6 +73,12 @@ import {
   unidentifiedBangPotions,
 } from "../resources/bangpotions";
 import { banishChainMacro, pickBanishSource, sourceMacro } from "../resources/banish";
+import {
+  battlefieldMacro,
+  battlefieldUsesLeft,
+  legendaryClub,
+  setClubTargets,
+} from "../resources/club";
 import { emergencyDiet, maintainFishy, maintainWaterproofly } from "../resources/fishy";
 import {
   freeKillChain,
@@ -115,6 +122,9 @@ function equipResource(
   outfit: Outfit,
   equipment: Item | Familiar | OutfitSpec | OutfitSpec[],
 ): boolean {
+  // A gem mounted in the codpiece grants its skills while the codpiece is worn, so asking for
+  // the gem means asking for the codpiece.
+  if (equipment instanceof Item && gemMounted(equipment)) equipment = codpiece;
   const apply = (target: Outfit): boolean =>
     Array.isArray(equipment)
       ? equipment.reduce((ok, spec) => target.equip(spec) && ok, true)
@@ -239,6 +249,22 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
 
     const location = task.do instanceof Location ? task.do : undefined;
+
+    // Club 'Em Across the Battlefield: paid insta-kill plus a second table (choice 1589). It
+    // follows the free kills in every kill ladder below, so the paid turn also rolls the
+    // task's wanted table.
+    const clubWanted = undelay(task.clubTarget);
+    const clubTargets = clubWanted === undefined ? [] : [clubWanted].flat();
+    const clubRung =
+      clubTargets.length > 0 && battlefieldUsesLeft() > 0 && outfit.equip(legendaryClub)
+        ? battlefieldMacro()
+        : new Macro();
+    setClubTargets(clubRung.components.length > 0 ? clubTargets : []);
+    const killLadder = (): Macro =>
+      freeKillChain({ location, dropsMatter: true })
+        .reduce((macro, rung) => macro.step(rung.do), new Macro())
+        .step(clubRung);
+
     if (combat.can("banish")) {
       const banisher = firstEquippable(outfit, (exclude) => pickBanishSource(location, exclude));
       if (banisher) {
@@ -288,7 +314,10 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         if (!outfit.equip($item`Fourth of May Cosplay Saber`)) return false;
         this.propertyManager.setChoice(1387, 3);
         resources.provide("forceItems", {
-          do: () => Macro.trySkill($skill`Use the Force`).step(fallbackMacro()),
+          do: () =>
+            Macro.trySkill($skill`Use the Force`)
+              .step(killLadder())
+              .step(fallbackMacro()),
         });
         return true;
       };
@@ -296,7 +325,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         const ray = selectYellowRay();
         if (!ray) return false;
         if (ray.equip !== undefined && !equipResource(outfit, ray.equip)) return false;
-        resources.provide(action, { do: () => Macro.step(ray.do).step(fallbackMacro()) });
+        resources.provide(action, {
+          do: () => Macro.step(ray.do).step(killLadder()).step(fallbackMacro()),
+        });
         return true;
       };
       if (saberFirst) {
@@ -316,19 +347,33 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           ...freeMonsters,
         ]),
       ];
+      // The rung goes in as a default (non-monster) macro, guarded by monster id, rather than
+      // a per-monster one: grimoire compiles per-monster macros ahead of default macros, and
+      // the tasks register their openers (Recall Facts, the screech, McTwist) through
+      // monsterMacro() as default macros. A per-monster rung therefore ran first and ended
+      // the fight before the opener: 2026-09-05 `:3258` Shattering Punch #2 killed the last
+      // habitat golem with the screech still queued behind it, and the screech then went on
+      // a paid baguette lady. Free monsters never get a rung: they cost no turn to kill.
       const upgradeKill = (monster?: Monster): void => {
+        if (monster && freeMonsters.includes(monster)) return;
         const dropsMatter = freeKillTargetDropsMatter(location, monster);
         if (dropsMatter === undefined) return;
         const source = firstEquippable(outfit, (exclude) =>
           selectFreeKill({ location, target: monster, dropsMatter, exclude }),
         );
-        if (!source) return;
-        const step =
-          monster === undefined && reserved.length > 0
-            ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, source.do)
-            : source.do;
-        if (step.components.length === 0) return;
-        combat.macro(step, monster);
+        const rungs = new Macro();
+        if (source) rungs.step(source.do);
+        rungs.step(clubRung);
+        if (rungs.components.length === 0) return;
+        if (monster !== undefined) {
+          combat.macro(Macro.if_(`monsterid ${monster.id}`, rungs));
+          return;
+        }
+        combat.macro(
+          reserved.length > 0
+            ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, rungs)
+            : rungs,
+        );
       };
       if (combat.getDefaultAction() === "kill") {
         upgradeKill();

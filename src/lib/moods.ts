@@ -150,6 +150,29 @@ export function superItemDropEffects(): Effect[] {
   return trimSongs(effects);
 }
 
+// Familiar weight: the boots' free runaways scale with weight, and the mimic's egg experience
+// comes faster on a heavier familiar. Best Pals needs the Heartstone worn or mounted in a worn
+// codpiece, so cast this after dress.
+export function familiarWeightEffects(): Effect[] {
+  const effects: Effect[] = [];
+  if (have($skill`Empathy of the Newt`)) effects.push($effect`Empathy`);
+  if (have($skill`Leash of Linguini`)) effects.push($effect`Leash of Linguini`);
+  if (have($skill`Heartstone: %pals`) && get("_heartstonePalsUsed", 0) < 5)
+    effects.push($effect`Best Pals`);
+  return trimSongs(effects);
+}
+
+// Familiar experience from castable skills only: Curiosity of Br'er Tarrypin (+1) is the one
+// class buff; Best Pals (+1) rides in with the weight mood. The rest of the +exp effects come
+// from consumables and are not worth a turn or a pull here.
+export function familiarExpEffects(): Effect[] {
+  const effects: Effect[] = [];
+  if (have($skill`Curiosity of Br'er Tarrypin`)) {
+    effects.push($effect`Curiosity of Br'er Tarrypin`);
+  }
+  return trimSongs(effects);
+}
+
 export function squintEffects(): Effect[] {
   if (!have($skill`Steely-Eyed Squint`) || get("_steelyEyedSquintUsed")) return [];
   return [$effect`Steely-Eyed Squint`];
