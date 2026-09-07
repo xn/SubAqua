@@ -29,10 +29,11 @@ import {
   set,
 } from "libram";
 
+import { scubaTanks } from "../engine/outfit";
 import { Quest } from "../engine/task";
 import { bangPotions } from "../resources/bangpotions";
 import { currentPolicy } from "../resources/policy";
-import { discretionaryPull } from "../resources/pulls";
+import { discretionaryPull, pullSequence } from "../resources/pulls";
 
 const pearl = $item`unblemished pearl`;
 const sheriffOutfit = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
@@ -274,6 +275,13 @@ export function initQuest(): Quest {
             if (have(it)) continue;
             if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
               continue;
+            // The Old Man hands out the trunks, but lasso training wears the cowboy hat + chaps
+            // and only a SCUBA tank breathes under them; without one the first underwater
+            // training task throws, so the tank is pulled at every tier (low included).
+            if (it === $item`Elf Guard SCUBA tank` && !scubaTanks.some((tank) => have(tank))) {
+              pullSequence(it);
+              continue;
+            }
             discretionaryPull(it);
           }
           const cmoi = $item`Congressional Medal of Insanity`;
