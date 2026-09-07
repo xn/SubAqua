@@ -5,6 +5,7 @@ import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
+import { selectFreeKill } from "../../resources/freekill";
 
 const pellet = $item`wriggling flytrap pellet`;
 const flytrap = $monster`Neptune flytrap`;
@@ -28,7 +29,8 @@ export function pelletQuest(opts: { swordLane: boolean }): Quest {
     tasks: [
       {
         name: "Flytrap Imprint",
-        ready: () => laneOpen() && !imprinted(),
+        ready: () =>
+          laneOpen() && !imprinted() && selectFreeKill({ dropsMatter: true }) !== undefined,
         completed: () => imprinted() || have(pellet) || monkeesStep() >= 0,
         do: garden,
         peridot: flytrap,
@@ -86,7 +88,10 @@ export function pelletQuest(opts: { swordLane: boolean }): Quest {
       },
       {
         name: "Garden Pellet",
-        ready: () => !swordLaneReady(opts.swordLane) || get("_archSpadeDigs", 0) >= 11,
+        ready: () =>
+          !swordLaneReady(opts.swordLane) ||
+          get("_archSpadeDigs", 0) >= 11 ||
+          selectFreeKill({ dropsMatter: true }) === undefined,
         completed: () => monkeesStep() >= 0 || have(pellet),
         do: garden,
         peridot: flytrap,

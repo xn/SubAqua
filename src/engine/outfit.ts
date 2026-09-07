@@ -69,7 +69,7 @@ export function lassoExpert(): boolean {
   return get("lassoTraining") === "expertly" || get("lassoTrainingCount", 0) >= 20;
 }
 
-const scubaTanks = $items`old SCUBA tank, Elf Guard SCUBA tank`;
+export const scubaTanks = $items`old SCUBA tank, Elf Guard SCUBA tank`;
 const trainingBlockedGear = $items`really\, really nice swimming trunks`;
 
 export function preferredBreathingGear(): Item[] {

@@ -11,6 +11,7 @@ export const args = Args.create(
         ["sim", "Print the readiness checklist; no turns, purchases, or server writes"],
       ],
       default: "run",
+      setting: "",
     }),
     tier: Args.string({
       help: "Shiny-tier override; 'auto' detects from owned items and garbo_valueOfFreeFight.",
