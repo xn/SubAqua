@@ -1,6 +1,5 @@
 subaqua sim — 2026-09-06, pre-ascension, Pastamancer, mid tier. This character then ran the
-route in 36 turns (pearls were mounted after this printout). Familiar rows show pet nicknames;
-sim prints the familiar type from the next build on.
+route in 36 turns (pearls were mounted after this printout).
 
 > subaqua sim
 
@@ -27,6 +26,7 @@ IoTMs (Highly Recommended)
 ✓ backup camera - Copies: cow cowbells, healer prayerbeads, free-monster re-fights (11/day)
 ✓ bat wings - Swoop procs make paid Colosseum rounds free (gold: 3 procs)
 ✓ blood cubic zirconia - Refracted Gaze on the cow and the school; Blood Bath; Sweat Bullets free kills (low/mid)
+✓ Chest Mimic - Mimic eggs: the second diver copy without a locket charge
 ✓ closed-circuit pay phone - Rufus: the Shadow Rift quest and its free fights; opens the guild lane
 ✓ combat lover's locket - Reminisces: the first diver, the screech golem, the Sword Imprint cowboy
 ✗ cosmic bowling ball - Bowl a Curveball: the banish that comes back every few fights
@@ -42,13 +42,12 @@ IoTMs (Highly Recommended)
 ✓ Sept-Ember Censer - Septapus summoning charms for the shadow slab; owned shadow bricks are free kills (up to 13)
 ✓ server room key - Cyberzone: OVERCLOCK Mom lane, free cyber eye fights
 ✓ spring shoes - Spring Away free run (pantry), Spring Kick
-✓ Wanklin - Mimic eggs: the second diver copy without a locket charge
 
 Familiars (Highly Recommended)
-✓ Buginald - Patriotic Screech banishes constructs for the Bakery/habitat lanes
-✓ Curby - Free runaways: the corral taming familiar and the guild test fights
-✓ Gagarth - Part of the cyber kit (eagle + server room key + OVERCLOCK + Glover); without the kit Mom goes through the paid Abyss
-✓ Husevelt OR Ghost Fart Dress - -combat familiar for the NC hunts; the Peace Turkey is the mandated Shub-Jigguwatt familiar
+✓ Glover - Part of the cyber kit (eagle + server room key + OVERCLOCK + Glover); without the kit Mom goes through the paid Abyss
+✓ Pair of Stomping Boots - Free runaways: the corral taming familiar and the guild test fights
+✓ Patriotic Eagle - Patriotic Screech banishes constructs for the Bakery/habitat lanes
+✓ Peace Turkey OR Disgeist - -combat familiar for the NC hunts; the Peace Turkey is the mandated Shub-Jigguwatt familiar
 
 Skills (Highly Recommended)
 ✓ Cannelloni Cocoon - The sanctioned full heal before Yog-Urt
@@ -101,13 +100,13 @@ IoTMs (Optional)
 ✗ V for Vivala mask - Mask buffs
 
 Familiars (Optional)
-✓ Icy Ab OR Ressa peepee - Experience familiar for the boss fights when there is no Chest Mimic
-✓ Oemaba - The Sea Jelly harvest at init
-✓ Overworked Pun - Item familiar; only a 1x fairy until her LED candle drops (turn ~16)
-✓ Rufidolsph OR Gonnifer - Underwater item familiar fallback when the fairy scan has nothing better
-✓ Sithriel Hieronymous Corvatus - Free kid fights (dude phylum)
-✓ SsÃAring;Egrave;Aring;Aring;& - Sword Imprint on the cowboy: lasso lane
-✓ Wusevelt - Foul Ball free fights
+✓ Artistic Goth Kid - Free kid fights (dude phylum)
+✓ Cooler Yeti OR Cookbookbat - Experience familiar for the boss fights when there is no Chest Mimic
+✓ Foul Ball - Foul Ball free fights
+✓ Jill-of-All-Trades - Item familiar; only a 1x fairy until her LED candle drops (turn ~16)
+✓ Red-Nosed Snapper OR Grouper Groupie - Underwater item familiar fallback when the fairy scan has nothing better
+✓ Space Jellyfish - The Sea Jelly harvest at init
+✓ Sword of S Words - Sword Imprint on the cowboy: lasso lane
 
 Skills (Optional)
 ✓ Ambidextrous Funkslinging - Two-item throws halve the Yog-Urt rounds
