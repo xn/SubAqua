@@ -761,7 +761,8 @@ function checkThing(thing: Thing, locket: LocketState): CheckResult {
   if (thing instanceof Hardcoded) {
     return { have: thing.have, label: thing.name, note: thing.note, unknown: thing.unknown };
   }
-  if (thing instanceof Familiar) return { have: have(thing), label: thing.name, note: "" };
+  // Familiar.name is the pet's nickname; the type name is its string form.
+  if (thing instanceof Familiar) return { have: have(thing), label: `${thing}`, note: "" };
   if (thing instanceof Skill) return { ...checkSkill(thing), label: thing.name };
   if (thing instanceof Monster) {
     return { have: locket.unlocked.has(thing), label: thing.name, note: "" };
