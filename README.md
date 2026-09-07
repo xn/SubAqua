@@ -43,6 +43,12 @@ that are mounted, and items the run can reach (inventory, Hagnk's, equipped,
 installed workshed; it flags the closet and display case). It never spends
 anything or writes a preference.
 
+Reference run: on 2026-09-06 a Pastamancer at mid tier, with the sim output in
+`docs/2026-09-06-sim-pastamancer.txt` (everything necessary green once the
+pearls were mounted; missing only the cosmic bowling ball, Pill Keeper,
+GAP/navel ring, KGB, Time-Spinner, Vivala mask and Source Terminal) finished
+the route in **36 turns**.
+
 The gold guard (`gold=true`) is on by default and aborts the first time a paid
 turn lands more than `goldSlack` (3) turns past the reference 41-turn run's
 checkpoint. If `sim` shows missing recommended rows, run with `gold=false` so
