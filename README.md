@@ -43,11 +43,187 @@ that are mounted, and items the run can reach (inventory, Hagnk's, equipped,
 installed workshed; it flags the closet and display case). It never spends
 anything or writes a preference.
 
-Reference run: on 2026-09-06 a Pastamancer at mid tier, with the sim output in
-`docs/2026-09-06-sim-pastamancer.txt` (everything necessary green once the
-pearls were mounted; missing only the cosmic bowling ball, Pill Keeper,
-GAP/navel ring, KGB, Time-Spinner, Vivala mask and Source Terminal) finished
-the route in **36 turns**.
+Reference run: on 2026-09-06 a Pastamancer at mid tier with the readout below
+(everything necessary green once the pearls were mounted; missing only the
+cosmic bowling ball, Pill Keeper, GAP/navel ring, KGB, Time-Spinner, Vivala
+mask and Source Terminal) finished the route in **36 turns**.
+
+<details>
+<summary><code>subaqua sim</code> readout for that run (pre-ascension, before mounting the pearls)</summary>
+
+```text
+> subaqua sim
+
+Checking your character (pre-ascension) at tier mid... Legend: ✓ Have / ✗ Missing & Necessary (the script aborts) / ✗ Missing & Recommended or Optional
+
+IoTMs (Necessary)
+✓ The Eternity Codpiece - The only way to bring the Seaceress's 5 unblemished pearls into the path (init/finale abort)
+
+Miscellany (Necessary)
+✓ 4 of the mid-tier Leprecondo layout pieces discovered (8/4) - The Leprecondo init task throws its try limit when it cannot place a full layout; discover more furniture or stash the Leprecondo
+✗ 5 unblemished pearls MOUNTED in the Eternity Codpiece (0/5 mounted) (10 loose in inventory: loose pearls do not survive ascension) - Pearls cannot be obtained inside the path; init aborts short of 5 (finale needs them)
+✓ a clan photobooth (e.g. BAFH) handing out the Sheriff kit - Init takes the Sheriff kit from the booth and throws without a booth (aborts if the booth hands out another kit); Assert your Authority is 3 free kills (low/mid)
+✓ Anemone Mine unlocked - Mine Teflon digs there; Muscle classes also run Find Grandpa there
+✓ a summon source for the Black Crayon Golem: locket unlock OR a clan fax machine with a faxbot that carries it - Golem Recall is ready whenever Just the Facts is known and aborts with no summon source
+✓ a summon source for the unholy diver: locket unlock OR a clan fax machine with a faxbot that carries it - Diver Summon runs at low/mid and aborts when the locket, a charged mimic, a clan fax and a pocket wish are all unavailable
+✓ autoSatisfyWithNPCs = true - main.ts refuses to start without it
+✓ a workshed (installed, or one of Asdon / model train set / Mayo Clinic / TakerSpace to install) - The Workshed init task throws its try limit with nothing to install; Asdon fuels Driving Waterproofly, TakerSpace crafts the anchor bomb
+✓ The Marinara Trench unlocked - Find Grandpa and the wanderer redemptions for Mysticality classes stall to their limit without it (necessary for your current class)
+
+IoTMs (Highly Recommended)
+✓ 2002 Mr. Store Catalog - Catalog credits: pro skateboard (McTwist doubles cow drops, low/mid) + VHS tapes; tier marker
+✓ Apriling band helmet - Tuba: 3 NC forces (Wreck hatch, shadow rift, skate park); piccolo/quad tom second
+✓ august scepter - Aug 2nd clover day for pristine scales; waffle day (low/mid); tier marker
+✓ backup camera - Copies: cow cowbells, healer prayerbeads, free-monster re-fights (11/day)
+✓ bat wings - Swoop procs make paid Colosseum rounds free (gold: 3 procs)
+✓ blood cubic zirconia - Refracted Gaze on the cow and the school; Blood Bath; Sweat Bullets free kills (low/mid)
+✓ Chest Mimic - Mimic eggs: the second diver copy without a locket charge
+✓ closed-circuit pay phone - Rufus: the Shadow Rift quest and its free fights; opens the guild lane
+✓ combat lover's locket - Reminisces: the first diver, the screech golem, the Sword Imprint cowboy
+✗ cosmic bowling ball - Bowl a Curveball: the banish that comes back every few fights
+✓ cursed monkey's paw - Wishes: prayerbeads/rivets in place of an Outpost visit (1 turn); tier marker
+✓ Everfull Dart Holster - Bullseye free kill; at high tier (dartsOnly) the darts and the parka spit are the only free kills
+✓ Fourth of May Cosplay Saber - Use the Force: 2 divers = 8 rivets, healer prayerbeads, researcher scrolls (5/day)
+✓ Jurassic Parka - Spikolodon spikes = 5 NC forces; the spit is the run's one yellow ray and a free kill at every tier (needs Torso Awareness)
+✓ legendary seal-clubbing club - Club 'Em Across the Battlefield on corral draws, Club 'Em Into Next Week on the golem; Club 'Em Back in Time free kill (mid)
+✓ Lil' Doctor™ bag - Reflex Hammer banish; Chest X-Ray 3 free kills (low/mid)
+✓ McHugeLarge duffel bag - Avalanche: 3 NC forces
+✓ Monodent of the Sea - Talk to Some Fish: a cheatsheet on every school fight, pristine scales
+✓ Peridot of Peril - One forced encounter per zone per day: diver, flytrap, cow, cowboy, monitor, eye in the darkness
+✓ Sept-Ember Censer - Septapus summoning charms for the shadow slab; owned shadow bricks are free kills (up to 13)
+✓ server room key - Cyberzone: OVERCLOCK Mom lane, free cyber eye fights
+✓ spring shoes - Spring Away free run (pantry), Spring Kick
+
+Familiars (Highly Recommended)
+✓ Glover - Part of the cyber kit (eagle + server room key + OVERCLOCK + Glover); without the kit Mom goes through the paid Abyss
+✓ Pair of Stomping Boots - Free runaways: the corral taming familiar and the guild test fights
+✓ Patriotic Eagle - Patriotic Screech banishes constructs for the Bakery/habitat lanes
+✓ Peace Turkey OR Disgeist - -combat familiar for the NC hunts; the Peace Turkey is the mandated Shub-Jigguwatt familiar
+
+Skills (Highly Recommended)
+✓ Cannelloni Cocoon - The sanctioned full heal before Yog-Urt
+✓ Curse of Weaksauce - The opener in every kill macro; the bladeswitcher stall floor
+✓ Deep Dark Visions - The only source of dreadscroll clue 3; without it the solve leans on the seed tables
+✓ Emotionally Chipped - Feel Hatred banishes, Feel Lonely -combat, Feel Nostalgic on corral draws
+✓ Gingerbread Mob Hit - One free kill a day
+✓ OVERCLOCK(10) - Ten free Cyberzone fights for the Mom lane
+✓ Saucegeyser OR Saucestorm - The finisher in every kill macro; without one, fights run on plain attacks
+✓ Shattering Punch - Three free kills a day
+✓ Snokebomb - Three banishes a day
+✓ Steely-Eyed Squint - Once-a-day +item spike on a forced drop fight
+✓ Tongue of the Walrus - Clears Beaten Up without resting
+✓ Torso Awareness - Without it the Jurassic Parka never equips: no spit yellow ray, no spikolodon forces
+✓ Unaccompanied Miner - Five free mine picks a day; otherwise a lodestone pull (mall) carries the teflon ore, and with neither the mine aborts
+
+Miscellany (Highly Recommended)
+✓ fishy pipe (inventory or Hagnk's) - First Fishy source; sushi, fish sauce and the pull meal are the fallbacks
+✓ Madness Reef unlocked - Rough scale fallback when the mine runs dry
+✓ old SCUBA tank OR Elf Guard SCUBA tank - The only breather that fits under the lasso-training hat + chaps (the Old Man hands out the trunks, bathysphere and sushi mat at init); init pulls an Elf Guard tank from the mall if none is owned (1 pull, every tier) and aborts if that buy fails
+✓ The Dive Bar unlocked - Find Grandpa and the wanderer redemptions for Moxie classes stall to their limit without it (necessary only if you ascend as that stat's class)
+✓ The Skate Park unlocked - Skate war and the skate lutz Fishy source
+
+Combat Lover's Locket monsters (Highly Recommended)
+✓ Black Crayon Golem - Golem Recall: crayon shavings, screech host
+✓ sea cowboy - Sword Imprint lane
+✓ unholy diver - Diver Summon: the first Forced diver (4 rivets)
+
+IoTMs (Optional)
+✓ April Shower Thoughts shield - Shower buffs
+✓ Archaeologist's Spade - The Skeleton Store pellet lane with the Sword of S Words (low/mid)
+✓ Cincho de Mayo - Fiesta Exit NC force, Party Foul banish
+✓ durable dolphin whistle - Re-fights a dolphin-stolen route drop
+✗ Eight Days a Week Pill Keeper - Sneakisol NC force
+✓ Flash Liquidizer Ultra Dousing Accessory - Douse Foe on the shadow slab (a discretionary pull, mid/high)
+✗ Greatest American Pants OR navel ring of navel gazing - Free runaways; skips the peppermint parasol late pull
+✓ Heartstone - Heartstone banish and %pals/Ultraheart (the banish and buff unlocks must be bought)
+✓ January's Garbage Tote - Tote gear
+✓ Kramco Sausage-o-Matic™ - Sausage goblins advance NC counters for free
+✗ Kremlin's Greatest Briefcase - KGB dart banish
+✓ latte lovers member's mug - Latte banish
+✓ Leprecondo - Furniture buffs (layout per tier; see the layout row under Miscellany)
+✓ mafia middle finger ring - Once-a-day banish
+✓ Mayam Calendar - Daily resources
+✓ miniature crystal ball - The Outpost screech reads its prediction (never worn in a fight)
+✓ Platinum Yendorian Express Card - Pulled and used on Shadow Affinity (low/mid)
+✓ tearaway pants - Tear Away your Pants! on the tumbleweed
+✗ Time-Spinner - Thrown at underleveled gladiators
+✓ unwrapped knock-off retro superhero cape - Cape modes
+✗ V for Vivala mask - Mask buffs
+
+Familiars (Optional)
+✓ Artistic Goth Kid - Free kid fights (dude phylum)
+✓ Cooler Yeti OR Cookbookbat - Experience familiar for the boss fights when there is no Chest Mimic
+✓ Foul Ball - Foul Ball free fights
+✓ Jill-of-All-Trades - Item familiar; only a 1x fairy until her LED candle drops (turn ~16)
+✓ Red-Nosed Snapper OR Grouper Groupie - Underwater item familiar fallback when the fairy scan has nothing better
+✓ Space Jellyfish - The Sea Jelly harvest at init
+✓ Sword of S Words - Sword Imprint on the cowboy: lasso lane
+
+Skills (Optional)
+✓ Ambidextrous Funkslinging - Two-item throws halve the Yog-Urt rounds
+✓ Astral Shell OR Elemental Saucesphere - Elemental resistance for the pearl zones
+✓ Aug. 2nd: Find an Eleven-Leaf Clover Day - Lucky! for pristine scales and sand dollars
+✓ Empathy of the Newt - Cast before Shub-Jigguwatt; familiar weight
+✓ Fat Leon's Phat Loot Lyric OR Singer's Faithful Ocelot OR The Polka of Plenty OR Donho's Bubbly Ballad OR Leash of Linguini - +item mood
+✓ Just the Facts - Golem Recall (crayon shavings, screech host), the Abyss habitat/Cyber Mom lane, pocket-wish summons; needs a golem summon source (see Miscellany)
+✓ Meteor Lore - Micrometeorite in the kill macros
+✓ Raise Backup Dancer - Extra damage on the Nautical Seaceress
+✓ Ruthless Efficiency - Cast before Shub-Jigguwatt
+✓ Stuffed Mortar Shell - Extra nuke on gladiators and the Seaceress
+✓ The Sonata of Sneakiness OR Smooth Movement - -combat mood
+
+Miscellany (Optional)
+✗ Source Terminal - Duplicate on the monitor, enhance items
+
+Pull check — Hagnk's stock (counted pulls; 2015+ Mr. Store items auto-pull for free):
+Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to buyLimit = 20000 (autoBuyPriceLimit, or buyLimit=); a pricier item aborts the run at that point.
+✓ Mer-kin sneakmask
+✓ shark jumper
+✓ scale-mail underwear — skipped with a Kramco
+✓ Elf Guard SCUBA tank — pulled at every tier when no SCUBA tank is owned (lasso training); discretionary otherwise
+✓ Flash Liquidizer Ultra Dousing Accessory
+✓ Congressional Medal of Insanity — optional; pulled only from Hagnk's, never mall-bought
+✗ ten-leaf clover — mall-bought if the route needs it — bang potions (blessed large box)
+✗ large box — mall-bought if the route needs it — bang potions (blessed large box)
+✗ Mer-kin hidepaint — mall-bought if the route needs it
+✓ Mer-kin digpick — low tier farms it in the mine
+✓ Platinum Yendorian Express Card — stock only; low/mid
+✗ Greatest American Pants — mall-bought if the route needs it — stock only; guild test free runs
+✓ lodestone — only without Unaccompanied Miner picks
+✓ damp old wallet — optional shortcut with three fallbacks; the route hands you next run's wallet
+✓ 11-leaf clover
+✓ rusty rivet — only if the paw wishes leave the count at 7
+✓ sea lasso — usually a drop or a wish
+✓ sea cowbell
+✗ software glitch — mall-bought if the route needs it — only without a backup camera (high tier)
+✓ comb jelly
+✓ Mer-kin prayerbeads — after the paw wishes
+✓ Mer-kin healscroll — fallback; the researcher Force is the source
+✓ Mer-kin worktea — fallback; the library alphabetizer drops it
+✓ Mer-kin knucklebone — safety net; the library farm is the source
+✓ Mer-kin cheatsheet — fallback; Talk to Some Fish is the source
+✓ Mer-kin hallpass
+✓ skate blade
+✓ null-day exploit
+✗ New Age healing crystal — mall-bought if the route needs it — Yog-Urt heal fallback
+✓ soggy used band-aid — Yog-Urt heal fallback
+✗ soft green echo eyedrop antidote — mall-bought if the route needs it — only if Gummiheart is up
+✗ fish sauce — mall-bought if the route needs it — Fishy fallback
+✗ Aldebaran sardines — mall-bought if the route needs it — Fishy pull meal (low/high) with the cheapest fishy pasta
+✗ pie man was not meant to eat — mall-bought if the route needs it — Fishy fallback
+✓ gremlin juice — Shub insurance (low; mid/high under 1250 Muscle)
+✓ handful of hand chalk — Shub insurance (low; mid/high under 1250 Muscle)
+✓ handheld Allied radio — NC force only without a duffel/parka
+✓ Clara's bell — NC force only without a duffel/parka; never mall-bought
+✓ stench jelly — NC force only without a duffel/parka
+✓ peppermint parasol — late pull; skipped with GAP/navel ring
+✓ ink bladder — late pull
+✓ Mer-kin pinkslip — late pull
+✓ stuffed yam stinkbomb — late pull
+✓ anchor bomb — late pull; a TakerSpace workshed crafts it instead
+```
+
+</details>
 
 The gold guard (`gold=true`) is on by default and aborts the first time a paid
 turn lands more than `goldSlack` (3) turns past the reference 41-turn run's
