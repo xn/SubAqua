@@ -49,7 +49,7 @@ export const args = Args.create(
       setting: "",
     }),
     gold: Args.boolean({
-      help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference UTS 2026-08-21, 41 turns). gold=false disables.",
+      help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference SubAqua 2026-09-06, 36 turns). gold=false disables.",
       default: true,
       setting: "",
     }),

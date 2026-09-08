@@ -20,8 +20,8 @@ export function wornOrMounted(item: Item): boolean {
 
 // Gems mount into mafia's codpiece1..5 pseudo-slots (libram EternityCodpiece.SLOTS), so equip()
 // and unequip() drive choice 1588 for us. A mounted gem grants its conditional skills while the
-// codpiece is worn, which frees the accessory slot it would otherwise take (gold-star-run.txt
-// :4485-4500 mounted the BCZ and Heartstone for the corral opener and popped them right after).
+// codpiece is worn, which frees the accessory slot it would otherwise take (the UTS gold log
+// docs/superpowers/research/runs/gold-uts-2026-08-21.log:4474-4489 mounted the BCZ and Heartstone for the corral opener and popped them right after).
 /**
  * Mount `gems` into the first codpiece slots, in order. Pearls holding those slots go to
  * inventory (the finale's Pry Pearls step accepts them there). Aborts if a mount does not stick.

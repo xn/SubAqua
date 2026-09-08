@@ -315,7 +315,7 @@ function corralDrawsPrepare(name: string): void {
 
 // ── McTwist opener ──────────────────────────────────────────────────────────────────────────
 // Refracted Gaze puts every corral table on the monster in front of us and McTwist doubles it,
-// so one free fight yields the whole kit (gold-star-run.txt:4584-4610: 2 cowbells, 2 leather,
+// so one free fight yields the whole kit (gold-uts-2026-08-21.log:4573-4599: 2 cowbells, 2 leather,
 // 2 lassos off a Back-Up eye). A corral draw keeps its own table at natural rates, so the fight
 // is first swapped onto a monster from outside the zone: the software glitch's bugged bugbear,
 // Talk to Some Fish's some fish, or a Back-Up copy when no monodent is on hand. The rustler is
@@ -326,7 +326,7 @@ function swordImprintCow(): boolean {
 }
 
 // A Back-Up copy of the habitat eye or slithering thing also advances Mom's rescue
-// (gold-star-run.txt:4640 momSeaMonkeeProgress 18 → 21 on the opener copy), so while that
+// (gold-uts-2026-08-21.log:4629 momSeaMonkeeProgress 18 → 21 on the opener copy), so while that
 // progress is still owed the copy is the swap on every draw and the camera takes the slot
 // the spring shoes would have had.
 function seaMonkeeBackup(): Monster | undefined {

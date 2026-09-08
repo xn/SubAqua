@@ -929,7 +929,7 @@ export function printSimChecklist(): void {
   }
   if (missingOptional > 0) {
     print(
-      "Note: the gold guard is on by default (gold=true) and aborts the first time a paid turn lands more than goldSlack=3 turns past the reference 41-turn run's checkpoint. Missing recommended rows make that likely; run with gold=false to let the route finish at its own pace.",
+      "Note: the gold guard is on by default (gold=true) and aborts the first time a paid turn lands more than goldSlack=3 turns past the reference 36-turn run's checkpoint. Missing recommended rows make that likely; run with gold=false to let the route finish at its own pace.",
     );
   }
   print(`Tier verdict (auto-detect: ${detectTier(ownItem)}, in use: ${tier})`, "blue");
