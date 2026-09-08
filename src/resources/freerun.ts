@@ -1,6 +1,7 @@
 import {
   appearanceRates,
   Familiar,
+  getMonsters,
   haveEquipped,
   Item,
   itemAmount,
@@ -36,6 +37,15 @@ export type FreeRunSource = CombatResource & {
 const snokebombExcludedZones = $locations`The Outskirts of Cobb's Knob, The Sleazy Back Alley, The Haunted Pantry`;
 
 const navelSources = ["GAP runaway", "navel ring runaway"];
+const merkin = $phylum`mer-kin`;
+
+// The pinkslip only works on a Mer-kin. With a target, that target must be one; without one
+// (a zone-wide free run) the zone must field at least one Mer-kin, or the slip is never chosen.
+function pinkslipFits(location: Location | undefined, target: Monster | undefined): boolean {
+  if (target) return target.phylum === merkin;
+  if (!location) return false;
+  return getMonsters(location).some((monster) => monster.phylum === merkin);
+}
 const corral = $location`The Coral Corral`;
 const inkBladder = $item`ink bladder`;
 
@@ -179,7 +189,9 @@ export const freeRunSources: FreeRunSource[] = [
     name: "Mer-kin pinkslip",
     available: () => itemAmount($item`Mer-kin pinkslip`) > 0,
     remaining: () => itemAmount($item`Mer-kin pinkslip`),
-    do: Macro.tryItem($item`Mer-kin pinkslip`),
+    // Only a Mer-kin takes the pinkslip; the phylum guard keeps a targetless free run from
+    // showing it to a pantry can (2026-09-07 `:111394`, Guild Test).
+    do: Macro.if_(merkin, Macro.tryItem($item`Mer-kin pinkslip`)),
     banishes: false,
   },
   {
@@ -226,9 +238,7 @@ export function selectFreeRun(
       const current = snokebomb ? banishedBy(snokebomb) : undefined;
       if (location && current && (appearanceRates(location)[current.name] ?? 0) > 0) return false;
     }
-    if (source.name === "Mer-kin pinkslip" && target && target.phylum !== $phylum`mer-kin`) {
-      return false;
-    }
+    if (source.name === "Mer-kin pinkslip" && !pinkslipFits(location, target)) return false;
     if (source.name === "ink bladder" && inkBladderReserved(location)) return false;
     return source.available();
   });
