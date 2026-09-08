@@ -15,7 +15,9 @@ import {
   visitUrl,
 } from "kolmafia";
 import {
+  AsdonMartin,
   $coinmaster,
+  $effect,
   $familiar,
   $item,
   $items,
@@ -33,7 +35,7 @@ import { scubaTanks } from "../engine/outfit";
 import { Quest } from "../engine/task";
 import { bangPotions } from "../resources/bangpotions";
 import { currentPolicy } from "../resources/policy";
-import { discretionaryPull, pullSequence } from "../resources/pulls";
+import { discretionaryPull, pullBudgetAllows, pullSequence } from "../resources/pulls";
 
 const pearl = $item`unblemished pearl`;
 const sheriffOutfit = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
@@ -42,6 +44,7 @@ const vhs = $item`Spooky VHS Tape`;
 const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, model train set, TakerSpace letter of Marque`;
 
 const seaGearPulls = $items`Mer-kin sneakmask, shark jumper, scale-mail underwear, Elf Guard SCUBA tank, Flash Liquidizer Ultra Dousing Accessory`;
+const momSpeedupPulls = $items`shark jumper, scale-mail underwear`;
 
 export function initQuest(): Quest {
   const policy = currentPolicy();
@@ -273,16 +276,39 @@ export function initQuest(): Quest {
         do: (): void => {
           for (const it of seaGearPulls) {
             if (have(it)) continue;
-            if (it === $item`scale-mail underwear` && have($item`Kramco Sausage-o-Matic™`))
+            // Mom speedups (wiki, The Caliginous Abyss): every Abyss combat earns 1 progress,
+            // +1 each for the shark jumper, scale-mail underwear and Jelly Combed. Each point
+            // is ~7 fewer Abyss kills over the 40 needed, so these are reserved pulls taken
+            // here, before the corral/mine/Shub pulls can eat the slots (2026-09-07: the jelly
+            // lost its slot and the finish ran at +2 = 20 kills, 17 of them paid).
+            if (momSpeedupPulls.includes(it)) {
+              if (pullBudgetAllows(it)) pullSequence(it);
               continue;
+            }
             // The Old Man hands out the trunks, but lasso training wears the cowboy hat + chaps
             // and only a SCUBA tank breathes under them; without one the first underwater
             // training task throws, so the tank is pulled at every tier (low included).
-            if (it === $item`Elf Guard SCUBA tank` && !scubaTanks.some((tank) => have(tank))) {
-              pullSequence(it);
-              continue;
+            // With an Asdon in the workshed, Driving Waterproofly is the breather instead
+            // (engine.ts maintainWaterproofly before every underwater task; the gold run pulled
+            // the tank and never wore it, gold-star-run.txt:954), so the slot is kept.
+            if (it === $item`Elf Guard SCUBA tank`) {
+              if (AsdonMartin.installed()) continue;
+              if (!scubaTanks.some((tank) => have(tank))) {
+                pullSequence(it);
+                continue;
+              }
             }
             discretionaryPull(it);
+          }
+          // The jelly is an item, not gear: pulled now, used on the first Abyss visit
+          // (mom.ts combJellyPrep) so the 20-turn effect covers the finish.
+          const jelly = $item`comb jelly`;
+          if (
+            availableAmount(jelly) === 0 &&
+            !have($effect`Jelly Combed`) &&
+            pullBudgetAllows(jelly)
+          ) {
+            pullSequence(jelly);
           }
           const cmoi = $item`Congressional Medal of Insanity`;
           if (!have(cmoi) && storageAmount(cmoi) > 0) discretionaryPull(cmoi);

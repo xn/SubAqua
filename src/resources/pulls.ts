@@ -79,6 +79,9 @@ const pullReservations: PullReservation[] = [
     item: $item`ink bladder`,
     needed: () => availableAmount($item`ink bladder`) === 0 && !pulledToday($item`ink bladder`),
   },
+  // Mom speedups: each is +1 progress per Abyss combat (wiki, The Caliginous Abyss), i.e. ~7
+  // fewer kills over the 40 needed. Pulled at init (init.ts Sea Gear Pulls); the
+  // reservations hold the slots and cover a re-pull if the jelly expires before the finish.
   {
     name: "comb jelly",
     item: $item`comb jelly`,
@@ -86,6 +89,18 @@ const pullReservations: PullReservation[] = [
       !have($effect`Jelly Combed`) &&
       availableAmount($item`comb jelly`) === 0 &&
       !pulledToday($item`comb jelly`),
+  },
+  {
+    name: "shark jumper",
+    item: $item`shark jumper`,
+    needed: () => availableAmount($item`shark jumper`) === 0 && !pulledToday($item`shark jumper`),
+  },
+  {
+    name: "scale-mail underwear",
+    item: $item`scale-mail underwear`,
+    needed: () =>
+      availableAmount($item`scale-mail underwear`) === 0 &&
+      !pulledToday($item`scale-mail underwear`),
   },
   {
     name: "sea lasso (training)",

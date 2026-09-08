@@ -692,11 +692,11 @@ type PullRow = { item: Item; note?: string; discretionary?: boolean; stockOnly?:
 
 const routePulls: PullRow[] = [
   { item: $item`Mer-kin sneakmask`, discretionary: true },
-  { item: $item`shark jumper`, discretionary: true },
-  { item: $item`scale-mail underwear`, discretionary: true, note: "skipped with a Kramco" },
+  { item: $item`shark jumper`, note: "Mom speedup: +1 progress per Abyss combat" },
+  { item: $item`scale-mail underwear`, note: "Mom speedup: +1 progress per Abyss combat" },
   {
     item: $item`Elf Guard SCUBA tank`,
-    note: "pulled at every tier when no SCUBA tank is owned (lasso training); discretionary otherwise",
+    note: "pulled at every tier when no SCUBA tank is owned (lasso training) and no Asdon is installed; discretionary otherwise",
   },
   { item: $item`Flash Liquidizer Ultra Dousing Accessory`, discretionary: true },
   {
@@ -725,7 +725,7 @@ const routePulls: PullRow[] = [
     note: "late pull, last slot: one Peanut re-roll if the corral spent Waffle Day's",
   },
   { item: $item`software glitch`, note: "only without a backup camera (high tier)" },
-  { item: $item`comb jelly` },
+  { item: $item`comb jelly`, note: "Mom speedup: Jelly Combed, +1 progress per Abyss combat" },
   { item: $item`Mer-kin prayerbeads`, note: "after the paw wishes" },
   { item: $item`Mer-kin healscroll`, note: "fallback; the researcher Force is the source" },
   { item: $item`Mer-kin worktea`, note: "fallback; the library alphabetizer drops it" },

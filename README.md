@@ -178,8 +178,8 @@ Miscellany (Optional)
 Pull check — Hagnk's stock (counted pulls; 2015+ Mr. Store items auto-pull for free):
 Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to buyLimit = 20000 (autoBuyPriceLimit, or buyLimit=); a pricier item aborts the run at that point.
 ✓ Mer-kin sneakmask
-✓ shark jumper
-✓ scale-mail underwear — skipped with a Kramco
+✓ shark jumper — Mom speedup: +1 progress per Abyss combat
+✓ scale-mail underwear — Mom speedup: +1 progress per Abyss combat
 ✓ Elf Guard SCUBA tank — pulled at every tier when no SCUBA tank is owned (lasso training); discretionary otherwise
 ✓ Flash Liquidizer Ultra Dousing Accessory
 ✓ Congressional Medal of Insanity — optional; pulled only from Hagnk's, never mall-bought
@@ -196,7 +196,7 @@ Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to 
 ✓ sea lasso — usually a drop or a wish
 ✓ sea cowbell
 ✗ software glitch — mall-bought if the route needs it — only without a backup camera (high tier)
-✓ comb jelly
+✓ comb jelly — Mom speedup: Jelly Combed, +1 progress per Abyss combat
 ✓ Mer-kin prayerbeads — after the paw wishes
 ✓ Mer-kin healscroll — fallback; the researcher Force is the source
 ✓ Mer-kin worktea — fallback; the library alphabetizer drops it
