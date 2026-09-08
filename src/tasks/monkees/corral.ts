@@ -26,6 +26,7 @@ import {
   get,
   have,
   Macro,
+  $phylum,
 } from "libram";
 
 //import { mapMonster } from "libram/dist/resources/2020/Cartography";
@@ -361,8 +362,15 @@ function rustlerOpenerMacro(): Macro {
   const macro = Macro.trySkill($skill`Spring Kick`);
   const target = backupSwap();
   if (target) macro.step(backupMacro(target));
-  else if (have(monodent)) macro.trySkill(talkToFish);
+  else if (have(monodent)) macro.step(fishTalk());
   return macro.step(gazeTwistMacro());
+}
+
+// Talk to Some Fish fails on fish (KoL refuses the skill, the macro aborts, and mafia's round
+// counter desyncs: 2026-09-07 corral opener on the sea cowboy). The cowboy and the cow are
+// phylum fish; the rustler is mer-kin. Guarded the same way fishMacro() guards it.
+function fishTalk(): Macro {
+  return Macro.ifNot($phylum`fish`, Macro.trySkill(talkToFish));
 }
 
 function drawOpenerMacro(): Macro {
@@ -371,7 +379,7 @@ function drawOpenerMacro(): Macro {
   const target = backupSwap();
   if (target) macro.step(backupMacro(target));
   else if (have(glitch)) macro.tryItem(glitch);
-  else if (have(monodent)) macro.trySkill(talkToFish);
+  else if (have(monodent)) macro.step(fishTalk());
   return macro.step(gazeTwistMacro());
 }
 
@@ -413,6 +421,23 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
       ...((opts.opener
         ? [
             {
+              // Pulled before the opener's macro is compiled: grimoire compiles the combat
+              // strategy before task.prepare runs, so a pull in prepare left have(glitch)
+              // false at compile time and the opener fell through to Talk to Some Fish
+              // (2026-09-07 `:106637`, CCS without the glitch, then the pull).
+              name: "Glitch Pull",
+              ready: () =>
+                openerReady() &&
+                backupSwap() === undefined &&
+                !have(glitch) &&
+                !pulledToday(glitch) &&
+                pullBudgetAllows(glitch),
+              completed: () => have(glitch) || pulledToday(glitch) || openerDone(),
+              do: () => void pullSequence(glitch),
+              freeaction: true,
+              limit: { tries: 1 },
+            },
+            {
               name: "Corral Opener",
               ready: openerReady,
               completed: openerDone,
@@ -425,14 +450,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
               outfit: openerOutfit,
               effects: () => combineMoods(itemDropEffects(), survivalEffects()),
               prepare: (): void => {
-                if (
-                  backupSwap() === undefined &&
-                  !have(glitch) &&
-                  !pulledToday(glitch) &&
-                  pullBudgetAllows(glitch)
-                ) {
-                  pullSequence(glitch);
-                }
                 recover();
                 // After dress: the codpiece is on, so the mounted Heartstone grants %pals.
                 applyEffects(
