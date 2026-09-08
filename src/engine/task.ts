@@ -1,6 +1,6 @@
 import { Quest as BaseQuest, Task as BaseTask, Limit } from "grimoire-kolmafia";
 import { CombatStrategy as BaseCombatStrategy } from "grimoire-kolmafia";
-import { Monster } from "kolmafia";
+import { Location, Monster } from "kolmafia";
 
 import { BackupSpec } from "../resources/backup";
 import { ForcePurpose } from "../resources/saber";
@@ -14,6 +14,12 @@ export type Task = {
 
   limit: Limit;
   peridot?: Monster | (() => Monster | undefined);
+  /**
+   * The zone a function-`do` task adventures in. The engine keys the Peridot, the free-kill
+   * and banish ladders and the underwater check off the task's Location; a `do` that has to
+   * be a function (the Abyss throws its waffle by hand) names its zone here instead.
+   */
+  location?: Location;
   backup?: BackupSpec | (() => BackupSpec | undefined);
   underwater?: boolean;
   freeaction?: boolean | (() => boolean);

@@ -720,6 +720,10 @@ const routePulls: PullRow[] = [
   { item: $item`rusty rivet`, note: "only if the paw wishes leave the count at 7" },
   { item: $item`sea lasso`, note: "usually a drop or a wish" },
   { item: $item`sea cowbell` },
+  {
+    item: $item`waffle`,
+    note: "late pull, last slot: one Peanut re-roll if the corral spent Waffle Day's",
+  },
   { item: $item`software glitch`, note: "only without a backup camera (high tier)" },
   { item: $item`comb jelly` },
   { item: $item`Mer-kin prayerbeads`, note: "after the paw wishes" },

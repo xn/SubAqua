@@ -111,11 +111,12 @@ import {
 } from "./outfit";
 import { Task } from "./task";
 
+function taskLocation(task: Task): Location | undefined {
+  return task.location ?? (task.do instanceof Location ? task.do : undefined);
+}
+
 function isUnderwaterTask(task: Task): boolean {
-  return (
-    (task.do instanceof Location && task.do.environment === "underwater") ||
-    task.underwater === true
-  );
+  return taskLocation(task)?.environment === "underwater" || task.underwater === true;
 }
 
 function equipResource(
@@ -196,11 +197,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     }
 
     const peridotTarget = backupTo ? undefined : undelay(task.peridot);
+    const peridotZone = taskLocation(task);
     if (
       peridotTarget &&
-      task.do instanceof Location &&
-      !get("_perilLocations").split(",").includes(`${task.do.id}`) &&
-      peridotTargetOffered(task.do, peridotTarget)
+      peridotZone &&
+      !get("_perilLocations").split(",").includes(`${peridotZone.id}`) &&
+      peridotTargetOffered(peridotZone, peridotTarget)
     ) {
       outfit.equip($item`Peridot of Peril`);
       setPeridotTargetId(peridotTarget);
@@ -248,7 +250,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
 
     if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
 
-    const location = task.do instanceof Location ? task.do : undefined;
+    const location = taskLocation(task);
 
     // Club 'Em Across the Battlefield: paid insta-kill plus a second table (choice 1589). It
     // follows the free kills in every kill ladder below, so the paid turn also rolls the
@@ -544,11 +546,12 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       ...task,
       do: () => {
         const peridotTarget = undelay(task.peridot);
+        const peridotZone = taskLocation(task);
         if (
           peridotTarget &&
           haveEquipped($item`Peridot of Peril`) &&
-          task.do instanceof Location &&
-          peridotTargetOffered(task.do, peridotTarget)
+          peridotZone &&
+          peridotTargetOffered(peridotZone, peridotTarget)
         ) {
           propertyManager.setChoice(1557, `1&bandersnatch=${peridotTarget.id}`);
         }

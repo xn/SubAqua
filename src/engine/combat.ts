@@ -4,6 +4,7 @@ import { $effect, $item, $monsters, $phylum, $skill, have, Macro } from "libram"
 
 import { freeMonsters } from "../resources/backup";
 import { bangPotionRounds } from "../resources/bangpotions";
+import { freeKillNever } from "../resources/freekill";
 
 const myActions = [
   "ignore",
@@ -125,7 +126,7 @@ export function fishMacro(): Macro {
   if (!have($skill`Sea *dent: Talk to Some Fish`)) return new Macro();
   if (availableAmount($item`pristine fish scale`) >= 6) return new Macro();
   return Macro.ifNot(
-    [...freeMonsters, ...shadowRiftBosses],
+    [...freeMonsters, ...shadowRiftBosses, ...freeKillNever],
     Macro.ifNot($phylum`fish`, openerOnce(Macro.trySkill($skill`Sea *dent: Talk to Some Fish`), 3)),
   );
 }
