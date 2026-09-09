@@ -63,7 +63,8 @@ export function burnTurnElsewhere(): boolean {
   const gearReady =
     availableAmount($item`Mer-kin gladiator mask`) > 0 &&
     availableAmount($item`Mer-kin gladiator tailpiece`) > 0;
-  if (!gearReady && !get("noncombatForcerActive")) {
+  const gymWanted = get("yogUrtDefeated") ? !gearReady : guardsMissing();
+  if (gymWanted && !get("noncombatForcerActive")) {
     if (get("yogUrtDefeated")) gladiatorGearStep();
     else gymnasiumTurn();
     claimIceBuff();

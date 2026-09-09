@@ -10,6 +10,7 @@ import {
   filterByClues,
   filterByGuesses,
   pickGuess,
+  purchaseCells,
   splitsOn,
   unknownClues,
   worstWrongWords,
@@ -403,10 +404,16 @@ export function resolverState(): ResolverState | undefined {
   return cands === undefined ? undefined : stateOf(cands);
 }
 
+const declinedClues = new Set<number>();
+
+export function declinePurchase(clue: number): void {
+  declinedClues.add(clue);
+}
+
 export function purchasableSplits(): number[] {
   const cands = candidates();
   if (cands === undefined) return [];
-  return [4, 7].filter((clue) => splitsOn(cands, clue));
+  return [4, 7].filter((clue) => !declinedClues.has(clue) && splitsOn(cands, clue));
 }
 
 export function guessReady(capacity: number): boolean {
@@ -416,21 +423,15 @@ export function guessReady(capacity: number): boolean {
   return state.worstBurn <= capacity || purchasableSplits().length === 0;
 }
 
-function afterPurchases(cands: Candidate[]): Candidate[] {
-  const clues = currentClues().slice();
-  for (const clue of [4, 7]) {
-    if (splitsOn(cands, clue)) clues[clue - 1] = cands[0].scroll[clue - 1];
-  }
-  return filterByClues(cands, clues);
-}
-
 export function seedResolvable(capacity: number): boolean {
   if (isKnucklebonesAndSushiEnough()) return true;
   if (!args.dreadGuess) return false;
   const cands = candidates();
   if (cands === undefined || cands.length === 0) return false;
-  const state = stateOf(afterPurchases(cands));
-  return state.count <= args.guessMax && state.worstBurn <= capacity;
+  return purchaseCells(cands, currentClues()).every((cell) => {
+    const state = stateOf(cell);
+    return state.count <= args.guessMax && state.worstBurn <= capacity;
+  });
 }
 
 export function seedGuess(): string | undefined {

@@ -17,6 +17,7 @@ import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import {
+  declinePurchase,
   godRunGuardCheck,
   guessReady,
   purchasableSplits,
@@ -44,9 +45,12 @@ const monodent = $item`Monodent of the Sea`;
 const tainted = $effect`Deep-Tainted Mind`;
 
 const BURN_PREF = "_subaqua_dreadBurn";
+const NO_BURN_TARGET_MESSAGE =
+  "Deep-Tainted Mind is up and no burn target is left (skate war, gym guards, Mom Finish, Library). Spend 1 non-free turn anywhere and rerun.";
 
 let knuckleboneDeclined = false;
 let sushiDeclined = false;
+let burnStalls = 0;
 
 function catalogCluesKnown(): boolean {
   return [1, 6, 8].every((n) => get(`dreadScroll${n}`, 0) !== 0);
@@ -169,6 +173,7 @@ export function libraryQuest(): Quest {
           }
           if (itemAmount(knucklebone) === 0) {
             knuckleboneDeclined = true;
+            declinePurchase(4);
             return;
           }
           use(knucklebone);
@@ -187,10 +192,14 @@ export function libraryQuest(): Quest {
           }
           if (itemAmount(worktea) === 0 || fullnessLimit() - myFullness() < 2) {
             sushiDeclined = true;
+            declinePurchase(7);
             return;
           }
           retrieveItem($item`white rice`);
-          if (!eatSushi()) sushiDeclined = true;
+          if (!eatSushi()) {
+            sushiDeclined = true;
+            declinePurchase(7);
+          }
         },
         freeaction: true,
         limit: { tries: 2 },
@@ -219,9 +228,17 @@ export function libraryQuest(): Quest {
           if (have(tainted)) {
             const before = myAdventures();
             if (!burnTurnElsewhere()) {
-              throw "Deep-Tainted Mind is up and no burn target is left (skate war, gym guards, Mom Finish, Library). Spend 1 non-free turn anywhere and rerun.";
+              throw NO_BURN_TARGET_MESSAGE;
             }
-            if (myAdventures() < before) set(BURN_PREF, get(BURN_PREF, 0) + 1);
+            if (myAdventures() < before) {
+              burnStalls = 0;
+              set(BURN_PREF, get(BURN_PREF, 0) + 1);
+            } else {
+              burnStalls += 1;
+            }
+            if (burnStalls >= 20) {
+              throw NO_BURN_TARGET_MESSAGE;
+            }
             return;
           }
           godRunGuardCheck();
@@ -229,7 +246,7 @@ export function libraryQuest(): Quest {
         },
         underwater: true,
         limit: {
-          soft: 40,
+          soft: 80,
           message: "Not becoming High Priest; check dreadScroll* prefs and the 703 solver.",
         },
       },

@@ -10,6 +10,7 @@ import {
   hamming,
   parseGuesses,
   pickGuess,
+  purchaseCells,
   splitsOn,
   unknownClues,
   worstWrongWords,
@@ -79,4 +80,45 @@ test("burnTurns is 3 per wrong word minus the read's own tick", () => {
   assert.equal(burnTurns(0), 0);
   assert.equal(burnTurns(1), 2);
   assert.equal(burnTurns(5), 14);
+});
+
+test("parseGuesses ignores a wrong-length or non-numeric entry", () => {
+  assert.deepEqual(parseGuesses("1234567:3"), []);
+  assert.deepEqual(parseGuesses("123456789:3"), []);
+  assert.deepEqual(parseGuesses("44413333:abc"), []);
+  assert.deepEqual(
+    parseGuesses("1234567:3,44413333:2").map((g) => g.incorrect),
+    [2],
+  );
+});
+
+test("filterByGuesses applies two recorded guesses jointly", () => {
+  const guessed = "12413121:6,44313333:0";
+  assert.deepEqual(
+    filterByGuesses([A, B, C], guessed).map((c) => c.seed),
+    [B.seed],
+  );
+});
+
+test("pickGuess([]) returns []", () => {
+  assert.deepEqual(pickGuess([]), []);
+});
+
+const cell7a: Candidate = { seed: 100, scroll: [1, 1, 1, 1, 1, 1, 1, 1] };
+const cell7b: Candidate = { seed: 101, scroll: [1, 2, 1, 1, 1, 1, 2, 1] };
+const cell7c: Candidate = { seed: 102, scroll: [1, 1, 1, 1, 1, 1, 2, 1] };
+const cell7d: Candidate = { seed: 103, scroll: [1, 1, 1, 1, 1, 1, 2, 1] };
+const splittingCands = [cell7a, cell7b, cell7c, cell7d];
+
+test("purchaseCells splits on clue 7 only, into cells of size 1 and 3", () => {
+  const cells = purchaseCells(splittingCands, [0, 0, 0, 0, 0, 0, 0, 0]);
+  const sizes = cells.map((cell) => cell.length).sort();
+  assert.deepEqual(sizes, [1, 3]);
+  const total = cells.reduce((sum, cell) => sum + cell.length, 0);
+  assert.equal(total, splittingCands.length);
+});
+
+test("purchaseCells returns a single cell when nothing splits", () => {
+  const cands = [B, C].map((c) => ({ ...c, scroll: [4, 4, 3, 1, 3, 3, 3, 3] }));
+  assert.deepEqual(purchaseCells(cands, [0, 0, 0, 0, 0, 0, 0, 0]), [cands]);
 });

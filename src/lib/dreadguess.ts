@@ -61,13 +61,16 @@ export function splitsOn(cands: Candidate[], clue: number): boolean {
 
 export function pickGuess(cands: Candidate[]): number[] {
   if (cands.length === 0) return [];
+  const digitCounts: number[][] = Array.from({ length: 8 }, () => new Array(5).fill(0));
+  for (const cand of cands) {
+    for (let pos = 0; pos < 8; pos++) digitCounts[pos][cand.scroll[pos]] += 1;
+  }
   let best = cands[0].scroll;
   let bestExpected = Number.POSITIVE_INFINITY;
   for (const cand of cands) {
     let expected = 0;
     for (let pos = 0; pos < 8; pos++) {
-      const matches = cands.filter((c) => c.scroll[pos] === cand.scroll[pos]).length;
-      expected += 1 - matches / cands.length;
+      expected += 1 - digitCounts[pos][cand.scroll[pos]] / cands.length;
     }
     if (expected < bestExpected) {
       bestExpected = expected;
@@ -75,6 +78,19 @@ export function pickGuess(cands: Candidate[]): number[] {
     }
   }
   return best;
+}
+
+export function purchaseCells(cands: Candidate[], clues: number[]): Candidate[][] {
+  const splitting = [4, 7].filter((clue) => clues[clue - 1] === 0 && splitsOn(cands, clue));
+  if (splitting.length === 0) return [cands];
+  const cells = new Map<string, Candidate[]>();
+  for (const c of cands) {
+    const key = splitting.map((clue) => c.scroll[clue - 1]).join(":");
+    const cell = cells.get(key);
+    if (cell) cell.push(c);
+    else cells.set(key, [c]);
+  }
+  return [...cells.values()];
 }
 
 export function worstWrongWords(cands: Candidate[], guess: number[]): number {
