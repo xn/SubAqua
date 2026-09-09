@@ -39,6 +39,7 @@ import {
 import { args } from "./args";
 import { buyLimit, haveAnywhere } from "./lib";
 import { detectTier, Tier } from "./lib/tier";
+import { bangPotionCriteriaKey } from "./resources/bangpotions";
 import { selectFreeKill } from "./resources/freekill";
 import { policyForTier } from "./resources/policy";
 
@@ -632,6 +633,21 @@ function miscRequirements(tier: Tier): Requirement[] {
       thing: summonSource(locket, $monster`sea cowboy`),
       why: "Sword Imprint is ready with the Sword of S Words + a locket (and no pay phone at low/mid) and aborts with no summon source",
       necessaryAt: allTiers,
+    });
+  }
+  {
+    const potionsKnown = !bangPotionCriteriaKey().includes("?");
+    const boxPulls = policyForTier(tier).allowDiscretionaryPulls;
+    rows.push({
+      thing: new Hardcoded(
+        potionsKnown || boxPulls,
+        "seed pin: bang potions identified or the blessed large box pulls allowed at this tier",
+        potionsKnown || boxPulls
+          ? ""
+          : " (the Library will farm catalog cards instead of guessing; about 5 extra turns when it triggers)",
+      ),
+      why: "The dreadscroll seed scan pins on the nine bang potions plus the seahorse name; without them the guess lane is off",
+      recommended: true,
     });
   }
   if (ownItem($item`Leprecondo`)) {
