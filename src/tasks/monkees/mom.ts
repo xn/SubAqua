@@ -81,6 +81,10 @@ function momDone(): boolean {
   return get("questS02Monkees") === "finished";
 }
 
+export function momFinishPending(): boolean {
+  return have(glass) && !momDone();
+}
+
 function phylumBanished(target: Phylum): boolean {
   const fields = get("banishedPhyla").split(":");
   for (let i = 0; i < fields.length; i += 3) {
