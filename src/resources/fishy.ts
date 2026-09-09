@@ -49,8 +49,9 @@ export function eatSushi(): boolean {
   cliExecute("refresh inventory");
   for (const [sushi, meat] of nigiris) {
     if (availableAmount(meat) > 0 && availableAmount($item`white rice`) > 0) {
+      const before = myFullness();
       cliExecute(`make ${sushi}`);
-      if (have(fishy)) return true;
+      if (myFullness() > before) return true;
     }
   }
   return false;
