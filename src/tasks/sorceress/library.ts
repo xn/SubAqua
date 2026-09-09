@@ -1,27 +1,34 @@
 import { OutfitSpec } from "grimoire-kolmafia";
 import {
-  abort,
   availableAmount,
   Effect,
   fullnessLimit,
   itemAmount,
+  myAdventures,
   myFullness,
   retrieveItem,
   use,
 } from "kolmafia";
-import { $effect, $item, $location, $monster, get, have, Macro } from "libram";
+import { $effect, $item, $location, $monster, get, have, set } from "libram";
 
+import { args } from "../../args";
 import { CombatStrategy } from "../../engine/combat";
 import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
-import { godRunGuardCheck } from "../../lib/dreadscroll";
+import {
+  godRunGuardCheck,
+  guessReady,
+  purchasableSplits,
+  resolverState,
+} from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { eatSushi } from "../../resources/fishy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 import { forceGranted } from "../../resources/saber";
+import { momFinishPending } from "../monkees/mom";
 
-import { burnTurnElsewhere } from "./burn";
+import { burnCapacity, burnTurnElsewhere } from "./burn";
 import { sourceEnhanceItems } from "./daily";
 
 const library = $location`Mer-kin Library`;
@@ -34,6 +41,12 @@ const healscroll = $item`Mer-kin healscroll`;
 const killscroll = $item`Mer-kin killscroll`;
 const zirconia = $item`blood cubic zirconia`;
 const monodent = $item`Monodent of the Sea`;
+const tainted = $effect`Deep-Tainted Mind`;
+
+const BURN_PREF = "_subaqua_dreadBurn";
+
+let knuckleboneDeclined = false;
+let sushiDeclined = false;
 
 function catalogCluesKnown(): boolean {
   return [1, 6, 8].every((n) => get(`dreadScroll${n}`, 0) !== 0);
@@ -56,26 +69,31 @@ function bczWanted(): boolean {
   );
 }
 
-function clueThrows(): Macro {
-  const needHeal = get("dreadScroll2", 0) === 0;
-  const needKill = get("dreadScroll5", 0) === 0;
-  const throws = new Macro();
-  if (needHeal) throws.tryItem(healscroll);
-  if (needKill) throws.tryItem(killscroll);
-  if (!needHeal && !needKill) return throws;
-  return researcherForceWanted() ? Macro.ifNot(researcher, throws) : throws;
+function scrollOwned(): boolean {
+  return availableAmount(dreadscroll) > 0;
 }
 
-function farmCompleted(): boolean {
-  return availableAmount(dreadscroll) > 0 && catalogCluesKnown();
+function readReady(): boolean {
+  return scrollOwned() && (catalogCluesKnown() || guessReady(burnCapacity()));
 }
 
-function farmPrepare(): void {
-  sourceEnhanceItems();
-  recover();
+function burnFits(): boolean {
+  const state = resolverState();
+  return state !== undefined && state.worstBurn <= burnCapacity();
 }
 
-function farmOutfit(): OutfitSpec {
+function purchaseWanted(clue: number): boolean {
+  if (!scrollOwned() || get(`dreadScroll${clue}`, 0) !== 0) return false;
+  if (resolverState() === undefined) return true;
+  if (!purchasableSplits().includes(clue)) return false;
+  return !burnFits() || !readReady();
+}
+
+function momFinishBurning(): boolean {
+  return args.burnMomFinish && have(tainted) && momFinishPending();
+}
+
+function scrollOutfit(): OutfitSpec {
   const scrollsMissing =
     itemAmount(killscroll) === 0 ||
     itemAmount(healscroll) === 0 ||
@@ -86,13 +104,16 @@ function farmOutfit(): OutfitSpec {
   const weapon = !saberForResearcher && scrollsMissing && have(monodent) ? [monodent] : [];
   const accessory = bczWanted() ? [zirconia] : [];
   const avoid = bczWanted() ? [] : [zirconia];
-  if (availableAmount(dreadscroll) === 0) {
-    return {
-      modifier: "item",
-      equip: [...scholarPieces, ...weapon, ...accessory, ...kramcoIfDue()],
-      avoid,
-    };
-  }
+  return {
+    modifier: "item",
+    equip: [...scholarPieces, ...weapon, ...accessory, ...kramcoIfDue()],
+    avoid,
+  };
+}
+
+function catalogOutfit(): OutfitSpec {
+  const accessory = bczWanted() ? [zirconia] : [];
+  const avoid = bczWanted() ? [] : [zirconia];
   return {
     modifier: "-combat",
     equip: [...scholarPieces, ...accessory],
@@ -101,29 +122,28 @@ function farmOutfit(): OutfitSpec {
   };
 }
 
-function farmEffects(): Effect[] {
-  return availableAmount(dreadscroll) === 0 ? itemDropEffects() : sneakEffects();
+function farmPrepare(): void {
+  sourceEnhanceItems();
+  recover();
 }
 
-function libraryFarmTask(force: boolean): Task {
+function scrollTask(force: boolean): Task {
   return {
-    name: force ? "Library Force" : "Library Farm",
+    name: force ? "Library Scroll Force" : "Library Scroll Farm",
     ready: () => scholarGearReady() && researcherForceWanted() === force,
-    completed: farmCompleted,
+    completed: scrollOwned,
     prepare: farmPrepare,
     do: library,
     backup: { targets: "free" },
     ...(force ? { saberPurpose: "researcher" as const } : {}),
     combat: force
-      ? new CombatStrategy().macro(clueThrows).forceItems(researcher).kill()
-      : new CombatStrategy().macro(clueThrows).kill(),
-    outfit: farmOutfit,
-    effects: farmEffects,
+      ? new CombatStrategy().forceItems(researcher).kill()
+      : new CombatStrategy().kill(),
+    outfit: scrollOutfit,
+    effects: (): Effect[] => itemDropEffects(),
     limit: {
       soft: 30,
-      message: `Library is yielding neither the dreadscroll nor catalog clues (${
-        force ? "scroll-Force" : "plain"
-      } lane).`,
+      message: `Library is not yielding the dreadscroll (${force ? "scroll-Force" : "plain"} lane).`,
     },
   };
 }
@@ -133,12 +153,12 @@ export function libraryQuest(): Quest {
     name: "Library",
     completed: () => get("isMerkinHighPriest", false),
     tasks: [
-      libraryFarmTask(true),
-      libraryFarmTask(false),
+      scrollTask(true),
+      scrollTask(false),
       {
         name: "Knucklebone",
-        ready: () => availableAmount(dreadscroll) > 0 && get("dreadScroll4", 0) === 0,
-        completed: () => get("dreadScroll4", 0) !== 0,
+        ready: () => !knuckleboneDeclined && purchaseWanted(4),
+        completed: () => knuckleboneDeclined || get("dreadScroll4", 0) !== 0,
         do: (): void => {
           if (
             itemAmount(knucklebone) === 0 &&
@@ -148,9 +168,8 @@ export function libraryQuest(): Quest {
             pullSequence(knucklebone);
           }
           if (itemAmount(knucklebone) === 0) {
-            abort(
-              "No Mer-kin knucklebone (drop it in the library or load one in Hagnk's); acquire one and rerun.",
-            );
+            knuckleboneDeclined = true;
+            return;
           }
           use(knucklebone);
         },
@@ -159,46 +178,50 @@ export function libraryQuest(): Quest {
       },
       {
         name: "Worktea Sushi",
-        ready: () =>
-          availableAmount(dreadscroll) > 0 &&
-          get("dreadScroll7", 0) === 0 &&
-          get("merkinVocabularyMastery", 0) < 90,
-        completed: () => get("dreadScroll7", 0) !== 0 || get("merkinVocabularyMastery", 0) >= 90,
+        ready: () => !sushiDeclined && purchaseWanted(7) && get("merkinVocabularyMastery", 0) < 90,
+        completed: () =>
+          sushiDeclined || get("dreadScroll7", 0) !== 0 || get("merkinVocabularyMastery", 0) >= 90,
         do: (): void => {
           if (itemAmount(worktea) === 0 && !pulledToday(worktea) && pullBudgetAllows(worktea)) {
             pullSequence(worktea);
           }
-          if (itemAmount(worktea) === 0) {
-            abort(
-              "No Mer-kin worktea for clue 7 (farm the library alphabetizer or load one in Hagnk's), or raise vocabulary to 90; then rerun.",
-            );
-          }
-          if (fullnessLimit() - myFullness() < 2) {
-            abort(
-              "No room for a 2-fullness nigiri to drink the worktea; free up fullness and rerun.",
-            );
+          if (itemAmount(worktea) === 0 || fullnessLimit() - myFullness() < 2) {
+            sushiDeclined = true;
+            return;
           }
           retrieveItem($item`white rice`);
-          if (!eatSushi()) {
-            abort(
-              "Could not roll a nigiri (need fish meat + white rice + the sushi mat); fix supplies and rerun.",
-            );
-          }
+          if (!eatSushi()) sushiDeclined = true;
         },
         freeaction: true,
         limit: { tries: 2 },
       },
       {
+        name: "Library Catalog",
+        ready: () => scholarGearReady() && scrollOwned() && !readReady(),
+        completed: readReady,
+        prepare: farmPrepare,
+        do: library,
+        backup: { targets: "free" },
+        combat: new CombatStrategy().kill(),
+        outfit: catalogOutfit,
+        effects: (): Effect[] => sneakEffects(),
+        limit: {
+          soft: 30,
+          message:
+            "Library catalog cards are not yielding clues 1/6/8 and the seed will not guess.",
+        },
+      },
+      {
         name: "High Priest",
-        ready: () => availableAmount(dreadscroll) > 0 && catalogCluesKnown(),
+        ready: () => readReady() && !momFinishBurning(),
         completed: () => get("isMerkinHighPriest", false),
         do: (): void => {
-          if (have($effect`Deep-Tainted Mind`)) {
+          if (have(tainted)) {
+            const before = myAdventures();
             if (!burnTurnElsewhere()) {
-              abort(
-                "Hit a 1-in-40 situation — spend 1 non-free turn anywhere and rerun (ash UTS:2719-2721).",
-              );
+              throw "Deep-Tainted Mind is up and no burn target is left (skate war, gym guards, Mom Finish, Library). Spend 1 non-free turn anywhere and rerun.";
             }
+            if (myAdventures() < before) set(BURN_PREF, get(BURN_PREF, 0) + 1);
             return;
           }
           godRunGuardCheck();
