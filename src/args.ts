@@ -39,6 +39,21 @@ export const args = Args.create(
       default: true,
       setting: "",
     }),
+    dreadGuess: Args.boolean({
+      help: "Read the dreadscroll with a seed-aware guess when the scan leaves at most guessMax candidates; dreadGuess=false farms catalog cards instead (spec 2026-09-09).",
+      default: true,
+      setting: "",
+    }),
+    guessMax: Args.number({
+      help: "Most candidate seeds the dreadscroll guess lane will read through; above this the catalog lane runs.",
+      default: 3,
+      setting: "",
+    }),
+    burnMomFinish: Args.boolean({
+      help: "Let a Deep-Tainted Mind burn spend turns on Mom Finish (Peanut is a spell kill and the effect halves Mysticality).",
+      default: false,
+      setting: "",
+    }),
     list: Args.flag({
       help: "Print the selected runplan with per-task completed status, then exit.",
       default: false,

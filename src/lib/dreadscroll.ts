@@ -4,6 +4,17 @@ import { get, set } from "libram";
 import { args } from "../args";
 import { bangPotionCriteriaKey } from "../resources/bangpotions";
 
+import {
+  burnTurns,
+  Candidate,
+  filterByClues,
+  filterByGuesses,
+  pickGuess,
+  splitsOn,
+  unknownClues,
+  worstWrongWords,
+} from "./dreadguess";
+
 type Rng = ReturnType<typeof phpSeed>;
 
 const SEED_MIN = 1000000;
@@ -286,13 +297,21 @@ function computeCandidateSeeds(): number[] | undefined {
 let memoKey: string | undefined;
 let memoValue: number[] | undefined;
 
+function toCandidate(seed: number): Candidate {
+  return { seed, scroll: calculateDreadscroll(seed) };
+}
+
 export function candidateSeeds(): number[] | undefined {
   if (!args.seedScan) return undefined;
 
-  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}`;
+  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}|${get("dreadScrollGuesses", "")}`;
   if (key === memoKey) return memoValue;
 
-  const result = computeCandidateSeeds();
+  const raw = computeCandidateSeeds();
+  const result =
+    raw === undefined
+      ? undefined
+      : filterByGuesses(raw.map(toCandidate), get("dreadScrollGuesses", "")).map((c) => c.seed);
   memoKey = key;
   memoValue = result;
   return result;
@@ -339,4 +358,88 @@ export function godRunGuardCheck(): void {
     "godRunGuard: on god-run pace (<= 17 turns) with dreadscroll clue 7 unknown. " +
       "Acquire a Mer-kin worktea and eat a sea sushi (the tea rides along and reveals the clue), then rerun.",
   );
+}
+
+export function cachedCandidates(): Candidate[] | undefined {
+  if (get("subaqua_seedCandidatesAsc", -1) !== myAscensions()) return undefined;
+  const cached = get("subaqua_seedCandidates", "");
+  if (cached === "" || cached === SCANNED_EMPTY) return undefined;
+  const seeds = cached
+    .split(",")
+    .map((s) => parseInt(s, 10))
+    .filter((seed) => Number.isFinite(seed) && seed >= SEED_MIN && seed <= SEED_MAX);
+  const cands = filterByGuesses(
+    filterByClues(seeds.map(toCandidate), currentClues()),
+    get("dreadScrollGuesses", ""),
+  );
+  return cands.length === 0 ? undefined : cands;
+}
+
+export function candidates(): Candidate[] | undefined {
+  const seeds = candidateSeeds();
+  if (seeds === undefined || seeds.length === 0) return undefined;
+  return seeds.map(toCandidate);
+}
+
+export type ResolverState = {
+  count: number;
+  unknown: number[];
+  guess: number[];
+  worstBurn: number;
+};
+
+function stateOf(cands: Candidate[]): ResolverState {
+  const guess = pickGuess(cands);
+  return {
+    count: cands.length,
+    unknown: unknownClues(cands, currentClues()),
+    guess,
+    worstBurn: burnTurns(worstWrongWords(cands, guess)),
+  };
+}
+
+export function resolverState(): ResolverState | undefined {
+  const cands = candidates();
+  return cands === undefined ? undefined : stateOf(cands);
+}
+
+export function purchasableSplits(): number[] {
+  const cands = candidates();
+  if (cands === undefined) return [];
+  return [4, 7].filter((clue) => splitsOn(cands, clue));
+}
+
+export function guessReady(capacity: number): boolean {
+  if (!args.dreadGuess) return false;
+  const state = resolverState();
+  if (state === undefined || state.count === 0 || state.count > args.guessMax) return false;
+  return state.worstBurn <= capacity || purchasableSplits().length === 0;
+}
+
+function afterPurchases(cands: Candidate[]): Candidate[] {
+  const clues = currentClues().slice();
+  for (const clue of [4, 7]) {
+    if (splitsOn(cands, clue)) clues[clue - 1] = cands[0].scroll[clue - 1];
+  }
+  return filterByClues(cands, clues);
+}
+
+export function seedResolvable(capacity: number): boolean {
+  if (isKnucklebonesAndSushiEnough()) return true;
+  if (!args.dreadGuess) return false;
+  const cands = candidates();
+  if (cands === undefined || cands.length === 0) return false;
+  const state = stateOf(afterPurchases(cands));
+  return state.count <= args.guessMax && state.worstBurn <= capacity;
+}
+
+export function seedGuess(): string | undefined {
+  const cands = cachedCandidates();
+  if (cands === undefined) return undefined;
+  const state = stateOf(cands);
+  print(
+    `Dreadscroll guess: ${state.count} candidate seed(s), unknown clues [${state.unknown.join(",")}], worst burn ${state.worstBurn}.`,
+    "blue",
+  );
+  return state.guess.join("");
 }
