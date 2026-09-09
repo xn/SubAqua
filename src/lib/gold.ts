@@ -178,7 +178,9 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
       );
     }
   }
-  const limit = checkpoint + GUARD_TOLERANCE + sessionDrift + args.goldSlack;
+  const group = groupOf(taskName);
+  const burn = group === "Library" || group === "Yog-Urt" ? get("_subaqua_dreadBurn", 0) : 0;
+  const limit = checkpoint + GUARD_TOLERANCE + sessionDrift + args.goldSlack + burn;
   if (now <= limit) return;
 
   for (const line of ledgerLines()) print(line, "red");
@@ -186,6 +188,7 @@ export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
   throw (
     `GOLD DEVIATION: ${taskName} spent a turn at turncount ${now}; ${GOLD_RUN} had ${groupOf(taskName)} ` +
     `done by turn ${checkpoint} (tolerance ${GUARD_TOLERANCE} + slack ${args.goldSlack}` +
+    `${burn ? ` + ${burn} dreadscroll burn` : ""}` +
     `${sessionDrift ? ` + ${sessionDrift} resumed drift` : ""}, ` +
     `limit ${limit}). Stopping before more turns go. ` +
     `Compare against docs/gold-star-run.txt; rerun with goldSlack=N ` +
