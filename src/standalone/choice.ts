@@ -10,6 +10,7 @@ import {
 } from "kolmafia";
 import { $effect, $item, get, have, set, ValueOf } from "libram";
 
+import { seedGuess } from "../lib/dreadscroll";
 import { clubTargetNames } from "../resources/club";
 import { peridotTargetId } from "../resources/peridot";
 
@@ -168,7 +169,7 @@ export function main(choice: number, page: string) {
     }
     runChoice(1);
   } else if (choice === 703) {
-    const bestGuess = getDreadscrollGuess();
+    const bestGuess = seedGuess() ?? getDreadscrollGuess();
     const extra = `pro1=${bestGuess[0]}&pro2=${bestGuess[1]}&pro3=${bestGuess[2]}&pro4=${bestGuess[3]}&pro5=${bestGuess[4]}&pro6=${bestGuess[5]}&pro7=${bestGuess[6]}&pro8=${bestGuess[7]}`;
     runChoice(1, extra);
   } else if (choice === 310) {
