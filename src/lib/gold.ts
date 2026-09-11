@@ -1,11 +1,6 @@
 import { bufferToFile, myTurncount, print } from "kolmafia";
 import { get, set } from "libram";
 
-import { args } from "../args";
-import { banishSources } from "../resources/banish";
-import { freeKillSources } from "../resources/freekill";
-import { freeRunSources } from "../resources/freerun";
-
 export const GOLD_RUN = "SubAqua 2026-09-06 (36 turns)";
 
 // Turncount at which each group finished in the gold run (docs/gold-star-run.txt, the final
@@ -35,9 +30,6 @@ export const goldTurncounts: Record<string, number> = {
   Finale: 36,
 };
 
-export const goldCheckpoints: Record<string, number> = goldTurncounts;
-
-const GUARD_TOLERANCE = 1;
 const FLOATING = new Set(["Mom/Banish Constructs"]);
 
 export function groupOf(taskName: string): string {
@@ -106,13 +98,10 @@ export function fightHappened(preCombatStarted: string): boolean {
   return get("_lastCombatStarted") !== preCombatStarted;
 }
 
-let sessionDrift: number | undefined;
-
 export function ledgerLines(): string[] {
   loadLedger();
   const lines = [
-    `Run accounting vs ${GOLD_RUN} (whole run; turncount now ${myTurncount()}` +
-      `${sessionDrift ? `; this invocation resumed ${sessionDrift} behind` : ""})`,
+    `Run accounting vs ${GOLD_RUN} (whole run; turncount now ${myTurncount()})`,
     "group | tasks | turns | combats | free | done@ | gold@ | Δ",
   ];
   let turns = 0;
@@ -142,56 +131,4 @@ export function reportLedger(): void {
   const lines = ledgerLines();
   for (const line of lines) print(line, "blue");
   bufferToFile(`${lines.join("\n")}\n`, "subaqua_lastrun.txt");
-}
-
-function ladderState(): string[] {
-  const names = (sources: { name: string; available: () => boolean }[]) =>
-    sources
-      .filter((source) => {
-        try {
-          return source.available();
-        } catch {
-          return false;
-        }
-      })
-      .map((source) => source.name)
-      .join(", ") || "(none)";
-  return [
-    `free kills available: ${names(freeKillSources)}`,
-    `free runs available: ${names(freeRunSources)}`,
-    `banishes available: ${names(banishSources)}`,
-  ];
-}
-
-export function assertOnGoldPace(taskName: string, turnsSpent: number): void {
-  if (!args.gold || turnsSpent <= 0 || FLOATING.has(taskName)) return;
-  const checkpoint = goldCheckpoints[groupOf(taskName)];
-  if (checkpoint === undefined) return;
-  const now = myTurncount();
-  if (sessionDrift === undefined) {
-    sessionDrift = Math.max(0, now - turnsSpent - checkpoint);
-    if (sessionDrift > 0) {
-      print(
-        `Gold guard: resuming ${sessionDrift} turns behind ${GOLD_RUN} (turncount ${now - turnsSpent}, ` +
-          `${groupOf(taskName)} checkpoint ${checkpoint}); later limits carry that drift.`,
-        "yellow",
-      );
-    }
-  }
-  const group = groupOf(taskName);
-  const burn = group === "Library" || group === "Yog-Urt" ? get("_subaqua_dreadBurn", 0) : 0;
-  const limit = checkpoint + GUARD_TOLERANCE + sessionDrift + args.goldSlack + burn;
-  if (now <= limit) return;
-
-  for (const line of ledgerLines()) print(line, "red");
-  for (const line of ladderState()) print(line, "red");
-  throw (
-    `GOLD DEVIATION: ${taskName} spent a turn at turncount ${now}; ${GOLD_RUN} had ${groupOf(taskName)} ` +
-    `done by turn ${checkpoint} (tolerance ${GUARD_TOLERANCE} + slack ${args.goldSlack}` +
-    `${burn ? ` + ${burn} dreadscroll burn` : ""}` +
-    `${sessionDrift ? ` + ${sessionDrift} resumed drift` : ""}, ` +
-    `limit ${limit}). Stopping before more turns go. ` +
-    `Compare against docs/gold-star-run.txt; rerun with goldSlack=N ` +
-    `to loosen or gold=false to disable.`
-  );
 }

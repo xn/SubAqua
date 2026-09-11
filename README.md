@@ -225,11 +225,6 @@ Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to 
 
 </details>
 
-The gold guard (`gold=true`) is on by default and aborts the first time a paid
-turn lands more than `goldSlack` (3) turns past the reference 36-turn run's
-checkpoint. If `sim` shows missing recommended rows, run with `gold=false` so
-the route finishes at its own pace instead of stopping to ask.
-
 Options: `tier=low|mid|high` (override detection), `buyLimit=N` (mall spend
 ceiling per purchase; defaults to your autoBuyPriceLimit), `godRunGuard`
 (abort at <= 17 turns played if dreadscroll clue 7 is unknown),

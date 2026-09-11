@@ -63,16 +63,6 @@ export const args = Args.create(
       help: "Run at most this many tasks, then stop (incremental testing).",
       setting: "",
     }),
-    gold: Args.boolean({
-      help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference SubAqua 2026-09-06, 36 turns). gold=false disables.",
-      default: true,
-      setting: "",
-    }),
-    goldSlack: Args.number({
-      help: "Turns of slack allowed over each gold checkpoint before the gold guard aborts.",
-      default: 3,
-      setting: "",
-    }),
     version: Args.flag({ help: "Print the version and exit.", default: false, setting: "" }),
   },
   { positionalArgs: ["command"] },

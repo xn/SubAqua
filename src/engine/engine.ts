@@ -56,7 +56,7 @@ import {
 
 import { codpiece, gemMounted } from "../lib/codpiece";
 import { dreadSeedCheck } from "../lib/dreadscroll";
-import { assertOnGoldPace, fightHappened, recordTask, reportLedger } from "../lib/gold";
+import { fightHappened, recordTask, reportLedger } from "../lib/gold";
 import {
   effectFailureContext,
   isEnsureError,
@@ -626,8 +626,6 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
       dreadSeedCheck();
     }
-
-    assertOnGoldPace(task.name, turnsSpent);
   }
 
   override setChoices(task: Task, manager: PropertiesManager): void {
