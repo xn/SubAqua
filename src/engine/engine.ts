@@ -66,6 +66,7 @@ import {
   shrugBadEffects,
   shrugForSongs,
 } from "../lib/moods";
+import { PaidTurnTally, paidTurnLimitFailure } from "../lib/paidturns";
 import { backupCamera, backupMacro, backupTarget, freeMonsters } from "../resources/backup";
 import {
   bangPotionMacro,
@@ -174,6 +175,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
   private preTaskTurncount = 0;
   private preTaskLastEncounter = "";
   private preTaskCombatStarted = "";
+  private paidTurns = new PaidTurnTally();
 
   override destruct(): void {
     try {
@@ -568,6 +570,7 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     super.post(task);
     const turnsSpent = myTurncount() - this.preTaskTurncount;
     recordTask(task.name, turnsSpent, fightHappened(this.preTaskCombatStarted));
+    this.paidTurns.add(task.name, turnsSpent);
     if (have($effect`Beaten Up`)) {
       uneffect($effect`Beaten Up`);
 
@@ -626,6 +629,18 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     if (get("seahorseName") !== "" && !get("isMerkinHighPriest")) {
       dreadSeedCheck();
     }
+  }
+
+  override checkLimits(task: Task, postcondition: (() => boolean) | undefined): void {
+    super.checkLimits(task, postcondition);
+    if (task.completed()) return;
+    const failure = paidTurnLimitFailure(
+      task.name,
+      this.paidTurns.get(task.name),
+      task.limit.paidTurns,
+      task.limit.message,
+    );
+    if (failure) throw failure;
   }
 
   override setChoices(task: Task, manager: PropertiesManager): void {

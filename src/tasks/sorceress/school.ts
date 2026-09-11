@@ -75,6 +75,7 @@ function vocabularyDone(): boolean {
 }
 
 const monodent = $item`Monodent of the Sea`;
+const crystalBall = $item`miniature crystal ball`;
 
 function schoolLootMacro(): Macro {
   const steps = new Macro();
@@ -120,10 +121,15 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
+          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
-        limit: { soft: 15, message: "The teacher's lounge is not unlocking (choices 396-398)." },
+        limit: {
+          paidTurns: 10,
+          soft: 40,
+          message: "The teacher's lounge is not unlocking (choices 396-398).",
+        },
       },
       {
         name: "Use Wordquiz",
@@ -183,10 +189,15 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
+          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
-        limit: { soft: 20, message: "The facecowl/waistrope pair is not dropping." },
+        limit: {
+          paidTurns: 14,
+          soft: 40,
+          message: "The facecowl/waistrope pair is not dropping.",
+        },
       },
       {
         name: "Buy Scholar Gear",

@@ -12,7 +12,12 @@ export type Quest = BaseQuest<Task>;
 export type Task = {
   combat?: CombatStrategy | BaseCombatStrategy<CombatActions>;
 
-  limit: Limit;
+  /**
+   * grimoire's Limit plus `paidTurns`: abort once the task has spent that many real turns
+   * (turncount deltas summed over its executions). Unlike `turns`, free fights and noncombats
+   * in the zone do not count.
+   */
+  limit: Limit & { paidTurns?: number };
   peridot?: Monster | (() => Monster | undefined);
   /**
    * The zone a function-`do` task adventures in. The engine keys the Peridot, the free-kill
