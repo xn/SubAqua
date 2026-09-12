@@ -14,6 +14,7 @@ import {
 import { $class, $effect, $item, $skill, AsdonMartin, get, have, Macro } from "libram";
 
 import { haveGem, wornOrMounted } from "../lib/codpiece";
+import { inZone } from "../lib/zone";
 
 export type BanishSource = {
   name: string;
@@ -132,15 +133,18 @@ export function sourceMacro(source: BanishSource): Macro {
   );
 }
 
-export function banishChainMacro(location?: Location, opts: { paid?: boolean } = {}): Macro {
+export function banishChainMacro(
+  location?: Location,
+  opts: { paid?: boolean; exclude?: ReadonlySet<string> } = {},
+): Macro {
   const macro = new Macro();
   for (const source of banishSources) {
+    if (opts.exclude?.has(source.name)) continue;
     if (source.paid && !opts.paid) continue;
     if (source.equip && !wornOrMounted(source.equip)) continue;
     if (!source.available()) continue;
     if (location) {
-      const current = banishedBy(source);
-      if (current && (appearanceRates(location)[current.name] ?? 0) > 0) continue;
+      if (inZone(appearanceRates(location), banishedBy(source)?.name)) continue;
     }
     macro.step(sourceMacro(source));
   }
@@ -177,9 +181,7 @@ export function pickBanishSource(
     if (exclude?.has(source.name)) return false;
     if (!source.available()) return false;
     if (!location) return true;
-    const current = banishedBy(source);
-    if (!current) return true;
-    return (appearanceRates(location)[current.name] ?? 0) === 0;
+    return !inZone(appearanceRates(location), banishedBy(source)?.name);
   });
 }
 
