@@ -24,6 +24,7 @@ import {
 } from "libram";
 
 import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
+import { inZone } from "../lib/zone";
 
 import { banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
@@ -219,7 +220,7 @@ export function selectFreeRun(
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
-  const snokebomb = banishSources.find((source) => source.name === "snokebomb");
+  const snokebomb = banishSources.find((source) => source.name === "Snokebomb");
   const run = freeRunSources.find((source) => {
     if (exclude?.has(source.name)) return false;
     if (source.banishes && !banish) return false;
@@ -236,7 +237,7 @@ export function selectFreeRun(
     if (source.name === "Snokebomb") {
       if (location && snokebombExcludedZones.includes(location)) return false;
       const current = snokebomb ? banishedBy(snokebomb) : undefined;
-      if (location && current && (appearanceRates(location)[current.name] ?? 0) > 0) return false;
+      if (location && inZone(appearanceRates(location), current?.name)) return false;
     }
     if (source.name === "Mer-kin pinkslip" && !pinkslipFits(location, target)) return false;
     if (source.name === "ink bladder" && inkBladderReserved(location)) return false;
