@@ -133,9 +133,13 @@ export function sourceMacro(source: BanishSource): Macro {
   );
 }
 
-export function banishChainMacro(location?: Location, opts: { paid?: boolean } = {}): Macro {
+export function banishChainMacro(
+  location?: Location,
+  opts: { paid?: boolean; exclude?: ReadonlySet<string> } = {},
+): Macro {
   const macro = new Macro();
   for (const source of banishSources) {
+    if (opts.exclude?.has(source.name)) continue;
     if (source.paid && !opts.paid) continue;
     if (source.equip && !wornOrMounted(source.equip)) continue;
     if (!source.available()) continue;

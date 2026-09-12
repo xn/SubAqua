@@ -1,5 +1,6 @@
 import { OutfitSpec } from "grimoire-kolmafia";
 import {
+  appearanceRates,
   availableAmount,
   currentRound,
   Familiar,
@@ -47,11 +48,15 @@ import {
   survivalEffects,
 } from "../../lib/moods";
 import { currentTier } from "../../lib/tier";
+import { wafflePlan, WAFFLE_RESERVE } from "../../lib/waffle";
+import { inZone } from "../../lib/zone";
 import { backupCamera, backupMacro, BackupSpec, backupTarget } from "../../resources/backup";
 import {
   assertBanishHeld,
   banishActive,
   banishChainMacro,
+  banishedBy,
+  banishSources,
   pickBanishSource,
 } from "../../resources/banish";
 import { bczAffordable, selectFreeKill } from "../../resources/freekill";
@@ -138,14 +143,12 @@ function standingDraws(): Monster[] {
   return draws.filter((draw) => !banishActive(draw));
 }
 
-// A waffle re-rolls the fight only when another draw is standing: with the cow alone, six
-// throws were refused (2026-09-05-run.txt:6295-6617), and the wiki says it never rolls a
-// tumbleweed. So while waffles are held a banish must leave two draws standing, and the second
-// banish waits. Once the waffles are gone the banishes go to zero and the tumbleweed, with Tear
-// Away and the free runs, carries the lottery.
+// Every draw is banished as soon as a banish is held: each standing draw dilutes the seahorse
+// roll, and the waffle plan (lib/waffle.ts) wants the zone empty so the last waffle becomes a
+// repeatable roll. The old rule that held the second banish while waffles were in hand cost
+// ~1 adventure per run (2026-09-12 dynamic program).
 function drawBanishable(target: Monster): boolean {
   if (banishActive(target)) return false;
-  if (itemAmount(waffle) > 0 && standingDraws().length < 3) return false;
   if (target === cow && availableAmount(cowbell) < 3) return false;
   if (target === cowboy && availableAmount(lasso) < 1) return false;
   return true;
@@ -160,7 +163,10 @@ function tamingRegimeMacro(): Macro {
   armedPrev = armedNow;
   armedNow = draws.filter(drawBanishable);
   const armed = armedNow;
-  const chain = banishChainMacro(corral, { paid: true });
+  // The by-hand plan owns Spring Kick while it kicks before the waffle: a second kick from the
+  // chain, on the monster the waffle rolled in, would release the first (one target at a time).
+  const exclude = new Set(handPlanKicks() ? ["Spring Kick"] : []);
+  const chain = banishChainMacro(corral, { paid: true, exclude });
   const runs = freeRunChainMacro({ location: corral });
   const macro = new Macro().if_(
     tumbleweed,
@@ -193,41 +199,66 @@ function tamingMacro(): Macro {
     : Macro.item(cowbell).item(cowbell).item(cowbell).item(lasso).abort();
 }
 
-// The wild seahorse rejects 80% of corral adventures regardless of banishes (wiki), so once
-// the banishes are spent every draw is a ~20% lottery. A waffle is one more roll inside a
-// fight that is already free; the ash throws one whenever it holds one (UnderTheSeaCCS:836),
-// and gold tamed on its third (gold-uts-2026-08-21.log:5751-6044). Never gate it on how
-// many draws are still unbanished: that state is exactly when the waffle matters.
+// The seahorse hunt's by-hand step. Which throws pay is decided in lib/waffle.ts from the
+// resources in hand; this runs the plan inside the open fight before the compiled macro.
 //
-// The throw must NOT live in the KoL macro. When the re-roll finds no new monster (the
-// usual case once the other two draws are banished) KoL answers "You don't want to waste
-// a waffle right now", keeps the waffle, and ends the macro with "(Macro aborted.)", which
-// mafia's FightRequest.runOnce treats as a macro error and aborts the whole script
-// (2026-08-31 t45 and 2026-09-05 t18, lastMacroError = "(Macro aborted.)"). The ash never
-// saw this because its CCS runs round by round: throw_item is a plain
-// fight.php?action=useitem with no macro to abort. So the fight is opened by hand, the
-// waffle goes out as that same plain useitem, and only then does the compiled macro run.
-function throwWaffle(): void {
+// The throw must NOT live in the KoL macro. When the re-roll finds no new monster KoL answers
+// "You don't want to waste a waffle right now", keeps the waffle, and ends the macro with
+// "(Macro aborted.)", which mafia's FightRequest.runOnce treats as a macro error and aborts the
+// whole script (2026-08-31 t45 and 2026-09-05 t18, lastMacroError = "(Macro aborted.)"). So
+// the fight is opened by hand, the kick and the waffle go out as plain fight.php actions, and
+// only then does the compiled macro run (banish on what the waffle rolled, tame the seahorse).
+const springKick = $skill`Spring Kick`;
+
+// Spring Kick holds one monster at a time; kicking here would release a corral draw it already
+// holds (the opener kicks the rustler), so the kick is only a banish while it holds nothing
+// from this zone.
+function kickAvailable(): boolean {
+  const source = banishSources.find((s) => s.name === "Spring Kick");
+  if (!source || !have(springShoes) || !source.available()) return false;
+  return !inZone(appearanceRates(corral), banishedBy(source)?.name);
+}
+
+function handPlanKicks(): boolean {
+  return itemAmount(waffle) > WAFFLE_RESERVE && kickAvailable();
+}
+
+function runHandPlan(): void {
   if (currentRound() === 0 || itemAmount(waffle) === 0) return;
-  if (lastMonster() === seahorse) return;
-  if (availableAmount(cowbell) < 3 || availableAmount(lasso) < 1) return;
   const before = lastMonster();
-  if (!standingDraws().some((draw) => draw !== before)) {
-    print(`Waffle held: no other draw is standing to roll ${before.name} into.`);
+  if (before === seahorse) return;
+  if (availableAmount(cowbell) < 3 || availableAmount(lasso) < 1) return;
+  const plan = wafflePlan({
+    current: before === tumbleweed ? "tumbleweed" : "draw",
+    othersStanding: standingDraws().filter((draw) => draw !== before).length,
+    waffles: itemAmount(waffle),
+    kick: kickAvailable() && draws.includes(before),
+  });
+  if (plan.length === 0) {
+    print(`Waffle held on ${before.name}: the last waffle waits for an empty corral.`);
     return;
   }
-  const page = throwItem(waffle);
-  if (page.includes("waste a waffle")) {
-    print(`Waffle refused on ${before.name} (no other draw to roll into); macro takes over.`);
-  } else {
-    print(`Waffle rolled ${before.name} into ${lastMonster().name}.`);
+  for (const action of plan) {
+    if (action === "kick") {
+      visitUrl(`fight.php?action=skill&whichskill=${springKick.id}`);
+      print(`Spring Kick on ${before.name}; the waffle re-rolls it next.`);
+      continue;
+    }
+    const page = throwItem(waffle);
+    if (page.includes("waste a waffle")) {
+      print(
+        `Waffle refused on ${before.name} (nothing else to roll into); kept, macro takes over.`,
+      );
+    } else {
+      print(`Waffle rolled ${before.name} into ${lastMonster().name}.`);
+    }
   }
 }
 
 function tameSeahorseAdventure(): void {
   visitUrl(toUrl(corral));
   if (handlingChoice()) runChoice(-1);
-  throwWaffle();
+  runHandPlan();
 }
 
 function seahorseMacro(): Macro {
@@ -541,8 +572,9 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
         combat: new CombatStrategy().macro(seahorseMacro, seahorse).macro(tamingRegimeMacro).kill(),
         outfit: (): OutfitSpec => {
           const equip: Item[] = [];
-          const top = pickBanishSource(corral);
+          const top = pickBanishSource(corral, new Set(handPlanKicks() ? ["Spring Kick"] : []));
           if (top?.equip) equip.push(gemMounted(top.equip) ? codpiece : top.equip);
+          if (handPlanKicks()) equip.push(springShoes);
           if (draws.every(banishActive)) {
             if (have(tearaway)) equip.push(tearaway);
             if (have(monodent)) equip.push(monodent);
