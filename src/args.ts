@@ -39,6 +39,21 @@ export const args = Args.create(
       default: true,
       setting: "",
     }),
+    dreadGuess: Args.boolean({
+      help: "Read the dreadscroll with a seed-aware guess when the scan leaves at most guessMax candidates; dreadGuess=false farms catalog cards instead (spec 2026-09-09).",
+      default: true,
+      setting: "",
+    }),
+    guessMax: Args.number({
+      help: "Most candidate seeds the dreadscroll guess lane will read through; above this the catalog lane runs.",
+      default: 3,
+      setting: "",
+    }),
+    burnMomFinish: Args.boolean({
+      help: "Let a Deep-Tainted Mind burn spend turns on Mom Finish (Peanut is a spell kill and the effect halves Mysticality).",
+      default: false,
+      setting: "",
+    }),
     list: Args.flag({
       help: "Print the selected runplan with per-task completed status, then exit.",
       default: false,
@@ -46,16 +61,6 @@ export const args = Args.create(
     }),
     actions: Args.number({
       help: "Run at most this many tasks, then stop (incremental testing).",
-      setting: "",
-    }),
-    gold: Args.boolean({
-      help: "Abort the first time a PAID turn lands on a quest group past the gold-standard run's checkpoint + goldSlack (lib/gold.ts; reference UTS 2026-08-21, 41 turns). gold=false disables.",
-      default: true,
-      setting: "",
-    }),
-    goldSlack: Args.number({
-      help: "Turns of slack allowed over each gold checkpoint before the gold guard aborts.",
-      default: 3,
       setting: "",
     }),
     version: Args.flag({ help: "Print the version and exit.", default: false, setting: "" }),

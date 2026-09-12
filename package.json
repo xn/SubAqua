@@ -27,7 +27,7 @@
     "format": "eslint src --fix && NODE_OPTIONS=\"--experimental-strip-types\" prettier --write .",
     "lint": "eslint src && NODE_OPTIONS=\"--experimental-strip-types\" prettier --check .",
     "lint:fix": "eslint src --fix && NODE_OPTIONS=\"--experimental-strip-types\" prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --import jiti/register --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "garbo-lib": "^1.0.3",

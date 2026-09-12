@@ -75,7 +75,7 @@ IoTMs (Highly Recommended)
 ✓ Apriling band helmet - Tuba: 3 NC forces (Wreck hatch, shadow rift, skate park); piccolo/quad tom second
 ✓ august scepter - Aug 2nd clover day for pristine scales; waffle day (low/mid); tier marker
 ✓ backup camera - Copies: cow cowbells, healer prayerbeads, free-monster re-fights (11/day)
-✓ bat wings - Swoop procs make paid Colosseum rounds free (gold: 3 procs)
+✓ bat wings - Swoop like a Bat is a free kill on the shadow slabs, so the rift bricks cost no turns (gold: 4 procs)
 ✓ blood cubic zirconia - Refracted Gaze on the cow and the school; Blood Bath; Sweat Bullets free kills (low/mid)
 ✓ Chest Mimic - Mimic eggs: the second diver copy without a locket charge
 ✓ closed-circuit pay phone - Rufus: the Shadow Rift quest and its free fights; opens the guild lane
@@ -178,8 +178,8 @@ Miscellany (Optional)
 Pull check — Hagnk's stock (counted pulls; 2015+ Mr. Store items auto-pull for free):
 Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to buyLimit = 20000 (autoBuyPriceLimit, or buyLimit=); a pricier item aborts the run at that point.
 ✓ Mer-kin sneakmask
-✓ shark jumper
-✓ scale-mail underwear — skipped with a Kramco
+✓ shark jumper — Mom speedup: +1 progress per Abyss combat
+✓ scale-mail underwear — Mom speedup: +1 progress per Abyss combat
 ✓ Elf Guard SCUBA tank — pulled at every tier when no SCUBA tank is owned (lasso training); discretionary otherwise
 ✓ Flash Liquidizer Ultra Dousing Accessory
 ✓ Congressional Medal of Insanity — optional; pulled only from Hagnk's, never mall-bought
@@ -196,7 +196,7 @@ Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to 
 ✓ sea lasso — usually a drop or a wish
 ✓ sea cowbell
 ✗ software glitch — mall-bought if the route needs it — only without a backup camera (high tier)
-✓ comb jelly
+✓ comb jelly — Mom speedup: Jelly Combed, +1 progress per Abyss combat
 ✓ Mer-kin prayerbeads — after the paw wishes
 ✓ Mer-kin healscroll — fallback; the researcher Force is the source
 ✓ Mer-kin worktea — fallback; the library alphabetizer drops it
@@ -224,11 +224,6 @@ Pulls not in Hagnk's are mall-bought with Hagnk's meat (you have 0 there) up to 
 ```
 
 </details>
-
-The gold guard (`gold=true`) is on by default and aborts the first time a paid
-turn lands more than `goldSlack` (3) turns past the reference 41-turn run's
-checkpoint. If `sim` shows missing recommended rows, run with `gold=false` so
-the route finishes at its own pace instead of stopping to ask.
 
 Options: `tier=low|mid|high` (override detection), `buyLimit=N` (mall spend
 ceiling per purchase; defaults to your autoBuyPriceLimit), `godRunGuard`

@@ -28,12 +28,13 @@ import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
-import { isKnucklebonesAndSushiEnough } from "../../lib/dreadscroll";
+import { seedResolvable } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { freeMonsters } from "../../resources/backup";
 import { bczAffordable } from "../../resources/freekill";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
+import { burnCapacity } from "./burn";
 import { sourceEnhanceItems } from "./daily";
 
 const school = $location`Mer-kin Elementary School`;
@@ -65,11 +66,16 @@ function deepcityOpen(): boolean {
   return get("seahorseName", "") !== "";
 }
 
+function resolvable(): boolean {
+  return seedResolvable(burnCapacity());
+}
+
 function vocabularyDone(): boolean {
-  return get("merkinVocabularyMastery", 0) >= 90 || isKnucklebonesAndSushiEnough();
+  return get("merkinVocabularyMastery", 0) >= 90 || resolvable();
 }
 
 const monodent = $item`Monodent of the Sea`;
+const crystalBall = $item`miniature crystal ball`;
 
 function schoolLootMacro(): Macro {
   const steps = new Macro();
@@ -104,8 +110,7 @@ export function schoolQuest(): Quest {
         name: "School Unlocks",
         ready: deepcityOpen,
         completed: () =>
-          get("merkinElementaryTeacherUnlock", false) ||
-          (isKnucklebonesAndSushiEnough() && cowlAndRope()),
+          get("merkinElementaryTeacherUnlock", false) || (resolvable() && cowlAndRope()),
         prepare: (): void => {
           putCloset(itemAmount(hallpass), hallpass);
           recover();
@@ -116,15 +121,20 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
+          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
-        limit: { soft: 15, message: "The teacher's lounge is not unlocking (choices 396-398)." },
+        limit: {
+          paidTurns: 10,
+          soft: 40,
+          message: "The teacher's lounge is not unlocking (choices 396-398).",
+        },
       },
       {
         name: "Use Wordquiz",
         ready: () =>
-          !isKnucklebonesAndSushiEnough() &&
+          !resolvable() &&
           itemAmount(wordquiz) > 0 &&
           (itemAmount(cheatsheet) > 0 || cheatsheetPullable()),
         completed: vocabularyDone,
@@ -137,7 +147,7 @@ export function schoolQuest(): Quest {
       },
       {
         name: "Farm School",
-        ready: () => deepcityOpen() && !isKnucklebonesAndSushiEnough(),
+        ready: () => deepcityOpen() && !resolvable(),
         completed: () =>
           vocabularyDone() ||
           (itemAmount(wordquiz) > 0 && (itemAmount(cheatsheet) > 0 || cheatsheetPullable())),
@@ -179,10 +189,15 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
+          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
-        limit: { soft: 20, message: "The facecowl/waistrope pair is not dropping." },
+        limit: {
+          paidTurns: 14,
+          soft: 40,
+          message: "The facecowl/waistrope pair is not dropping.",
+        },
       },
       {
         name: "Buy Scholar Gear",

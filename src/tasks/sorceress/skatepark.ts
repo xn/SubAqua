@@ -28,7 +28,10 @@ import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pul
 
 const blade = $item`skate blade`;
 const parasol = $item`peppermint parasol`;
-const latePullOrder = $items`peppermint parasol, ink bladder, Mer-kin pinkslip, stuffed yam stinkbomb, anchor bomb`;
+const waffle = $item`waffle`;
+// The waffle is one Peanut re-roll (mom.ts waffleOnPeanut) for when the corral spent Waffle
+// Day's three; it takes the last slot only.
+const latePullOrder = $items`peppermint parasol, ink bladder, Mer-kin pinkslip, stuffed yam stinkbomb, anchor bomb, waffle`;
 
 function latePullable(it: Item): boolean {
   if (pulledToday(it)) return false;
@@ -38,6 +41,7 @@ function latePullable(it: Item): boolean {
   ) {
     return false;
   }
+  if (it === waffle && itemAmount(waffle) > 0) return false;
   if (storageAmount(it) === 0 && mallPrice(it) > buyLimit()) return false;
   return pullBudgetAllows(it);
 }

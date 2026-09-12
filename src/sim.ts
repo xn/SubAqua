@@ -39,6 +39,7 @@ import {
 import { args } from "./args";
 import { buyLimit, haveAnywhere } from "./lib";
 import { detectTier, Tier } from "./lib/tier";
+import { bangPotionCriteriaKey } from "./resources/bangpotions";
 import { selectFreeKill } from "./resources/freekill";
 import { policyForTier } from "./resources/policy";
 
@@ -634,6 +635,21 @@ function miscRequirements(tier: Tier): Requirement[] {
       necessaryAt: allTiers,
     });
   }
+  {
+    const potionsKnown = !bangPotionCriteriaKey().includes("?");
+    const boxPulls = policyForTier(tier).allowDiscretionaryPulls;
+    rows.push({
+      thing: new Hardcoded(
+        potionsKnown || boxPulls,
+        "seed pin: bang potions identified or the blessed large box pulls allowed at this tier",
+        potionsKnown || boxPulls
+          ? ""
+          : " (the Library will farm catalog cards instead of guessing; about 5 extra turns when it triggers)",
+      ),
+      why: "The dreadscroll seed scan pins on the nine bang potions plus the seahorse name; without them the guess lane is off",
+      recommended: true,
+    });
+  }
   if (ownItem($item`Leprecondo`)) {
     const layout = policyForTier(tier).leprecondoLayout;
     const discovered = Leprecondo.discoveredFurniture();
@@ -692,11 +708,11 @@ type PullRow = { item: Item; note?: string; discretionary?: boolean; stockOnly?:
 
 const routePulls: PullRow[] = [
   { item: $item`Mer-kin sneakmask`, discretionary: true },
-  { item: $item`shark jumper`, discretionary: true },
-  { item: $item`scale-mail underwear`, discretionary: true, note: "skipped with a Kramco" },
+  { item: $item`shark jumper`, note: "Mom speedup: +1 progress per Abyss combat" },
+  { item: $item`scale-mail underwear`, note: "Mom speedup: +1 progress per Abyss combat" },
   {
     item: $item`Elf Guard SCUBA tank`,
-    note: "pulled at every tier when no SCUBA tank is owned (lasso training); discretionary otherwise",
+    note: "pulled at every tier when no SCUBA tank is owned (lasso training) and no Asdon is installed; discretionary otherwise",
   },
   { item: $item`Flash Liquidizer Ultra Dousing Accessory`, discretionary: true },
   {
@@ -720,8 +736,12 @@ const routePulls: PullRow[] = [
   { item: $item`rusty rivet`, note: "only if the paw wishes leave the count at 7" },
   { item: $item`sea lasso`, note: "usually a drop or a wish" },
   { item: $item`sea cowbell` },
+  {
+    item: $item`waffle`,
+    note: "late pull, last slot: one Peanut re-roll if the corral spent Waffle Day's",
+  },
   { item: $item`software glitch`, note: "only without a backup camera (high tier)" },
-  { item: $item`comb jelly` },
+  { item: $item`comb jelly`, note: "Mom speedup: Jelly Combed, +1 progress per Abyss combat" },
   { item: $item`Mer-kin prayerbeads`, note: "after the paw wishes" },
   { item: $item`Mer-kin healscroll`, note: "fallback; the researcher Force is the source" },
   { item: $item`Mer-kin worktea`, note: "fallback; the library alphabetizer drops it" },
@@ -922,11 +942,6 @@ export function printSimChecklist(): void {
     );
   } else {
     print(`You have everything the route knows about at tier ${tier}.`, "blue");
-  }
-  if (missingOptional > 0) {
-    print(
-      "Note: the gold guard is on by default (gold=true) and aborts the first time a paid turn lands more than goldSlack=3 turns past the reference 41-turn run's checkpoint. Missing recommended rows make that likely; run with gold=false to let the route finish at its own pace.",
-    );
   }
   print(`Tier verdict (auto-detect: ${detectTier(ownItem)}, in use: ${tier})`, "blue");
 }
