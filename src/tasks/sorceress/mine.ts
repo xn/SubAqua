@@ -29,6 +29,7 @@ import { CombatStrategy, killMacro } from "../../engine/combat";
 import { lassoExpert, requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
+import { getLucky, luckyObtainable } from "../../lib/lucky";
 import { itemDropEffects } from "../../lib/moods";
 import { discretionaryPull, pullSequence } from "../../resources/pulls";
 
@@ -103,18 +104,6 @@ const abyss = $location`The Caliginous Abyss`;
 const reef = $location`Madness Reef`;
 const roughScale = $item`rough fish scale`;
 
-function luckyObtainable(): boolean {
-  if (have($effect`Lucky!`)) return true;
-  if (
-    have($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`) &&
-    !get("_aug2Cast", false) &&
-    get("_augSkillsCast", 0) < 5
-  ) {
-    return true;
-  }
-  return itemAmount($item`11-leaf clover`) > 0 || get("_cloversPurchased", 0) < 3;
-}
-
 function reefTripNext(): boolean {
   return !luckyObtainable() && itemAmount(roughScale) >= 10;
 }
@@ -138,20 +127,6 @@ function scaleTrip(): boolean {
 
 const NO_SCALE_SOURCE = (need: number): string =>
   `Need ${need} more pristine fish scale(s): out of hermitage clovers (3/day) and fewer than 10 rough fish scales for the Madness Reef exchange (choice 311/1 -> 310/2). Get scales (a Lucky! source for the Caliginous Abyss, or rough scales to trade), then rerun.`;
-
-function getLucky(): void {
-  if (have($effect`Lucky!`)) return;
-  if (
-    have($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`) &&
-    !get("_aug2Cast", false) &&
-    get("_augSkillsCast", 0) < 5
-  ) {
-    useSkill($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`);
-    if (have($effect`Lucky!`)) return;
-  }
-  withProperty("autoSatisfyWithCoinmasters", true, () => retrieveItem($item`11-leaf clover`));
-  if (itemAmount($item`11-leaf clover`) > 0) use($item`11-leaf clover`);
-}
 
 const SHAFT: [number, number][] = [
   [3, 6],

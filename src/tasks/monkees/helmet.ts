@@ -7,12 +7,10 @@ import {
   retrieveItem,
   turnsPlayed,
   use,
-  useSkill,
   visitUrl,
 } from "kolmafia";
 import {
   $coinmaster,
-  $effect,
   $familiar,
   $item,
   $items,
@@ -28,6 +26,7 @@ import { CombatStrategy, openerOnce } from "../../engine/combat";
 import { sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, questStepOf, recover } from "../../lib";
+import { getLucky } from "../../lib/lucky";
 import {
   applyEffects,
   combineMoods,
@@ -82,17 +81,8 @@ function gainSandDollars(): void {
   if (itemAmount($item`sand dollar`) < 63 && pullSequence($item`damp old wallet`)) {
     use($item`damp old wallet`);
   }
-  if (itemAmount($item`sand dollar`) < 63) {
-    if (
-      have($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`) &&
-      !get("_aug2Cast", false) &&
-      get("_augSkillsCast", 0) < 5
-    ) {
-      useSkill($skill`Aug. 2nd: Find an Eleven-Leaf Clover Day`);
-    } else if (have($item`11-leaf clover`) || pullSequence($item`11-leaf clover`)) {
-      use($item`11-leaf clover`);
-    }
-    if (have($effect`Lucky!`)) adv1(outpost, -1, "");
+  if (itemAmount($item`sand dollar`) < 63 && getLucky({ pull: true })) {
+    adv1(outpost, -1, "");
   }
 }
 
