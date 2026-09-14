@@ -261,7 +261,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
   };
 }
 
-const yogDelevelOrder = $items`Mer-kin mouthsoap, crayon shavings, table tennis ball, sea cowbell`;
+const yogDelevelOrder = $items`Mer-kin mouthsoap, crayon shavings, train whistle, table tennis ball, sea cowbell`;
 const yogHealOrder = $items`sea gel, Mer-kin healscroll, waterlogged scroll of healing, soggy used band-aid, New Age healing crystal`;
 
 export function yogUrtFilter(): CombatFilter {

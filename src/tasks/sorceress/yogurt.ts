@@ -49,7 +49,9 @@ const crystal = $item`New Age healing crystal`;
 const bandaid = $item`soggy used band-aid`;
 const antidote = $item`soft green echo eyedrop antidote`;
 const penny = $item`sand penny`;
-const yogDelevelStock = $items`Mer-kin mouthsoap, crayon shavings, table tennis ball, sea cowbell`;
+// Yog-Urt accepts each specific item once per fight, so two deleveling rounds need two types.
+// The train whistle (-25% attack, reusable, once per combat) counts as a type.
+const yogDelevelStock = $items`Mer-kin mouthsoap, crayon shavings, train whistle, table tennis ball, sea cowbell`;
 
 function delevelersOwned(): number {
   return yogDelevelStock.filter((it) => itemAmount(it) > 0).length;
@@ -221,7 +223,7 @@ export function yogUrtQuest(): Quest {
           }
           if (delevelersOwned() < 2 && !have($effect`Null Afternoon`)) {
             abort(
-              "Yog-Urt prep is short: need two deleveler types (Mer-kin mouthsoap / crayon shavings / table tennis ball / sea cowbell) or Null Afternoon. Farm the corral for cowbells or pull delevelers, then rerun.",
+              "Yog-Urt prep is short: need two deleveler types (Mer-kin mouthsoap / crayon shavings / train whistle / table tennis ball / sea cowbell) or Null Afternoon. Farm the corral for cowbells or pull delevelers, then rerun.",
             );
           }
           if (availableAmount(beads) < 3 && !pulledToday(beads) && pullBudgetAllows(beads)) {
