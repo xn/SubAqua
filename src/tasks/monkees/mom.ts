@@ -28,6 +28,7 @@ import {
   $items,
   $location,
   $monster,
+  $phylum,
   $skill,
   $stat,
   CombatLoversLocket,
@@ -40,6 +41,12 @@ import {
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
+import {
+  abyssScreechTurn,
+  banishConstructsReady,
+  CyberLaneState,
+  cyberMomReady,
+} from "../../lib/cyberlane";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { selectFreeKill } from "../../resources/freekill";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
@@ -178,6 +185,29 @@ function cyberLaneStuck(): boolean {
   return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
 }
 
+function cyberLaneState(): CyberLaneState {
+  return {
+    screechReady: screechReady(),
+    habitatFree: habitatFree(),
+    eyeHabitatUp:
+      get("_monsterHabitatsFightsLeft", 0) > 0 && habitatIsMomTarget() && habitatDrawable(),
+    clubEmGolemPending: clubEmGolemPending(),
+    lastGolemHabitat:
+      get("_monsterHabitatsFightsLeft", 0) === 1 && get("_monsterHabitatsMonster") === golem,
+  };
+}
+
+// The Outpost screeches the last habitat golem; when its charges outlive the Outpost (09-14:
+// two left at the lockkey drop) the last golem shows in the Abyss instead, so the Abyss tasks
+// field the eagle for it the same way.
+function abyssScreechOpener(): Macro {
+  return abyssScreechTurn(cyberLaneState()) ? openerOnce(Macro.trySkill(screech)) : new Macro();
+}
+
+function abyssFamiliar() {
+  return abyssScreechTurn(cyberLaneState()) ? eagle : undefined;
+}
+
 function noteRecallOutcome(): void {
   if (!staleGolemHabitat()) return;
   if (!habitatTargets.includes(lastMonster())) return;
@@ -246,6 +276,7 @@ function abyssAdventure(): void {
 const abyssCombat = () =>
   new CombatStrategy()
     .macro(monsterMacro(vhsMacro, vhsTargets))
+    .macro(monsterMacro(abyssScreechOpener, golem))
     .macro(peanutMacro, peanut)
     .banish(school)
     .kill(peanut)
@@ -253,6 +284,7 @@ const abyssCombat = () =>
 
 const abyssOutfit = () => ({
   modifier: "item",
+  familiar: abyssFamiliar(),
   equip: [
     glass,
     ...$items`shark jumper, scale-mail underwear`,
@@ -363,7 +395,7 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ? ([
             {
               name: "Banish Constructs",
-              ready: () => cyberKit() && habitatFree() && !clubEmGolemPending(),
+              ready: () => cyberKit() && banishConstructsReady(cyberLaneState()),
               completed: () =>
                 momDone() ||
                 get("_cyberFreeFights", 0) >= 10 ||
@@ -389,6 +421,8 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 if (get("banishedPhyla").includes("construct") || get("screechCombats", 0) > 0)
                   return;
                 if (get("_lastCombatStarted", "") === get("_subaqua_screech_combat", "")) return;
+                // With the eye habitat up the Bakery may draw the eye instead of a construct.
+                if (lastMonster().phylum !== $phylum`construct`) return;
                 throw (
                   `Banish Constructs fought ${get("lastEncounter")} with the Patriotic Eagle out and the screech ` +
                   "did not land (screechCombats still 0, construct unbanished). KoL did not cast skill 7451 " +
@@ -412,16 +446,18 @@ export function momQuest(opts: { cyber: boolean }): Quest {
               peridot: abyssPeridot,
               combat: new CombatStrategy()
                 .macro(monsterMacro(vhsMacro, vhsTargets))
+                .macro(monsterMacro(abyssScreechOpener, golem))
                 .macro(
                   () => openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
                   habitatTargets,
                 )
                 .kill(),
-              outfit: {
+              outfit: () => ({
                 modifier: "item",
+                familiar: abyssFamiliar(),
                 equip: [glass, ...momSpeedupGear],
                 avoid: [crystalBall],
-              },
+              }),
               effects: itemDropEffects,
               prepare: (): void => {
                 momSpeedupPrep();
@@ -432,11 +468,9 @@ export function momQuest(opts: { cyber: boolean }): Quest {
             },
             {
               name: "Cyber Mom",
-              ready: () =>
-                cyberKit() &&
-                get("_monsterHabitatsFightsLeft", 0) > 0 &&
-                habitatIsMomTarget() &&
-                habitatDrawable(),
+              // Waits for the construct banish: unbanished, Cyberzone 1's five construct
+              // processes crowd the eye out (09-14: 2 eyes in 11 fights, try limit hit).
+              ready: () => cyberKit() && cyberMomReady(cyberLaneState()),
               completed: () =>
                 momDone() ||
                 get("_monsterHabitatsFightsLeft", 0) === 0 ||
