@@ -39,3 +39,20 @@ export function banishConstructsReady(state: CyberLaneState): boolean {
 export function cyberMomReady(state: CyberLaneState): boolean {
   return state.eyeHabitatUp && !state.screechReady;
 }
+
+export interface CyberBudget {
+  /** mafia's _cyberFreeFights: it counts only fight pages carrying FREEFREEFREE, and the
+   *  construct process fights do not carry it (09-14: 11 fights, 5 counted). */
+  freeFightsCounted: number;
+  /** _cyberZone1Turns + _cyberZone2Turns + _cyberZone3Turns; the 10th adventure of a zone is a
+   *  turn-free noncombat, so 11 zone adventures hold the 10 OVERCLOCK fights. */
+  zoneAdventures: number;
+  /** A Cyber Mom fight advanced the turn counter: the budget is spent whatever the counters say. */
+  paidFightSeen: boolean;
+}
+
+/** OVERCLOCK(10)'s ten free CyberRealm fights are gone. 09-14's rerun paid 7 Cyberzone turns
+ *  because the counted figure sat at 5. */
+export function cyberFreeFightsGone(budget: CyberBudget): boolean {
+  return budget.paidFightSeen || budget.freeFightsCounted >= 10 || budget.zoneAdventures >= 11;
+}

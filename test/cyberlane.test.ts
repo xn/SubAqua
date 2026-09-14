@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   abyssScreechTurn,
   banishConstructsReady,
+  cyberFreeFightsGone,
   CyberLaneState,
   cyberMomReady,
 } from "../src/lib/cyberlane";
@@ -53,4 +54,24 @@ test("the Abyss screeches only the last habitat golem, only while the screech is
 test("nothing to do with no eye habitat", () => {
   assert.equal(cyberMomReady({ ...base, screechReady: false }), false);
   assert.equal(banishConstructsReady(base), false);
+});
+
+test("the free-fight budget ends on zone adventures, not on mafia's undercount", () => {
+  // 09-14 first pass: 12 zone adventures, 5 counted, then every fight cost a turn.
+  assert.equal(
+    cyberFreeFightsGone({ freeFightsCounted: 5, zoneAdventures: 12, paidFightSeen: false }),
+    true,
+  );
+  assert.equal(
+    cyberFreeFightsGone({ freeFightsCounted: 5, zoneAdventures: 10, paidFightSeen: false }),
+    false,
+  );
+  assert.equal(
+    cyberFreeFightsGone({ freeFightsCounted: 10, zoneAdventures: 3, paidFightSeen: false }),
+    true,
+  );
+  assert.equal(
+    cyberFreeFightsGone({ freeFightsCounted: 2, zoneAdventures: 3, paidFightSeen: true }),
+    true,
+  );
 });
