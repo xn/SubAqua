@@ -14,6 +14,14 @@ import { $effect, $item, $items, get, have } from "libram";
 
 import { buyLimit } from "../lib";
 import { shubPrepShort } from "../lib/shub";
+import { delevelersOwned } from "../lib/yog";
+import {
+  exploitName,
+  storedDelevelerOrder,
+  yogDelevelerPull,
+  yogExploitWanted,
+  YogDelevelState,
+} from "../lib/yogdelevel";
 
 import { currentPolicy } from "./policy";
 
@@ -50,17 +58,47 @@ type PullReservation = {
   needed: () => boolean;
 };
 
+const storedDelevelers = storedDelevelerOrder.map((name) => Item.get(name));
+const exploit = Item.get(exploitName);
+
+function yogDelevelState(): YogDelevelState {
+  return {
+    highPriest: get("isMerkinHighPriest", false),
+    yogDefeated: get("yogUrtDefeated", false),
+    typesHeld: delevelersOwned(),
+    nullAfternoon: have($effect`Null Afternoon`),
+    stored: storedDelevelers.filter((it) => storageAmount(it) > 0).map((it) => it.name),
+    pulledToday: [...storedDelevelers, exploit].filter(pulledToday).map((it) => it.name),
+  };
+}
+
+/** The reusable Yog-Urt deleveler to pull from Hagnk's (lib/yogdelevel), if one is wanted. */
+export function yogDelevelerPullItem(): Item | undefined {
+  const name = yogDelevelerPull(yogDelevelState());
+  return name === undefined ? undefined : Item.get(name);
+}
+
 const pullReservations: PullReservation[] = [
   {
     name: "crayon shavings",
     item: $item`crayon shavings`,
     needed: () => availableAmount($item`crayon shavings`) < 9,
   },
+  // Yog-Urt's second deleveler type when the School dropped no mouthsoap: the reusable
+  // delevelers in Hagnk's first, the exploit last. Each holds its own slot so the late-pull
+  // reservations below (ink bladder, pinkslip) cannot starve it, which is what forced the
+  // by-hand whistle pulls on 09-14 and 09-15.
+  ...storedDelevelers.map((it) => ({
+    name: `${it.name} (Yog deleveler)`,
+    item: it,
+    needed: () => yogDelevelerPullItem() === it,
+  })),
   {
     name: "null-day exploit",
-    item: $item`null-day exploit`,
+    item: exploit,
     needed: () =>
-      !get("shubJigguwattDefeated") && shubPrepShort(2) && !pulledToday($item`null-day exploit`),
+      (!get("shubJigguwattDefeated") && shubPrepShort(2) && !pulledToday(exploit)) ||
+      yogExploitWanted(yogDelevelState()),
   },
   {
     name: "Mer-kin pinkslip",
