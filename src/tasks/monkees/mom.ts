@@ -28,6 +28,7 @@ import {
   $items,
   $location,
   $monster,
+  $phylum,
   $skill,
   $stat,
   CombatLoversLocket,
@@ -40,6 +41,13 @@ import {
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
 import { Quest, Task } from "../../engine/task";
 import { grandpaZone, monkeesStep, recover } from "../../lib";
+import {
+  abyssScreechTurn,
+  banishConstructsReady,
+  cyberFreeFightsGone,
+  CyberLaneState,
+  cyberMomReady,
+} from "../../lib/cyberlane";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { selectFreeKill } from "../../resources/freekill";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
@@ -79,6 +87,25 @@ function schoolBanished(): boolean {
 }
 function momDone(): boolean {
   return get("questS02Monkees") === "finished";
+}
+
+// Mom's bar is full; only the Abyss rescue noncombat (Mom Finish) is left. The cyber lane's
+// tasks stop here: 09-14's rerun kept fighting Cyberzone 1 for 6 paid turns after the eye
+// that filled the bar, because only questS02Monkees was checked.
+function momBarFull(): boolean {
+  return momDone() || get("momSeaMonkeeProgress", 0) >= 40;
+}
+
+const cyberTurnsPref = "_subaqua_cyberTurnsBefore";
+const cyberPaidPref = "_subaqua_cyberPaidFight";
+
+function cyberFightsGone(): boolean {
+  return cyberFreeFightsGone({
+    freeFightsCounted: get("_cyberFreeFights", 0),
+    zoneAdventures:
+      get("_cyberZone1Turns", 0) + get("_cyberZone2Turns", 0) + get("_cyberZone3Turns", 0),
+    paidFightSeen: get(cyberPaidPref, false),
+  });
 }
 
 export function momFinishPending(): boolean {
@@ -121,8 +148,22 @@ function clubEmGolemPending(): boolean {
   return get("clubEmNextWeekMonster") === golem;
 }
 
-function wandererScreech(monsterPref: string): boolean {
-  return get(monsterPref) === golem.name && screechReady() && !habitatGolemsLive();
+type WandererPref = "spookyVHSTapeMonster" | "clubEmNextWeekMonster";
+
+// libram's get() returns a Monster for these prefs (never a name string): compare monsters.
+// The name comparison this replaces never matched, so the Club 'Em golem was killed without
+// the eagle on 09-14 (t16) with the screech still unspent.
+function wandererMonster(monsterPref: WandererPref): Monster | null {
+  return get(monsterPref);
+}
+
+function wandererScreech(monsterPref: WandererPref): boolean {
+  return wandererMonster(monsterPref) === golem && screechReady() && !habitatGolemsLive();
+}
+
+function wandererIsMomTarget(monsterPref: WandererPref): boolean {
+  const monster = wandererMonster(monsterPref);
+  return monster !== null && habitatTargets.includes(monster);
 }
 
 function screechGolemFromLocket(): boolean {
@@ -171,11 +212,34 @@ function cyberLaneStuck(): boolean {
   if (!cyberKit()) return false;
   if (recallRefused()) return true;
   if (habitatIsMomTarget()) {
-    return get("_monsterHabitatsFightsLeft", 0) > 0 && get("_cyberFreeFights", 0) >= 10;
+    return get("_monsterHabitatsFightsLeft", 0) > 0 && cyberFightsGone();
   }
   if (!recallsLeft()) return true;
   if (habitatFree()) return false;
-  return !habitatDrawable() || get("_cyberFreeFights", 0) >= 10;
+  return !habitatDrawable() || cyberFightsGone();
+}
+
+function cyberLaneState(): CyberLaneState {
+  return {
+    screechReady: screechReady(),
+    habitatFree: habitatFree(),
+    eyeHabitatUp:
+      get("_monsterHabitatsFightsLeft", 0) > 0 && habitatIsMomTarget() && habitatDrawable(),
+    clubEmGolemPending: clubEmGolemPending(),
+    lastGolemHabitat:
+      get("_monsterHabitatsFightsLeft", 0) === 1 && get("_monsterHabitatsMonster") === golem,
+  };
+}
+
+// The Outpost screeches the last habitat golem; when its charges outlive the Outpost (09-14:
+// two left at the lockkey drop) the last golem shows in the Abyss instead, so the Abyss tasks
+// field the eagle for it the same way.
+function abyssScreechOpener(): Macro {
+  return abyssScreechTurn(cyberLaneState()) ? openerOnce(Macro.trySkill(screech)) : new Macro();
+}
+
+function abyssFamiliar() {
+  return abyssScreechTurn(cyberLaneState()) ? eagle : undefined;
 }
 
 function noteRecallOutcome(): void {
@@ -246,6 +310,7 @@ function abyssAdventure(): void {
 const abyssCombat = () =>
   new CombatStrategy()
     .macro(monsterMacro(vhsMacro, vhsTargets))
+    .macro(monsterMacro(abyssScreechOpener, golem))
     .macro(peanutMacro, peanut)
     .banish(school)
     .kill(peanut)
@@ -253,6 +318,7 @@ const abyssCombat = () =>
 
 const abyssOutfit = () => ({
   modifier: "item",
+  familiar: abyssFamiliar(),
   equip: [
     glass,
     ...$items`shark jumper, scale-mail underwear`,
@@ -363,11 +429,9 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ? ([
             {
               name: "Banish Constructs",
-              ready: () => cyberKit() && habitatFree() && !clubEmGolemPending(),
+              ready: () => cyberKit() && banishConstructsReady(cyberLaneState()),
               completed: () =>
-                momDone() ||
-                get("_cyberFreeFights", 0) >= 10 ||
-                get("banishedPhyla").includes("construct"),
+                momBarFull() || cyberFightsGone() || get("banishedPhyla").includes("construct"),
               do: () => {
                 if (screechGolemFromLocket()) {
                   CombatLoversLocket.reminisce(golem);
@@ -389,6 +453,8 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 if (get("banishedPhyla").includes("construct") || get("screechCombats", 0) > 0)
                   return;
                 if (get("_lastCombatStarted", "") === get("_subaqua_screech_combat", "")) return;
+                // With the eye habitat up the Bakery may draw the eye instead of a construct.
+                if (lastMonster().phylum !== $phylum`construct`) return;
                 throw (
                   `Banish Constructs fought ${get("lastEncounter")} with the Patriotic Eagle out and the screech ` +
                   "did not land (screechCombats still 0, construct unbanished). KoL did not cast skill 7451 " +
@@ -406,22 +472,24 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 have(glass) &&
                 recallsLeft() &&
                 habitatFree(),
-              completed: () => !recallsLeft() || habitatIsMomTarget(),
+              completed: () => momBarFull() || !recallsLeft() || habitatIsMomTarget(),
               do: abyssAdventure,
               location: abyss,
               peridot: abyssPeridot,
               combat: new CombatStrategy()
                 .macro(monsterMacro(vhsMacro, vhsTargets))
+                .macro(monsterMacro(abyssScreechOpener, golem))
                 .macro(
                   () => openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
                   habitatTargets,
                 )
                 .kill(),
-              outfit: {
+              outfit: () => ({
                 modifier: "item",
+                familiar: abyssFamiliar(),
                 equip: [glass, ...momSpeedupGear],
                 avoid: [crystalBall],
-              },
+              }),
               effects: itemDropEffects,
               prepare: (): void => {
                 momSpeedupPrep();
@@ -432,15 +500,11 @@ export function momQuest(opts: { cyber: boolean }): Quest {
             },
             {
               name: "Cyber Mom",
-              ready: () =>
-                cyberKit() &&
-                get("_monsterHabitatsFightsLeft", 0) > 0 &&
-                habitatIsMomTarget() &&
-                habitatDrawable(),
+              // Waits for the construct banish: unbanished, Cyberzone 1's five construct
+              // processes crowd the eye out (09-14: 2 eyes in 11 fights, try limit hit).
+              ready: () => cyberKit() && cyberMomReady(cyberLaneState()),
               completed: () =>
-                momDone() ||
-                get("_monsterHabitatsFightsLeft", 0) === 0 ||
-                get("_cyberFreeFights", 0) >= 10,
+                momBarFull() || get("_monsterHabitatsFightsLeft", 0) === 0 || cyberFightsGone(),
               do: $location`Cyberzone 1`,
               combat: new CombatStrategy()
                 .macro(monsterMacro(vhsMacro, vhsTargets))
@@ -460,6 +524,15 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 if (myBuffedstat($stat`Moxie`) < 500) {
                   throw "Cyberzone habitat fights want 500+ buffed moxie to be safe (ash UTS:2219). Buff up or let the abyss fallback run.";
                 }
+                set(cyberTurnsPref, totalTurnsPlayed());
+              },
+              post: (): void => {
+                if (totalTurnsPlayed() <= get(cyberTurnsPref, 0)) return;
+                set(cyberPaidPref, true);
+                print(
+                  `Cyber Mom: the last Cyberzone fight cost a turn (${get("_cyberFreeFights", 0)} free fights counted); the cyber lane is done for today.`,
+                  "red",
+                );
               },
               limit: { soft: 12 },
             },
@@ -483,10 +556,15 @@ export function momQuest(opts: { cyber: boolean }): Quest {
 }
 
 export function wandererTasks(): Task[] {
-  const redemption = (name: string, monsterPref: string, turnPref: string): Task => ({
+  const redemption = (
+    name: string,
+    monsterPref: WandererPref,
+    turnPref: "spookyVHSTapeMonsterTurn" | "clubEmNextWeekMonsterTurn",
+  ): Task => ({
     name,
-    ready: () => !!get(monsterPref) && totalTurnsPlayed() >= get(turnPref, 0) + 8,
-    completed: () => !get(monsterPref),
+    ready: () =>
+      wandererMonster(monsterPref) !== null && totalTurnsPlayed() >= get(turnPref, 0) + 8,
+    completed: () => wandererMonster(monsterPref) === null,
     do: () => grandpaZone(),
     underwater: true,
     combat: new CombatStrategy()
@@ -502,13 +580,11 @@ export function wandererTasks(): Task[] {
     outfit: () => ({
       modifier: `item, ${pearlResModifier()}`,
       familiar: wandererScreech(monsterPref) ? eagle : undefined,
-      equip: habitatTargets.some((target) => target.name === get(monsterPref))
-        ? momSpeedupGear
-        : [],
+      equip: wandererIsMomTarget(monsterPref) ? momSpeedupGear : [],
     }),
     effects: () => combineMoods(itemDropEffects(), resEffects()),
     prepare: () => {
-      if (habitatTargets.some((target) => target.name === get(monsterPref))) momSpeedupPrep();
+      if (wandererIsMomTarget(monsterPref)) momSpeedupPrep();
       else recover();
     },
     limit: { soft: 4 },

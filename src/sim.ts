@@ -749,7 +749,17 @@ const routePulls: PullRow[] = [
   { item: $item`Mer-kin cheatsheet`, note: "fallback; Talk to Some Fish is the source" },
   { item: $item`Mer-kin hallpass` },
   { item: $item`skate blade` },
-  { item: $item`null-day exploit` },
+  {
+    item: $item`train whistle`,
+    stockOnly: true,
+    note: "Yog-Urt second deleveler when the School drops no mouthsoap; reusable, comes back",
+  },
+  {
+    item: $item`HOA citation pad`,
+    stockOnly: true,
+    note: "Yog-Urt second deleveler after the train whistle; reusable, comes back",
+  },
+  { item: $item`null-day exploit`, note: "Shub insurance; Yog-Urt deleveler of last resort" },
   { item: $item`New Age healing crystal`, note: "Yog-Urt heal fallback" },
   { item: $item`soggy used band-aid`, note: "Yog-Urt heal fallback" },
   { item: $item`soft green echo eyedrop antidote`, note: "only if Gummiheart is up" },

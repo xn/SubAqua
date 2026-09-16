@@ -16,25 +16,20 @@ import {
   use,
   useSkill,
 } from "kolmafia";
-import {
-  $coinmaster,
-  $effect,
-  $item,
-  $items,
-  $location,
-  $skill,
-  $stat,
-  get,
-  have,
-  uneffect,
-} from "libram";
+import { $coinmaster, $effect, $item, $location, $skill, $stat, get, have, uneffect } from "libram";
 
 import { expFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { survivalEffects } from "../../lib/moods";
+import { delevelersOwned, yogDelevelNames } from "../../lib/yog";
 import { currentPolicy } from "../../resources/policy";
-import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
+import {
+  pullBudgetAllows,
+  pulledToday,
+  pullSequence,
+  yogDelevelerPullItem,
+} from "../../resources/pulls";
 
 import { burnTurnElsewhere } from "./burn";
 import { yogUrtFilter } from "./fights";
@@ -49,11 +44,6 @@ const crystal = $item`New Age healing crystal`;
 const bandaid = $item`soggy used band-aid`;
 const antidote = $item`soft green echo eyedrop antidote`;
 const penny = $item`sand penny`;
-const yogDelevelStock = $items`Mer-kin mouthsoap, crayon shavings, table tennis ball, sea cowbell`;
-
-function delevelersOwned(): number {
-  return yogDelevelStock.filter((it) => itemAmount(it) > 0).length;
-}
 
 const healingHP = new Map<Item, number>([
   [gel, 500],
@@ -189,6 +179,11 @@ export function yogUrtQuest(): Quest {
         ready: () => get("isMerkinHighPriest", false) && !get("yogUrtDefeated"),
         completed: () => get("yogUrtDefeated", false) || yogPrepComplete(),
         do: (): void => {
+          // Second deleveler type first (lib/yogdelevel): a reusable one from Hagnk's holds its
+          // own pull slot, and pulling it clears that reservation before the heal-kit pulls
+          // below are budgeted.
+          const stored = yogDelevelerPullItem();
+          if (stored && pullBudgetAllows(stored)) pullSequence(stored);
           if (
             have($effect`Gummiheart`) &&
             itemAmount(antidote) === 0 &&
@@ -221,7 +216,10 @@ export function yogUrtQuest(): Quest {
           }
           if (delevelersOwned() < 2 && !have($effect`Null Afternoon`)) {
             abort(
-              "Yog-Urt prep is short: need two deleveler types (Mer-kin mouthsoap / crayon shavings / table tennis ball / sea cowbell) or Null Afternoon. Farm the corral for cowbells or pull delevelers, then rerun.",
+              `Yog-Urt prep is short: need two deleveler types (${yogDelevelNames}) or Null ` +
+                "Afternoon. The School dropped no mouthsoap, nothing reusable (train whistle, HOA " +
+                "citation pad) is in Hagnk's, and the null-day exploit pull did not land: put a " +
+                "deleveler in Hagnk's or free a pull slot, then rerun.",
             );
           }
           if (availableAmount(beads) < 3 && !pulledToday(beads) && pullBudgetAllows(beads)) {

@@ -36,6 +36,7 @@ import {
 import { killMacro } from "../../engine/combat";
 import { belowHpFloor, floorClearingHeal, stallSpare } from "../../lib";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
+import { yogDelevelStock } from "../../lib/yog";
 import { selectFreeRun } from "../../resources/freerun";
 import { currentPolicy } from "../../resources/policy";
 
@@ -261,7 +262,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
   };
 }
 
-const yogDelevelOrder = $items`Mer-kin mouthsoap, crayon shavings, table tennis ball, sea cowbell`;
+const yogDelevelOrder = yogDelevelStock;
 const yogHealOrder = $items`sea gel, Mer-kin healscroll, waterlogged scroll of healing, soggy used band-aid, New Age healing crystal`;
 
 export function yogUrtFilter(): CombatFilter {
