@@ -38,6 +38,13 @@ export function main(choice: number, page: string) {
     runChoice(2);
   } else if (choice === 691 && options[4]) {
     runChoice(4);
+  } else if (choice === 692 || choice === 693) {
+    // Daily Dungeon door / trap room peeked for the dreadscroll seed (lib/dungeonpeek.ts): the
+    // room type is recorded on arrival, leaving costs nothing and keeps the room for later.
+    const leave = Object.entries(options).find(([, text]) =>
+      /Leave the way you came in|Proceed backwards cautiously/.test(text),
+    );
+    if (leave) runChoice(parseInt(leave[0], 10));
   } else if (choice === 1322) {
     if (
       getProperty("_questPartyFairQuest") === "food" ||

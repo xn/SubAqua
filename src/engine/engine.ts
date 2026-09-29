@@ -56,6 +56,7 @@ import {
 
 import { codpiece, gemMounted } from "../lib/codpiece";
 import { dreadSeedCheck } from "../lib/dreadscroll";
+import { killRungLadder } from "../lib/freekill-ladder";
 import { fightHappened, recordTask, reportLedger } from "../lib/gold";
 import {
   effectFailureContext,
@@ -289,8 +290,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           prepare: source.prepare,
           do: () => {
             const chain = freeKillChain({ location, dropsMatter: true });
-            const ladder = chain.includes(source) ? chain : [source, ...chain];
-            return ladder.reduce((macro, rung) => macro.step(rung.do), new Macro()).abort();
+            return killRungLadder(source, chain)
+              .reduce((macro, rung) => macro.step(rung.do), new Macro())
+              .abort();
           },
         });
       }
@@ -365,18 +367,22 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         const source = firstEquippable(outfit, (exclude) =>
           selectFreeKill({ location, target: monster, dropsMatter, exclude }),
         );
-        const rungs = new Macro();
-        if (source) rungs.step(source.do);
-        rungs.step(clubRung);
-        if (rungs.components.length === 0) return;
+        // The selected source may be chance-based (darts): the rest of the worn chain follows
+        // it so a miss falls through to a guaranteed free kill, not the paid kill below. The
+        // ladder compiles after dress(), so the chain reads the gear this task actually wears.
+        if (source === undefined && clubRung.components.length === 0) return;
+        const ladder = (): Macro =>
+          killRungLadder(source, source ? freeKillChain({ location, dropsMatter }) : [])
+            .reduce((macro, rung) => macro.step(rung.do), new Macro())
+            .step(clubRung);
         if (monster !== undefined) {
-          combat.macro(Macro.if_(`monsterid ${monster.id}`, rungs));
+          combat.macro(() => Macro.if_(`monsterid ${monster.id}`, ladder()));
           return;
         }
-        combat.macro(
+        combat.macro(() =>
           reserved.length > 0
-            ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, rungs)
-            : rungs,
+            ? Macro.ifNot(reserved.length === 1 ? reserved[0] : reserved, ladder())
+            : ladder(),
         );
       };
       if (combat.getDefaultAction() === "kill") {

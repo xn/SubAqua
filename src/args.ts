@@ -44,6 +44,11 @@ export const args = Args.create(
       default: true,
       setting: "",
     }),
+    dungeonPeek: Args.boolean({
+      help: "When the seed scan leaves several candidates that disagree on the next Daily Dungeon room, look at that room for free (leave a door or trap room, run from a monster) before buying a knucklebone or sushi.",
+      default: true,
+      setting: "",
+    }),
     guessMax: Args.number({
       help: "Most candidate seeds the dreadscroll guess lane will read through; above this the catalog lane runs.",
       default: 3,
