@@ -15,6 +15,7 @@ import {
   unknownClues,
   worstWrongWords,
 } from "./dreadguess";
+import { formatDungeonLayout, isDungeonPref, peekMayFight, peekSplits } from "./dungeonpeek";
 
 type Rng = ReturnType<typeof phpSeed>;
 
@@ -40,6 +41,12 @@ export function calculateBangPotions(seed: number): string {
 
 export function calculateCondoOrder(seed: number): string {
   return shuffled("emdfbs", phpSeed(seed), false);
+}
+
+/** Daily Dungeon room order, seedfinder's calculate_daily_dungeon: the same shuffle as the bang
+ *  potions over the twelve non-chest rooms, printed 4_4_4 like mafia's dailyDungeonRooms. */
+export function calculateDailyDungeon(seed: number): string {
+  return formatDungeonLayout(shuffled("MMMMDDDDTTTT", phpSeed(seed), false));
 }
 
 export function calculateDreadscroll(seed: number): number[] {
@@ -171,7 +178,15 @@ type Criteria = {
   seahorse: string;
   condo: string;
   bang: string;
+  dungeon: string;
 };
+
+const DUNGEON_UNKNOWN = "????_????_????";
+
+function dungeonCriterion(): string {
+  const pref = get("dailyDungeonRooms", "");
+  return isDungeonPref(pref) ? pref : DUNGEON_UNKNOWN;
+}
 
 function currentClues(): number[] {
   const clues: number[] = [];
@@ -197,7 +212,7 @@ function playerCriteria(): Criteria {
     bang += potion === "" ? "?" : potion.charAt(0);
   }
 
-  return { clues, seahorse: get("seahorseName", ""), condo, bang };
+  return { clues, seahorse: get("seahorseName", ""), condo, bang, dungeon: dungeonCriterion() };
 }
 
 function wildcardMatch(criteria: string, data: string): boolean {
@@ -212,7 +227,8 @@ function constraintCount(c: Criteria): number {
     c.clues.filter((v) => v > 0).length +
     (c.seahorse !== "" ? 1 : 0) +
     c.condo.split("").filter((ch) => ch !== "?").length +
-    c.bang.split("").filter((ch) => ch !== "?").length
+    c.bang.split("").filter((ch) => ch !== "?").length +
+    c.dungeon.split("").filter((ch) => ch !== "?" && ch !== "_").length
   );
 }
 
@@ -224,6 +240,9 @@ function matches(c: Criteria, seed: number): boolean {
   if (c.seahorse !== "" && c.seahorse !== calculateSeahorseName(seed)) return false;
   if (c.condo !== "??????" && !wildcardMatch(c.condo, calculateCondoOrder(seed))) return false;
   if (c.bang !== "?????????" && !wildcardMatch(c.bang, calculateBangPotions(seed))) return false;
+  if (c.dungeon !== DUNGEON_UNKNOWN && !wildcardMatch(c.dungeon, calculateDailyDungeon(seed))) {
+    return false;
+  }
   return true;
 }
 
@@ -305,7 +324,7 @@ function toCandidate(seed: number): Candidate {
 export function candidateSeeds(): number[] | undefined {
   if (!args.seedScan) return undefined;
 
-  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}|${get("dreadScrollGuesses", "")}`;
+  const key = `${turnsPlayed()}|${currentClues().join(",")}|${bangPotionCriteriaKey()}|${get("subaqua_seedCandidates", "")}|${get("dreadScrollGuesses", "")}|${dungeonCriterion()}`;
   if (key === memoKey) return memoValue;
 
   const raw = computeCandidateSeeds();
@@ -414,6 +433,20 @@ export function purchasableSplits(): number[] {
   const cands = candidates();
   if (cands === undefined) return [];
   return [4, 7].filter((clue) => !declinedClues.has(clue) && splitsOn(cands, clue));
+}
+
+/** The free Daily Dungeon look (spec in lib/dungeonpeek.ts): `splits` when the room the
+ *  counter points at is unrecorded and the candidates disagree on it, `mayFight` when one of
+ *  them puts a monster there. */
+export function dungeonPeek(): { splits: boolean; mayFight: boolean } {
+  const cands = candidates();
+  if (cands === undefined || cands.length < 2) return { splits: false, mayFight: false };
+  const layouts = cands.map((c) => calculateDailyDungeon(c.seed));
+  const lastRoom = get("_lastDailyDungeonRoom", 0);
+  return {
+    splits: peekSplits(layouts, dungeonCriterion(), lastRoom),
+    mayFight: peekMayFight(layouts, lastRoom),
+  };
 }
 
 export function guessReady(capacity: number): boolean {

@@ -1,11 +1,13 @@
 import { OutfitSpec } from "grimoire-kolmafia";
 import {
+  adv1,
   availableAmount,
   Effect,
   fullnessLimit,
   itemAmount,
   myAdventures,
   myFullness,
+  print,
   retrieveItem,
   use,
 } from "kolmafia";
@@ -18,6 +20,7 @@ import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import {
   declinePurchase,
+  dungeonPeek,
   godRunGuardCheck,
   guessReady,
   purchasableSplits,
@@ -25,6 +28,7 @@ import {
 } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { eatSushi } from "../../resources/fishy";
+import { selectFreeRun } from "../../resources/freerun";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 import { forceGranted } from "../../resources/saber";
 import { momFinishPending } from "../monkees/mom";
@@ -43,11 +47,13 @@ const killscroll = $item`Mer-kin killscroll`;
 const zirconia = $item`blood cubic zirconia`;
 const monodent = $item`Monodent of the Sea`;
 const tainted = $effect`Deep-Tainted Mind`;
+const dailyDungeon = $location`The Daily Dungeon`;
 
 const BURN_PREF = "_subaqua_dreadBurn";
 const NO_BURN_TARGET_MESSAGE =
   "Deep-Tainted Mind is up and no burn target is left (skate war, gym guards, Mom Finish, Library). Spend 1 non-free turn anywhere and rerun.";
 
+let peekDeclined = false;
 let knuckleboneDeclined = false;
 let sushiDeclined = false;
 let burnStalls = 0;
@@ -157,6 +163,39 @@ export function libraryQuest(): Quest {
     name: "Library",
     completed: () => get("isMerkinHighPriest", false),
     tasks: [
+      {
+        // A free clue ahead of the purchasable ones: the Daily Dungeon room order is seeded
+        // with the dreadscroll, and the room the counter points at costs nothing to look at
+        // (door: "Leave the way you came in.", trap: "Proceed backwards cautiously", monster:
+        // free run). 2026-09-23 seedfinder chat: two seeds agreed on potions and seahorse
+        // name and split on room 1. Mafia records the room in dailyDungeonRooms on arrival,
+        // and the seed scan reads it as a criterion, so completion is the split closing.
+        name: "Dungeon Peek",
+        ready: () => {
+          if (!args.dungeonPeek || peekDeclined) return false;
+          const peek = dungeonPeek();
+          if (!peek.splits) return false;
+          return (
+            !peek.mayFight || selectFreeRun({ banish: false, location: dailyDungeon }) !== undefined
+          );
+        },
+        completed: () => peekDeclined || !dungeonPeek().splits,
+        do: (): void => {
+          const before = get("dailyDungeonRooms", "");
+          adv1(dailyDungeon, -1, "");
+          if (get("dailyDungeonRooms", "") === before) {
+            peekDeclined = true;
+            print(
+              "Dungeon Peek: the room was not recorded; leaving the clue to the purchases.",
+              "olive",
+            );
+          }
+        },
+        location: dailyDungeon,
+        combat: new CombatStrategy().freeRun(),
+        outfit: {},
+        limit: { tries: 2, paidTurns: 0 },
+      },
       scrollTask(true),
       scrollTask(false),
       {
