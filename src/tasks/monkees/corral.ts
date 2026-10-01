@@ -597,7 +597,7 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           );
         },
         post: resyncSeahorse,
-        limit: { soft: 12, message: "The wild seahorse is not spawning; check banishes." },
+        limit: { soft: 30, message: "The wild seahorse is not spawning; check banishes." },
       },
       {
         name: "Pop Corral Gems",

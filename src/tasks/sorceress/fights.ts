@@ -37,6 +37,7 @@ import { killMacro } from "../../engine/combat";
 import { belowHpFloor, floorClearingHeal, stallSpare } from "../../lib";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
 import { yogDelevelStock } from "../../lib/yog";
+import { freeKillChain } from "../../resources/freekill";
 import { selectFreeRun } from "../../resources/freerun";
 import { currentPolicy } from "../../resources/policy";
 
@@ -103,10 +104,14 @@ function equipItems(equip: unknown): Item[] {
   );
 }
 
-export function gymFreeRun(target?: Monster): { do: Macro } | undefined {
+export function gymFreeRun(
+  target?: Monster,
+  opts: { banish?: boolean } = {},
+): { do: Macro } | undefined {
+  const { banish = true } = opts;
   const exclude = new Set<string>();
   for (;;) {
-    const source = selectFreeRun({ banish: true, location: gymnasium, target, exclude });
+    const source = selectFreeRun({ banish, location: gymnasium, target, exclude });
     if (!source || exclude.has(source.name)) return undefined;
     const worn =
       source.equip === undefined ||
@@ -136,6 +141,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
   let mortarFired = false;
   let forcerBanked = false;
   let runTried = false;
+  let freeKillTried = false;
   let clubbed = false;
   let lastRound = -1;
   let lastHp = -1;
@@ -156,7 +162,24 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
     lastRound = here;
 
     const ours = opts.gym ? monster.phylum === $phylum`mer-kin` : gladiators.includes(monster);
-    if (!ours) return killMacro(false).toString();
+    if (!ours) {
+      // Habitat copies and wanderers in the gym buy nothing: a free run (no banish, the copy
+      // is not a zone draw), then a held free kill, and only then a paid kill. 09-19: six eye
+      // copies and a Pirate Day pirate were killed at full price with the boots charged.
+      if (opts.gym) {
+        if (!runTried) {
+          runTried = true;
+          const run = gymFreeRun(monster, { banish: false });
+          if (run) return run.do.toString();
+        }
+        if (!freeKillTried) {
+          freeKillTried = true;
+          const kill = freeKillChain({ location: gymnasium })[0];
+          if (kill) return kill.do.toString();
+        }
+      }
+      return killMacro(false).toString();
+    }
 
     const foeHp = monsterHp();
     if (reflectLive) {
