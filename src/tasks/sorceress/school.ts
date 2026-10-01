@@ -75,7 +75,6 @@ function vocabularyDone(): boolean {
 }
 
 const monodent = $item`Monodent of the Sea`;
-const crystalBall = $item`miniature crystal ball`;
 
 function schoolLootMacro(): Macro {
   const steps = new Macro();
@@ -121,7 +120,6 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
-          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
@@ -189,7 +187,6 @@ export function schoolQuest(): Quest {
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
-          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,

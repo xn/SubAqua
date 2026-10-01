@@ -175,7 +175,6 @@ export function outpostQuest(): Quest {
           modifier: "-combat",
           familiar: screechTurn() ? eagle : sneakFamiliar(),
           equip: $items`Monodent of the Sea`,
-          avoid: $items`miniature crystal ball`,
         }),
         effects: sneakEffects,
         prepare: (): void => {

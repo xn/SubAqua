@@ -83,7 +83,12 @@ export function skateParkTurn(): void {
     cliExecute("unequip Peridot of Peril");
     if (itemAmount(blade) > 0) equip($slot`weapon`, blade);
   } else {
-    const terms = ["-combat", "-equip Peridot of Peril", "-equip bat wings"];
+    const terms = [
+      "-combat",
+      "-equip Peridot of Peril",
+      "-equip bat wings",
+      "-equip miniature crystal ball",
+    ];
     if (isTrainingLasso()) {
       if (have($item`sea cowboy hat`)) terms.push("+equip sea cowboy hat");
       if (have($item`sea chaps`)) terms.push("+equip sea chaps");

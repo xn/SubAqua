@@ -80,7 +80,6 @@ const waffle = $item`waffle`;
 const macrometeorite = $skill`Macrometeorite`;
 const vhsTargets = [...habitatTargets, school];
 const monodent = $item`Monodent of the Sea`;
-const crystalBall = $item`miniature crystal ball`;
 
 function schoolBanished(): boolean {
   return get("banishedMonsters").includes("school of many");
@@ -324,7 +323,6 @@ const abyssOutfit = () => ({
     ...$items`shark jumper, scale-mail underwear`,
     ...(schoolBanished() ? [] : [monodent]),
   ],
-  avoid: [crystalBall],
 });
 
 export function momFinishQuest(): Quest {
@@ -488,7 +486,6 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 modifier: "item",
                 familiar: abyssFamiliar(),
                 equip: [glass, ...momSpeedupGear],
-                avoid: [crystalBall],
               }),
               effects: itemDropEffects,
               prepare: (): void => {
@@ -514,7 +511,6 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 modifier: "moxie",
                 familiar: glover,
                 equip: [...momSpeedupGear, monodent],
-                avoid: $items`miniature crystal ball`,
               },
               effects: famWeightEffects,
               prepare: (): void => {

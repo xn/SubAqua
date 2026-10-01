@@ -583,7 +583,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           return {
             modifier: "initiative",
             equip,
-            avoid: [$item`miniature crystal ball`],
             familiar: tamingFamiliar(),
           };
         },
