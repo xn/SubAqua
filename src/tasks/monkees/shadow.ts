@@ -2,7 +2,7 @@ import { adv1, haveEffect, itemAmount, print, use, useSkill } from "kolmafia";
 import { $effect, $item, $items, $location, $monster, $skill, get, have, Macro } from "libram";
 
 import { CombatStrategy, fishMacro, openerOnce } from "../../engine/combat";
-import { kramcoIfDue } from "../../engine/outfit";
+import { kramcoFor } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { itemDropEffects } from "../../lib/moods";
@@ -67,7 +67,7 @@ function riftOutfit() {
     equip: [
       monodent,
       ...$items`Flash Liquidizer Ultra Dousing Accessory, bat wings`,
-      ...kramcoIfDue(),
+      ...kramcoFor("farm"),
       ...(training() < 20 ? $items`sea cowboy hat, sea chaps` : []),
     ],
   };

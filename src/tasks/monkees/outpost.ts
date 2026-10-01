@@ -14,7 +14,7 @@ import {
 } from "libram";
 
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
-import { sneakFamiliar } from "../../engine/outfit";
+import { kramcoFor, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
@@ -120,7 +120,11 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: farmBackup,
         combat: farmCombat(),
-        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
+        outfit: () => ({
+          modifier: "item",
+          familiar: screechTurn() ? eagle : undefined,
+          equip: kramcoFor("outpost"),
+        }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Grandma");
@@ -135,7 +139,11 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: () => (lockkeyGateOpen() ? undefined : farmBackup()),
         combat: farmCombat(),
-        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
+        outfit: () => ({
+          modifier: "item",
+          familiar: screechTurn() ? eagle : undefined,
+          equip: kramcoFor("outpost"),
+        }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");

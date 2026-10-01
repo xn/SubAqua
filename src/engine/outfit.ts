@@ -19,11 +19,13 @@ import {
   findFairyMultiplier,
   findLeprechaunMultiplier,
   get,
-  getKramcoWandererChance,
   have,
   maxBy,
   totalFamiliarWeight,
 } from "libram";
+
+import { kramcoWanted, KramcoSite } from "../lib/kramco";
+import { currentTier } from "../lib/tier";
 
 export const waterBreathingEquipment = $items`really\, really nice swimming trunks, The Crown of Ed the Undying, aerated diving helmet, crappy Mer-kin mask, Mer-kin gladiator mask, Mer-kin scholar mask, old SCUBA tank, Elf Guard SCUBA tank`;
 export const familiarWaterBreathingEquipment = $items`das boot, little bitty bathysphere`;
@@ -134,10 +136,15 @@ export function chooseFamiliar(): Familiar {
   return best;
 }
 
-export function kramcoIfDue(): Item[] {
-  return have($item`Kramco Sausage-o-Matic™`) && getKramcoWandererChance() >= 1
-    ? $items`Kramco Sausage-o-Matic™`
-    : [];
+// The Kramco for an outfit's equip list; the policy lives in lib/kramco.ts.
+export function kramcoFor(site: KramcoSite): Item[] {
+  const wanted = kramcoWanted({
+    owned: have($item`Kramco Sausage-o-Matic™`),
+    forcerActive: get("noncombatForcerActive"),
+    tier: currentTier(),
+    site,
+  });
+  return wanted ? $items`Kramco Sausage-o-Matic™` : [];
 }
 
 export function chooseItemFamiliar(): Familiar {
