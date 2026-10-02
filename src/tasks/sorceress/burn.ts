@@ -41,6 +41,7 @@ export function libraryBurnTurn(): void {
     "-combat",
     "-equip Peridot of Peril",
     "-equip bat wings",
+    "-equip miniature crystal ball",
     ...scholarPieces.filter((it) => have(it)).map((it) => `+equip ${it.name}`),
   ];
   const famBreather = requiredFamiliarBreather();

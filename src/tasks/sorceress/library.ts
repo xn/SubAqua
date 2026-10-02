@@ -15,7 +15,7 @@ import { $effect, $item, $location, $monster, get, have, set } from "libram";
 
 import { args } from "../../args";
 import { CombatStrategy } from "../../engine/combat";
-import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
+import { kramcoFor, sneakFamiliar } from "../../engine/outfit";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
 import {
@@ -116,7 +116,7 @@ function scrollOutfit(): OutfitSpec {
   const avoid = bczWanted() ? [] : [zirconia];
   return {
     modifier: "item",
-    equip: [...scholarPieces, ...weapon, ...accessory, ...kramcoIfDue()],
+    equip: [...scholarPieces, ...weapon, ...accessory, ...kramcoFor("farm")],
     avoid,
   };
 }

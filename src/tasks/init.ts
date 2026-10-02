@@ -6,6 +6,7 @@ import {
   getWorkshed,
   handlingChoice,
   itemAmount,
+  print,
   retrieveItem,
   runChoice,
   storageAmount,
@@ -33,6 +34,7 @@ import {
 
 import { scubaTanks } from "../engine/outfit";
 import { Quest } from "../engine/task";
+import { furnishPlan } from "../lib/leprecondo";
 import { bangPotions } from "../resources/bangpotions";
 import { currentPolicy } from "../resources/policy";
 import { discretionaryPull, pullBudgetAllows, pullSequence } from "../resources/pulls";
@@ -42,6 +44,21 @@ const sheriffOutfit = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
 const catalog = $item`2002 Mr. Store Catalog`;
 const vhs = $item`Spooky VHS Tape`;
 const worksheds = $items`Asdon Martin keyfob (on ring), portable Mayo Clinic, model train set, TakerSpace letter of Marque`;
+
+// Layout pieces first, then any other discovered piece; fewer than four discovered pieces skips the
+// Leprecondo (printed once) instead of throwing the try limit.
+function leprecondoPlan(): ReturnType<typeof furnishPlan<Leprecondo.FurniturePiece>> {
+  const plan = furnishPlan(
+    currentPolicy().leprecondoLayout.map((id) => Leprecondo.FURNITURE_PIECES[id]),
+    Leprecondo.discoveredFurniture(),
+  );
+  if (plan === undefined && !leprecondoSkipPrinted) {
+    leprecondoSkipPrinted = true;
+    print("Leprecondo skipped: fewer than four furniture pieces discovered.", "red");
+  }
+  return plan;
+}
+let leprecondoSkipPrinted = false;
 
 const seaGearPulls = $items`Mer-kin sneakmask, shark jumper, scale-mail underwear, Elf Guard SCUBA tank, Flash Liquidizer Ultra Dousing Accessory`;
 const momSpeedupPulls = $items`shark jumper, scale-mail underwear`;
@@ -169,15 +186,15 @@ export function initQuest(): Quest {
       },
       {
         name: "Leprecondo",
-        completed: () => !have($item`Leprecondo`) || get("leprecondoInstalled") !== "0,0,0,0",
+        completed: () =>
+          !have($item`Leprecondo`) ||
+          get("leprecondoInstalled") !== "0,0,0,0" ||
+          leprecondoPlan() === undefined,
         do: (): void => {
-          const discovered = Leprecondo.discoveredFurniture();
-          const picks = policy.leprecondoLayout
-            .map((id) => Leprecondo.FURNITURE_PIECES[id])
-            .filter((piece) => piece !== undefined && discovered.includes(piece))
-            .slice(0, 4);
-          if (picks.length === 4) {
-            Leprecondo.setFurniture(picks[0], picks[1], picks[2], picks[3]);
+          const picks = leprecondoPlan();
+          if (picks === undefined) return;
+          if (!Leprecondo.setFurniture(...picks)) {
+            print(`Leprecondo furnish failed: ${picks.join(", ")}`, "red");
           }
         },
         freeaction: true,

@@ -14,9 +14,10 @@ import {
 } from "libram";
 
 import { CombatStrategy, monsterMacro, openerOnce } from "../../engine/combat";
-import { sneakFamiliar } from "../../engine/outfit";
+import { kramcoFor, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { monkeesStep, recover } from "../../lib";
+import { secondGolemRecallWanted } from "../../lib/habitat";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { assertBanishHeld } from "../../resources/banish";
 import { pawWish } from "../../resources/paw";
@@ -55,11 +56,16 @@ export function habitatGolemsLive(): boolean {
   return get("_monsterHabitatsFightsLeft", 0) > 0 && get("_monsterHabitatsMonster") === golem;
 }
 
+// The second recall is skipped when the lockkey gate is under a batch away (lib/habitat):
+// 09-19 it fired at adventure 21 of 25 and four stale charges hid the eye recall until t26.
+// The golem Back-Up below covers the gap.
 function recallPending(): boolean {
+  if (!have($skill`Just the Facts`) || get("_monsterHabitatsFightsLeft", 0) > 1) return false;
+  const recalled = get("_monsterHabitatsRecalled", 0);
+  if (recalled >= 2) return false;
   return (
-    have($skill`Just the Facts`) &&
-    get("_monsterHabitatsFightsLeft", 0) <= 1 &&
-    get("_monsterHabitatsRecalled", 0) < 2
+    recalled === 0 ||
+    secondGolemRecallWanted({ turnsSpent: outpost.turnsSpent, gate: LOCKKEY_GATE })
   );
 }
 
@@ -85,12 +91,7 @@ function golemRecallMacro(): Macro {
 }
 
 const farmBackup = () => ({
-  targets:
-    !recallPending() &&
-    get("_monsterHabitatsFightsLeft", 0) === 0 &&
-    get("_monsterHabitatsRecalled", 0) >= 2
-      ? [golem]
-      : [],
+  targets: !recallPending() && get("_monsterHabitatsFightsLeft", 0) === 0 ? [golem] : [],
   cap: 7,
 });
 
@@ -120,7 +121,11 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: farmBackup,
         combat: farmCombat(),
-        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
+        outfit: () => ({
+          modifier: "item",
+          familiar: screechTurn() ? eagle : undefined,
+          equip: kramcoFor("outpost"),
+        }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Grandma");
@@ -135,7 +140,11 @@ export function outpostQuest(): Quest {
         do: outpost,
         backup: () => (lockkeyGateOpen() ? undefined : farmBackup()),
         combat: farmCombat(),
-        outfit: () => ({ modifier: "item", familiar: screechTurn() ? eagle : undefined }),
+        outfit: () => ({
+          modifier: "item",
+          familiar: screechTurn() ? eagle : undefined,
+          equip: kramcoFor("outpost"),
+        }),
         effects: itemDropEffects,
         prepare: (): void => {
           assertBanishHeld(farmBanished, outpost, "Outpost Lockkey");
@@ -167,7 +176,6 @@ export function outpostQuest(): Quest {
           modifier: "-combat",
           familiar: screechTurn() ? eagle : sneakFamiliar(),
           equip: $items`Monodent of the Sea`,
-          avoid: $items`miniature crystal ball`,
         }),
         effects: sneakEffects,
         prepare: (): void => {

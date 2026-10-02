@@ -15,7 +15,18 @@ const base: CyberLaneState = {
   eyeHabitatUp: false,
   clubEmGolemPending: false,
   lastGolemHabitat: false,
+  recallPays: true,
 };
+
+test("2026-09-19 t26: habitat drained, bar at 30 -> no Bakery turn for a lane that cannot pay", () => {
+  const today = { ...base, habitatFree: true, recallPays: false };
+  assert.equal(banishConstructsReady(today), false);
+});
+
+test("eye habitat already up: the copies exist, so the banish still lands whatever the bar says", () => {
+  const up = { ...base, eyeHabitatUp: true, recallPays: false };
+  assert.equal(banishConstructsReady(up), true);
+});
 
 test("2026-09-14: eye habitat up, screech unspent, Club 'Em golem pending -> banish first", () => {
   const today = { ...base, eyeHabitatUp: true, clubEmGolemPending: true };

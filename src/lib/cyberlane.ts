@@ -17,6 +17,8 @@ export interface CyberLaneState {
   clubEmGolemPending: boolean;
   /** The golem habitat has exactly one fight left: the next golem is the last free target. */
   lastGolemHabitat: boolean;
+  /** lib/habitat eyeRecallPays: the bar has room for the copies past the Bakery turn. */
+  recallPays: boolean;
 }
 
 /** Field the eagle and open with the screech on the last habitat golem in the Abyss, the
@@ -27,11 +29,12 @@ export function abyssScreechTurn(state: CyberLaneState): boolean {
 }
 
 /** Banish Constructs (a Bakery construct, one paid turn at most) waits for the Club 'Em golem
- *  while the habitat is free, but not once the eye habitat is up: the cyber lane is waiting
- *  on the banish and its fights never advance the turn counter the Club 'Em copy needs. */
+ *  while the habitat is free, and only opens a lane the recall can still pay for (09-19: a
+ *  Bakery turn at bar 30, then the recall fight filled the bar). Once the eye habitat is up
+ *  the copies exist whatever the bar says, and the cyber lane is waiting on the banish. */
 export function banishConstructsReady(state: CyberLaneState): boolean {
   if (!state.screechReady) return false;
-  if (state.habitatFree) return !state.clubEmGolemPending;
+  if (state.habitatFree) return !state.clubEmGolemPending && state.recallPays;
   return state.eyeHabitatUp;
 }
 

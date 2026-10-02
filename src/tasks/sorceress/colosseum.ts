@@ -91,7 +91,12 @@ export function colosseumRoundTurn(): void {
   if (!get("_lyleFavored")) cliExecute("monorail buff");
   const coeff =
     (60 + myBuffedstat($stat`Mysticality`) / 2.5) / (numericModifier("Spell Damage Percent") + 1);
-  const terms = [`${coeff.toFixed(2)} spell damage percent`, "mys", ...pieces];
+  const terms = [
+    `${coeff.toFixed(2)} spell damage percent`,
+    "mys",
+    "-equip miniature crystal ball",
+    ...pieces,
+  ];
   const sea = seaKeyword();
   if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
     maximize(terms.join(", "), false);

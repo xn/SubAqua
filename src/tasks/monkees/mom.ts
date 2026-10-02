@@ -48,6 +48,7 @@ import {
   CyberLaneState,
   cyberMomReady,
 } from "../../lib/cyberlane";
+import { eyeRecallPays, momProgressPerFight } from "../../lib/habitat";
 import { combineMoods, itemDropEffects, resEffects } from "../../lib/moods";
 import { selectFreeKill } from "../../resources/freekill";
 import { pullBudgetAllows, pullSequence } from "../../resources/pulls";
@@ -80,7 +81,6 @@ const waffle = $item`waffle`;
 const macrometeorite = $skill`Macrometeorite`;
 const vhsTargets = [...habitatTargets, school];
 const monodent = $item`Monodent of the Sea`;
-const crystalBall = $item`miniature crystal ball`;
 
 function schoolBanished(): boolean {
   return get("banishedMonsters").includes("school of many");
@@ -205,12 +205,33 @@ function recallsLeft(): boolean {
   return get("_monsterHabitatsRecalled", 0) < 3;
 }
 
+function momPerFight(): number {
+  return momProgressPerFight({
+    jumper: have($item`shark jumper`),
+    underwear: have($item`scale-mail underwear`),
+    combed: have($effect`Jelly Combed`),
+  });
+}
+
+// The eye recall on the coming Abyss fight still buys free Cyberzone fights worth more than
+// the Bakery turn the screech costs (lib/habitat). 09-19: cast at 38 on the fight that
+// filled the bar; its five copies were paid gym kills.
+function recallPays(): boolean {
+  return eyeRecallPays({
+    progress: get("momSeaMonkeeProgress", 0),
+    perFight: momPerFight(),
+    setupTurns: screechReady() ? 1 : 0,
+  });
+}
+
 // The cyber lane can no longer deliver Mom progress: no recall left for an eye habitat, a
-// recall over the stale golems was refused, or the eye habitat is up with no cyber fights
-// left. Then the paid Abyss (Abyss Mom) runs early, while free kills are still held.
+// recall over the stale golems was refused and they are still live (KoL hides the skill until
+// they drain; once drained the lane may reopen if the bar still pays), or the eye habitat is
+// up with no cyber fights left. Then the paid Abyss (Abyss Mom) runs early, while free kills
+// are still held.
 function cyberLaneStuck(): boolean {
   if (!cyberKit()) return false;
-  if (recallRefused()) return true;
+  if (recallRefused() && habitatGolemsLive()) return true;
   if (habitatIsMomTarget()) {
     return get("_monsterHabitatsFightsLeft", 0) > 0 && cyberFightsGone();
   }
@@ -228,6 +249,7 @@ function cyberLaneState(): CyberLaneState {
     clubEmGolemPending: clubEmGolemPending(),
     lastGolemHabitat:
       get("_monsterHabitatsFightsLeft", 0) === 1 && get("_monsterHabitatsMonster") === golem,
+    recallPays: recallPays(),
   };
 }
 
@@ -324,7 +346,6 @@ const abyssOutfit = () => ({
     ...$items`shark jumper, scale-mail underwear`,
     ...(schoolBanished() ? [] : [monodent]),
   ],
-  avoid: [crystalBall],
 });
 
 export function momFinishQuest(): Quest {
@@ -429,7 +450,8 @@ export function momQuest(opts: { cyber: boolean }): Quest {
         ? ([
             {
               name: "Banish Constructs",
-              ready: () => cyberKit() && banishConstructsReady(cyberLaneState()),
+              ready: () =>
+                cyberKit() && !cyberLaneStuck() && banishConstructsReady(cyberLaneState()),
               completed: () =>
                 momBarFull() || cyberFightsGone() || get("banishedPhyla").includes("construct"),
               do: () => {
@@ -471,8 +493,11 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 have($skill`Just the Facts`) &&
                 have(glass) &&
                 recallsLeft() &&
-                habitatFree(),
-              completed: () => momBarFull() || !recallsLeft() || habitatIsMomTarget(),
+                habitatFree() &&
+                !cyberLaneStuck() &&
+                recallPays(),
+              completed: () =>
+                momBarFull() || !recallsLeft() || habitatIsMomTarget() || !recallPays(),
               do: abyssAdventure,
               location: abyss,
               peridot: abyssPeridot,
@@ -480,7 +505,10 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 .macro(monsterMacro(vhsMacro, vhsTargets))
                 .macro(monsterMacro(abyssScreechOpener, golem))
                 .macro(
-                  () => openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`)),
+                  () =>
+                    recallPays()
+                      ? openerOnce(Macro.trySkill($skill`Recall Facts: Monster Habitats`))
+                      : new Macro(),
                   habitatTargets,
                 )
                 .kill(),
@@ -488,7 +516,6 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 modifier: "item",
                 familiar: abyssFamiliar(),
                 equip: [glass, ...momSpeedupGear],
-                avoid: [crystalBall],
               }),
               effects: itemDropEffects,
               prepare: (): void => {
@@ -514,7 +541,6 @@ export function momQuest(opts: { cyber: boolean }): Quest {
                 modifier: "moxie",
                 familiar: glover,
                 equip: [...momSpeedupGear, monodent],
-                avoid: $items`miniature crystal ball`,
               },
               effects: famWeightEffects,
               prepare: (): void => {

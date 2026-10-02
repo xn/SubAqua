@@ -252,6 +252,9 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
     super.customize(task, outfit, combat, resources);
 
     if (!task.batWings && have($item`bat wings`)) outfit.equip({ avoid: [$item`bat wings`] });
+    if (!task.crystalBall && have($item`miniature crystal ball`)) {
+      outfit.equip({ avoid: [$item`miniature crystal ball`] });
+    }
 
     const location = taskLocation(task);
 

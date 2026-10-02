@@ -656,13 +656,17 @@ function miscRequirements(tier: Tier): Requirement[] {
     const usable = layout
       .map((id) => Leprecondo.FURNITURE_PIECES[id])
       .filter((piece) => piece !== undefined && discovered.includes(piece)).length;
+    const total = discovered.filter((piece) => piece !== undefined && piece !== "empty").length;
     rows.push({
       thing: new Hardcoded(
         (inRun() && get("leprecondoInstalled") !== "0,0,0,0") || usable >= 4,
         `4 of the ${tier}-tier Leprecondo layout pieces discovered (${usable}/4)`,
+        usable >= 4
+          ? ""
+          : ` (${total} discovered in all; the gaps are filled with other pieces, or the Leprecondo is skipped below 4)`,
       ),
-      why: "The Leprecondo init task throws its try limit when it cannot place a full layout; discover more furniture or stash the Leprecondo",
-      necessaryAt: allTiers,
+      why: "The layout's pieces are the ones that pay; with fewer discovered the init task fills the gaps with other furniture, and skips the Leprecondo entirely below four",
+      recommended: true,
     });
   }
   if ($item`Source terminal`.name in getCampground()) {

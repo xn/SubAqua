@@ -31,6 +31,12 @@ export type Task = {
   saberPurpose?: ForcePurpose;
   freeRunBanishes?: boolean | (() => boolean);
   batWings?: boolean;
+  /**
+   * Set true to let the maximizer wear the miniature crystal ball. Off by default (user rule
+   * 2026-09-19): a ball worn on a sneak/boots familiar re-predicts whatever it last saw, and in
+   * the 09-19 gym it echoed a habitat eye into a paid kill (docs/2026-09-19-run.txt:8425).
+   */
+  crystalBall?: boolean;
   /** Set false to keep the bang-potion identification throws off this task's fights. */
   bangPotions?: boolean;
   /**

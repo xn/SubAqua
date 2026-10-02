@@ -25,13 +25,13 @@ import {
 } from "libram";
 
 import { CombatStrategy, openerOnce } from "../../engine/combat";
-import { kramcoIfDue, sneakFamiliar } from "../../engine/outfit";
+import { kramcoFor, sneakFamiliar } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { seedResolvable } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { freeMonsters } from "../../resources/backup";
-import { bczAffordable } from "../../resources/freekill";
+import { bczAffordable, selectFreeKill } from "../../resources/freekill";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
 import { burnCapacity } from "./burn";
@@ -75,9 +75,8 @@ function vocabularyDone(): boolean {
 }
 
 const monodent = $item`Monodent of the Sea`;
-const crystalBall = $item`miniature crystal ball`;
 
-function schoolLootMacro(): Macro {
+function schoolLootMacro(opts: { monitor?: boolean } = {}): Macro {
   const steps = new Macro();
   if (have($skill`Sea *dent: Talk to Some Fish`)) {
     steps.trySkill($skill`Sea *dent: Talk to Some Fish`);
@@ -86,7 +85,17 @@ function schoolLootMacro(): Macro {
     steps.trySkill($skill`BCZ: Refracted Gaze`);
   }
   if (steps.components.length === 0) return new Macro();
-  return Macro.ifNot([...freeMonsters, monitor], openerOnce(steps, 3));
+  const skipped = opts.monitor ? freeMonsters : [...freeMonsters, monitor];
+  return Macro.ifNot(skipped, openerOnce(steps, 3));
+}
+
+// Halls Passing (the cowl/rope NC) needs a hallpass in inventory; teacher, monitor and
+// punisher drop them. With none held and a free kill in hand, the school fight is looted
+// rather than Back-Up'd into a golem: 09-19 every teacher became a golem copy, the pull
+// budget was full after the first pass, and two NCs went to the bathrooms and the closet.
+function hallpassLootWanted(): boolean {
+  if (itemAmount(hallpass) + closetAmount(hallpass) > 0 || cowlAndRope()) return false;
+  return selectFreeKill({ location: school, dropsMatter: true }) !== undefined;
 }
 
 export function schoolQuest(): Quest {
@@ -117,11 +126,10 @@ export function schoolQuest(): Quest {
         },
         do: school,
         backup: { targets: "free" },
-        combat: new CombatStrategy().macro(schoolLootMacro).kill(),
+        combat: new CombatStrategy().macro(() => schoolLootMacro()).kill(),
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
-          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,
@@ -162,11 +170,11 @@ export function schoolQuest(): Quest {
         peridot: monitor,
         combat: new CombatStrategy()
           .macro(() => openerOnce(Macro.trySkill($skill`Duplicate`)), monitor)
-          .macro(schoolLootMacro)
+          .macro(() => schoolLootMacro())
           .kill(),
         outfit: () => ({
           modifier: availableAmount(bunwig) > 0 ? "item" : "item, hat drop",
-          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`, ...kramcoIfDue()],
+          equip: [...crappyPieces, monodent, $item`blood cubic zirconia`, ...kramcoFor("farm")],
         }),
         effects: itemDropEffects,
         limit: { soft: 30, message: "School farming is not producing cheatsheets/wordquizzes." },
@@ -184,12 +192,11 @@ export function schoolQuest(): Quest {
           recover();
         },
         do: school,
-        backup: { targets: "free" },
-        combat: new CombatStrategy().macro(schoolLootMacro).kill(),
+        backup: () => (hallpassLootWanted() ? undefined : { targets: "free" as const }),
+        combat: new CombatStrategy().macro(() => schoolLootMacro({ monitor: true })).kill(),
         outfit: () => ({
           modifier: "-combat",
           equip: [...crappyPieces, monodent, $item`blood cubic zirconia`],
-          avoid: [crystalBall],
           familiar: sneakFamiliar(),
         }),
         effects: sneakEffects,

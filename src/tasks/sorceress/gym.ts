@@ -63,7 +63,7 @@ export function gymnasiumTurn(): void {
     if (have($item`sea cowboy hat`)) pieces.push("+equip sea cowboy hat");
     if (have($item`sea chaps`)) pieces.push("+equip sea chaps");
   }
-  const terms = ["combat rate", "-equip bat wings", ...pieces];
+  const terms = ["combat rate", "-equip bat wings", "-equip miniature crystal ball", ...pieces];
   const sea = seaKeyword();
   if (sea.length === 0 || !maximize([...terms, ...sea].join(", "), false)) {
     maximize(terms.join(", "), false);
