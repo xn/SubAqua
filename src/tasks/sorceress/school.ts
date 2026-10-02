@@ -1,9 +1,13 @@
 import {
+  abort,
   availableAmount,
   buy,
   closetAmount,
+  elementalResistance,
   equip,
   itemAmount,
+  myMaxhp,
+  print,
   putCloset,
   restoreHp,
   takeCloset,
@@ -13,6 +17,7 @@ import {
 import {
   $coinmaster,
   $effect,
+  $element,
   $item,
   $location,
   $monster,
@@ -108,7 +113,19 @@ export function schoolQuest(): Quest {
         ready: () => have($skill`Deep Dark Visions`),
         completed: () => get("dreadScroll3", 0) !== 0,
         do: (): void => {
-          restoreHp(1000);
+          // Mafia skips the cast below 500 maximum HP, which would burn every try with no clue.
+          if (myMaxhp() < 500) {
+            abort(
+              `Deep Dark Visions needs 500 maximum HP; you have ${myMaxhp()}. Raise it and rerun.`,
+            );
+          }
+          // A cast deals three to four times max HP before resistance; the clue comes either way,
+          // but only a full bar at 67%+ spooky resistance can come out of it standing.
+          const survivable = elementalResistance($element`spooky`) >= 67;
+          if (!survivable) {
+            print("Deep Dark Visions: spooky resistance is too low to survive the cast.", "red");
+          }
+          restoreHp(survivable ? myMaxhp() : Math.min(1000, myMaxhp()));
           useSkill($skill`Deep Dark Visions`);
         },
         outfit: { modifier: "50 spooky res, hp" },
