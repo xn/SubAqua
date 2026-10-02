@@ -28,8 +28,11 @@ import {
 } from "kolmafia";
 import { $effect, $item, $items, $skill, AsdonMartin, get, have } from "libram";
 
+import { buyLimit } from "../lib";
+import { FishyPullCandidate, fishyPullOrder } from "../lib/fishypull";
+
 import { currentPolicy } from "./policy";
-import { pullSequence } from "./pulls";
+import { pulledToday, pullSequence } from "./pulls";
 
 const fishy = $effect`Fishy`;
 
@@ -305,18 +308,39 @@ export function maintainFishy(): void {
     if (have(fishy)) return;
   }
 
-  if (mySpleenUse() < spleenLimit()) {
-    if (availableAmount($item`fish sauce`) > 0 || pullSequence($item`fish sauce`)) {
-      chew(1, $item`fish sauce`);
+  for (const { item } of fishyPulls()) {
+    if (have(item) || pullSequence(item)) {
+      if (item.spleen > 0) chew(1, item);
+      else use(1, item);
     }
     if (have(fishy)) return;
   }
 
   if (eatSushi()) return;
 
+  const prices = fishyPullItems.map((item) => `${item.name} ${mallPrice(item)}`).join(", ");
   abort(
-    "Could not acquire Fishy (pipe, pull-meal, fish sauce, and sushi all failed). " +
-      "Get Fishy manually (fishy pipe / eat sea sushi / chew fish sauce), then rerun.",
+    "Could not acquire Fishy (pipe, pull-meal, fish sauce / cuppa Gill tea pull, and sushi all failed). " +
+      `Mall prices: ${prices}; buy limit ${buyLimit()} (a pull over it needs buyLimit= raised or the item in Hagnk's). ` +
+      "Get Fishy manually (fishy pipe / eat sea sushi / chew fish sauce / cuppa Gill tea), then rerun.",
+  );
+}
+
+const fishyPullItems = $items`fish sauce, cuppa Gill tea`;
+
+// A candidate over the buy limit is skipped here rather than handed to pullSequence, which would
+// abort before the other candidate or the sushi got a turn.
+function fishyPulls(): (FishyPullCandidate & { item: Item })[] {
+  return fishyPullOrder(
+    fishyPullItems.map((item) => ({
+      item,
+      name: item.name,
+      cost: fishyOpportunityCost(item),
+      obtainable:
+        have(item) ||
+        (!pulledToday(item) && (storageAmount(item) > 0 || mallPrice(item) <= buyLimit())),
+      usable: mySpleenUse() + item.spleen <= spleenLimit(),
+    })),
   );
 }
 

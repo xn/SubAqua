@@ -769,6 +769,10 @@ const routePulls: PullRow[] = [
   { item: $item`soft green echo eyedrop antidote`, note: "only if Gummiheart is up" },
   { item: $item`fish sauce`, note: "Fishy fallback" },
   {
+    item: $item`cuppa Gill tea`,
+    note: "Fishy fallback in place of fish sauce when it is cheaper counting the spleen point",
+  },
+  {
     item: $item`Aldebaran sardines`,
     note: "Fishy pull meal (low/high) with the cheapest fishy pasta",
   },
