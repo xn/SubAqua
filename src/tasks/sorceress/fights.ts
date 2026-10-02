@@ -297,6 +297,11 @@ export function yogUrtFilter(): CombatFilter {
 
   const next = (order: Item[]): Item | undefined =>
     order.find((it) => itemAmount(it) > 0 && !thrown.has(it));
+  // Null Afternoon zeroes her attack, and monsterAttack() does not show it.
+  const nextDeleveler = (): Item | undefined =>
+    have($effect`Null Afternoon`) || myBuffedstat($stat`Moxie`) + 10 > monsterAttack()
+      ? undefined
+      : next(yogDelevelOrder);
 
   return (round, monster, text) => {
     const here = currentRound();
@@ -311,8 +316,7 @@ export function yogUrtFilter(): CombatFilter {
 
     if (step < 2) {
       step += 1;
-      const deleveler =
-        myBuffedstat($stat`Moxie`) + 10 > monsterAttack() ? undefined : next(yogDelevelOrder);
+      const deleveler = nextDeleveler();
       const heal = next(yogHealOrder);
       if (heal) {
         healsThrown += 1;
@@ -389,8 +393,7 @@ export function yogUrtFilter(): CombatFilter {
       }
     }
     if (have($effect`More Like a Suckrament`)) {
-      const deleveler =
-        myBuffedstat($stat`Moxie`) + 10 > monsterAttack() ? undefined : next(yogDelevelOrder);
+      const deleveler = nextDeleveler();
       if (deleveler) {
         thrown.add(deleveler);
         return Macro.tryItem(deleveler).toString();
@@ -401,7 +404,10 @@ export function yogUrtFilter(): CombatFilter {
         healsThrown += 1;
         return Macro.tryItem(heal).toString();
       }
-      return Macro.attack().toString();
+      // Any damage to her under the effect is a self-kill, so an attack is not a fallback.
+      abort(
+        "Yog-Urt: nothing harmless left to throw under More Like a Suckrament. Finish the fight by hand.",
+      );
     }
     if (have($skill`Saucegeyser`) && myMp() >= mpCost($skill`Saucegeyser`)) {
       return Macro.trySkill($skill`Saucegeyser`).toString();
