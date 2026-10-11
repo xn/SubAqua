@@ -29,9 +29,13 @@ import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pul
 const blade = $item`skate blade`;
 const parasol = $item`peppermint parasol`;
 const waffle = $item`waffle`;
-// The waffle is one Peanut re-roll (mom.ts waffleOnPeanut) for when the corral spent Waffle
-// Day's three; it takes the last slot only.
-const latePullOrder = $items`peppermint parasol, ink bladder, Mer-kin pinkslip, stuffed yam stinkbomb, anchor bomb, waffle`;
+const tombstone = $item`partial tombstone`;
+// The partial tombstone (one free kill, resources/freekill) ranks ahead of the ink bladder and
+// the pinkslip, which went unused in gold and in 6 of the 8 runs before 2026-10-01; it comes
+// from Hagnk's stock only, never mall-bought for a slot this late. The waffle is one Peanut
+// re-roll (mom.ts waffleOnPeanut) for when the corral spent Waffle Day's three; it takes the
+// last slot only.
+const latePullOrder = $items`peppermint parasol, partial tombstone, ink bladder, Mer-kin pinkslip, stuffed yam stinkbomb, anchor bomb, waffle`;
 
 function latePullable(it: Item): boolean {
   if (pulledToday(it)) return false;
@@ -42,6 +46,9 @@ function latePullable(it: Item): boolean {
     return false;
   }
   if (it === waffle && itemAmount(waffle) > 0) return false;
+  if (it === tombstone && (itemAmount(tombstone) > 0 || storageAmount(tombstone) === 0)) {
+    return false;
+  }
   if (storageAmount(it) === 0 && mallPrice(it) > buyLimit()) return false;
   return pullBudgetAllows(it);
 }

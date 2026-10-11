@@ -787,6 +787,11 @@ const routePulls: PullRow[] = [
   { item: $item`Mer-kin pinkslip`, note: "late pull" },
   { item: $item`stuffed yam stinkbomb`, note: "late pull" },
   { item: $item`anchor bomb`, note: "late pull; a TakerSpace workshed crafts it instead" },
+  {
+    item: $item`partial tombstone`,
+    stockOnly: true,
+    note: "late pull, ahead of the ink bladder and pinkslip: one free kill",
+  },
 ];
 
 // ---------------------------------------------------------------------------------------------
