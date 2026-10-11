@@ -19,6 +19,7 @@ export default defineConfig(
         {
           data: {
             familiars: ["Sword of S Words"],
+            items: ["partial tombstone"],
             skills: ["%fn, kill a lot of these guys"],
           },
         },

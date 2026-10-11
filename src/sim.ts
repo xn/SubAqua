@@ -769,6 +769,10 @@ const routePulls: PullRow[] = [
   { item: $item`soft green echo eyedrop antidote`, note: "only if Gummiheart is up" },
   { item: $item`fish sauce`, note: "Fishy fallback" },
   {
+    item: $item`cuppa Gill tea`,
+    note: "Fishy fallback in place of fish sauce when it is cheaper counting the spleen point",
+  },
+  {
     item: $item`Aldebaran sardines`,
     note: "Fishy pull meal (low/high) with the cheapest fishy pasta",
   },
@@ -783,6 +787,11 @@ const routePulls: PullRow[] = [
   { item: $item`Mer-kin pinkslip`, note: "late pull" },
   { item: $item`stuffed yam stinkbomb`, note: "late pull" },
   { item: $item`anchor bomb`, note: "late pull; a TakerSpace workshed crafts it instead" },
+  {
+    item: $item`partial tombstone`,
+    stockOnly: true,
+    note: "late pull, ahead of the ink bladder and pinkslip: one free kill",
+  },
 ];
 
 // ---------------------------------------------------------------------------------------------

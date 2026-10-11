@@ -30,6 +30,7 @@ import {
   Leprecondo,
   MayamCalendar,
   set,
+  SongBoom,
 } from "libram";
 
 import { scubaTanks } from "../engine/outfit";
@@ -363,6 +364,17 @@ export function initQuest(): Quest {
           !have($skill`Aug. 24th: Waffle Day!`) ||
           get("_augSkillsCast", 0) >= 5,
         do: () => void useSkill($skill`Aug. 24th: Waffle Day!`),
+        freeaction: true,
+        limit: { tries: 1 },
+      },
+      {
+        // The song resets to none on ascension. Food Vibrations over the meat song: 3-5 MP a turn
+        // and a Special Seasoning (an adventure when eaten) on every 11th paid combat win.
+        name: "BoomBox",
+        ready: () => SongBoom.have() && SongBoom.songChangesLeft() > 0,
+        completed: () =>
+          !SongBoom.have() || SongBoom.song() !== null || SongBoom.songChangesLeft() === 0,
+        do: () => void SongBoom.setSong("Food Vibrations"),
         freeaction: true,
         limit: { tries: 1 },
       },

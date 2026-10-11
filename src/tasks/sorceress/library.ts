@@ -18,6 +18,7 @@ import { CombatStrategy } from "../../engine/combat";
 import { kramcoFor, sneakFamiliar } from "../../engine/outfit";
 import { Quest, Task } from "../../engine/task";
 import { recover } from "../../lib";
+import { backupSeedWanted } from "../../lib/backup-seed";
 import {
   declinePurchase,
   dungeonPeek,
@@ -27,10 +28,13 @@ import {
   resolverState,
 } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
+import { backupUsesLeft, freeMonsters, lastCopyableMonster } from "../../resources/backup";
 import { eatSushi } from "../../resources/fishy";
 import { selectFreeRun } from "../../resources/freerun";
+import { currentPolicy } from "../../resources/policy";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 import { forceGranted } from "../../resources/saber";
+import { summonFree } from "../../resources/summon";
 import { momFinishPending } from "../monkees/mom";
 
 import { burnCapacity, burnTurnElsewhere } from "./burn";
@@ -56,6 +60,7 @@ const NO_BURN_TARGET_MESSAGE =
 let peekDeclined = false;
 let knuckleboneDeclined = false;
 let sushiDeclined = false;
+let seedDeclined = false;
 let burnStalls = 0;
 
 function catalogCluesKnown(): boolean {
@@ -77,6 +82,19 @@ function bczWanted(): boolean {
     (itemAmount(knucklebone) === 0 && get("dreadScroll7", 0) === 0) ||
     (itemAmount(killscroll) === 0 && get("dreadScroll5", 0) === 0)
   );
+}
+
+// The library farms back their draws up into free copies of lastCopyableMonster, which only
+// works while that is a free monster. The school's Talk to Some Fish leaves it as "some fish"
+// (2026-10-05 :6768), and the five library draws then went to shadow bricks that the Abyss
+// finish needed. A locket or mimic-egg fight against any free monster restores the seed.
+function librarySeedWanted(): boolean {
+  if (!currentPolicy().useBackupCamera) return false;
+  const last = lastCopyableMonster();
+  return backupSeedWanted({
+    lastCopyableFree: last !== undefined && freeMonsters.includes(last),
+    backupsLeft: backupUsesLeft(),
+  });
 }
 
 function scrollOwned(): boolean {
@@ -195,6 +213,24 @@ export function libraryQuest(): Quest {
         combat: new CombatStrategy().freeRun(),
         outfit: {},
         limit: { tries: 2, paidTurns: 0 },
+      },
+      {
+        name: "Library Seed",
+        ready: () => scholarGearReady() && !readReady() && !seedDeclined && librarySeedWanted(),
+        completed: () => seedDeclined || !librarySeedWanted(),
+        do: (): void => {
+          if (summonFree(freeMonsters) === undefined) {
+            seedDeclined = true;
+            print(
+              "Library Seed: no free summon on hand; the library draws stay unbacked.",
+              "olive",
+            );
+          }
+        },
+        combat: new CombatStrategy().kill(),
+        outfit: { modifier: "item" },
+        prepare: () => recover(),
+        limit: { tries: 2 },
       },
       scrollTask(true),
       scrollTask(false),

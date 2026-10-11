@@ -24,9 +24,9 @@ import {
 } from "libram";
 
 import { familiarWaterBreathingEquipment, hasBreathingEffect } from "../engine/outfit";
+import { banisherHolds, banishRunAllowed, reflexHammerRemaining } from "../lib/freerun-pick";
 import { inZone } from "../lib/zone";
 
-import { banishedBy, banishSources } from "./banish";
 import { FreeKillSource, selectFreeKill } from "./freekill";
 import { CombatResource } from "./resource";
 
@@ -49,6 +49,7 @@ function pinkslipFits(location: Location | undefined, target: Monster | undefine
 }
 const corral = $location`The Coral Corral`;
 const inkBladder = $item`ink bladder`;
+const doctorBag = $item`Lil' Doctor™ bag`;
 
 function inkBladderReserved(location?: Location): boolean {
   return location !== corral && get("seahorseName") === "" && itemAmount(inkBladder) <= 2;
@@ -143,6 +144,16 @@ export const freeRunSources: FreeRunSource[] = [
     banishes: true,
   },
   {
+    // In banishSources since the start, but never a free-run pick: 2026-10-05 the gym paid
+    // three kills with all three hammer charges unused.
+    name: "Reflex Hammer",
+    available: () => reflexHammerRemaining(get("_reflexHammerUsed"), have(doctorBag)) > 0,
+    remaining: () => reflexHammerRemaining(get("_reflexHammerUsed"), have(doctorBag)),
+    equip: doctorBag,
+    do: Macro.trySkill($skill`Reflex Hammer`),
+    banishes: true,
+  },
+  {
     name: "Stomping Boots runaway",
     available: () => bootsRunawaysLeft() > 0,
     remaining: bootsRunawaysLeft,
@@ -211,19 +222,33 @@ export function isFreeRunSource(source: FreeRunSource | FreeKillSource): source 
 export function selectFreeRun(
   options: {
     banish?: boolean;
+    /**
+     * False where a banish changes nothing about the zone's draws (a 100%-combat zone like the
+     * Gymnasium): a banishing source is then a plain free run and may be re-thrown over a
+     * monster it already holds here. Default true.
+     */
+    banishValue?: boolean;
     location?: Location;
     target?: Monster;
     exclude?: ReadonlySet<string>;
   } = {},
 ): FreeRunSource | FreeKillSource | undefined {
-  const { banish = false, location, target, exclude } = options;
+  const { banish = false, banishValue = true, location, target, exclude } = options;
   if (target && get("_curveballMonster") === target && Number(get("_curveballFightsLeft")) > 0) {
     return undefined;
   }
-  const snokebomb = banishSources.find((source) => source.name === "Snokebomb");
+  const rates = location ? appearanceRates(location) : undefined;
   const run = freeRunSources.find((source) => {
     if (exclude?.has(source.name)) return false;
     if (source.banishes && !banish) return false;
+    if (source.banishes && rates && source.name !== "Bowl a Curveball") {
+      // Re-throwing a source over a monster it holds in this zone releases that monster
+      // (2026-09-12 corral). mafia keys banishedMonsters by the skill/item name. The curveball
+      // is exempt: the ball in inventory means its banish is over, while mafia leaves the old
+      // entry in banishedMonsters until the next throw (2026-10-05 :7651 sea cow).
+      const held = banisherHolds(get("banishedMonsters"), source.name);
+      if (!banishRunAllowed({ heldInZone: inZone(rates, held), banishValue })) return false;
+    }
     if (
       navelSources.includes(source.name) &&
       (!location || location.environment === "underwater") &&
@@ -234,10 +259,8 @@ export function selectFreeRun(
     if (source.name === "Stomping Boots runaway") {
       return source.available() && bootsRunAvailable(location);
     }
-    if (source.name === "Snokebomb") {
-      if (location && snokebombExcludedZones.includes(location)) return false;
-      const current = snokebomb ? banishedBy(snokebomb) : undefined;
-      if (location && inZone(appearanceRates(location), current?.name)) return false;
+    if (source.name === "Snokebomb" && location && snokebombExcludedZones.includes(location)) {
+      return false;
     }
     if (source.name === "Mer-kin pinkslip" && !pinkslipFits(location, target)) return false;
     if (source.name === "ink bladder" && inkBladderReserved(location)) return false;

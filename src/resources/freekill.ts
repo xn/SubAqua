@@ -136,6 +136,18 @@ export const freeKillSources: FreeKillSource[] = [
     avoidAt: [$location`The Coral Corral`],
   },
   {
+    // Three statuary chunks (The Black Rose Garden) make one; tradeable, so it only reaches a
+    // run through Hagnk's. An instakill-immune monster just takes ~220 damage from it.
+    name: "partial tombstone",
+    available: () =>
+      itemAmount($item`partial tombstone`) > 0 && get("_partialTombstonesUsed", 0) < 11,
+    remaining: () =>
+      Math.min(itemAmount($item`partial tombstone`), 11 - get("_partialTombstonesUsed", 0)),
+    do: Macro.tryItem($item`partial tombstone`),
+    colosseumSafe: false,
+    dropSafe: true,
+  },
+  {
     name: "groveling gravel",
     available: () => itemAmount($item`groveling gravel`) > 0,
     remaining: () => itemAmount($item`groveling gravel`),
