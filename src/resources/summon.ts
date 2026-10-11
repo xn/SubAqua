@@ -54,6 +54,35 @@ function farmPocketWish(): void {
   }
 }
 
+/**
+ * Fight the first of `candidates` a free summon source can produce: a locket reminisce, a held
+ * mimic egg, or a fresh egg from the DNA bank. Returns the monster fought, or undefined when no
+ * source can; never aborts. Used to re-seed lastCopyableMonster for Back-Up farms.
+ */
+export function summonFree(candidates: Monster[]): Monster | undefined {
+  for (const target of candidates) {
+    if (CombatLoversLocket.canReminisce(target)) {
+      CombatLoversLocket.reminisce(target);
+      return target;
+    }
+  }
+  if (!have(mimic)) return undefined;
+  const hatch = (target: Monster): boolean => {
+    if (!ChestMimic.differentiate(target)) return false;
+    if (handlingChoice() && lastChoice() === 1387) runChoice(3);
+    return true;
+  };
+  for (const target of candidates) {
+    if (ChestMimic.differentiableQuantity(target) > 0 && hatch(target)) return target;
+  }
+  if (mimic.experience >= 100 && get("_mimicEggsObtained") < 11) {
+    const receivable = ChestMimic.getReceivableMonsters();
+    const target = candidates.find((candidate) => receivable.includes(candidate));
+    if (target && ChestMimic.receive(target) && hatch(target)) return target;
+  }
+  return undefined;
+}
+
 export function summon(target: Monster): void {
   if (CombatLoversLocket.canReminisce(target)) {
     CombatLoversLocket.reminisce(target);
