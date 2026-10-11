@@ -5,3 +5,5 @@ dist
 yarn-error.log
 .superpowers
 .claude
+docs
+CLAUDE.md
