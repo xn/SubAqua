@@ -111,7 +111,15 @@ export function gymFreeRun(
   const { banish = true } = opts;
   const exclude = new Set<string>();
   for (;;) {
-    const source = selectFreeRun({ banish, location: gymnasium, target, exclude });
+    // The Gymnasium is a 100%-combat zone: a banish only picks which mer-kin shows up, so
+    // every banishing source is spent as a plain run (2026-10-05: Snokebomb ×2 sat unused).
+    const source = selectFreeRun({
+      banish,
+      banishValue: false,
+      location: gymnasium,
+      target,
+      exclude,
+    });
     if (!source || exclude.has(source.name)) return undefined;
     const worn =
       source.equip === undefined ||
@@ -124,7 +132,7 @@ export function gymFreeRun(
 }
 
 export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
-  const source = selectFreeRun({ banish: true, location: gymnasium });
+  const source = selectFreeRun({ banish: true, banishValue: false, location: gymnasium });
   if (!source) return { items: [] };
   if (source.equip instanceof Familiar) return { items: [], familiar: source.equip };
   return { items: equipItems(source.equip) };
