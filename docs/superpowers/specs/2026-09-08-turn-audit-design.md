@@ -16,7 +16,7 @@ Two deliverables, one metric:
 
 1. **A live turn audit** that classifies every paid turn as the run goes, names the free
    resource that was held when a paid fight happened, charges misallocated drop-safe free kills,
-   and produces an *adjusted* turn count with dice excluded and luck added back.
+   and produces an _adjusted_ turn count with dice excluded and luck added back.
 2. **A floor guard** that compares the adjusted count against the structural floor per group,
    replacing the run-based pace guard. The 36-turn log stays as a reference log for reading
    lines side by side, not as a number to beat.
@@ -27,16 +27,16 @@ Two deliverables, one metric:
 
 Every task that spends a turn or fights produces one event with exactly one class.
 
-| class          | when                                                                                                                              | in adjusted | in overage |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
-| `structural`   | paid NC in the structural set, or a paid fight against a boss, a Colosseum monster, or a `freeKillNever` monster                  | yes         | no         |
-| `dice`         | paid NC in a lottery zone that is not the wanted outcome                                                                          | no          | no         |
-| `armed`        | paid fight where the engine had put a free kill, free run or banish rung in the macro and it did not end the fight               | yes         | yes        |
-| `avoidable`    | paid fight where no rung was armed but a usable source was held for that location and the strategy's action                     | yes         | yes        |
-| `reserved`     | paid fight where the only held sources were blocked by a charge reservation                                                       | yes         | no         |
-| `noResource`   | paid fight, not structural, nothing held                                                                                          | yes         | no         |
-| `luck`         | a fight that cost no turn because `_batWingsFreeFights` rose during the task and no free source's `remaining()` fell             | yes         | no         |
-| `unclassified` | paid NC outside the structural set and outside every lottery zone                                                                 | yes         | no         |
+| class          | when                                                                                                                 | in adjusted | in overage |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
+| `structural`   | paid NC in the structural set, or a paid fight against a boss, a Colosseum monster, or a `freeKillNever` monster     | yes         | no         |
+| `dice`         | paid NC in a lottery zone that is not the wanted outcome                                                             | no          | no         |
+| `armed`        | paid fight where the engine had put a free kill, free run or banish rung in the macro and it did not end the fight   | yes         | yes        |
+| `avoidable`    | paid fight where no rung was armed but a usable source was held for that location and the strategy's action          | yes         | yes        |
+| `reserved`     | paid fight where the only held sources were blocked by a charge reservation                                          | yes         | no         |
+| `noResource`   | paid fight, not structural, nothing held                                                                             | yes         | no         |
+| `luck`         | a fight that cost no turn because `_batWingsFreeFights` rose during the task and no free source's `remaining()` fell | yes         | no         |
+| `unclassified` | paid NC outside the structural set and outside every lottery zone                                                    | yes         | no         |
 
 Adjusted turns = every paid turn except `dice`, plus `luck`. Overage = `armed` + `avoidable` +
 charged misallocations. Excess = adjusted minus the group's floor; its split by class is the
@@ -60,8 +60,8 @@ covers it.
   - The Mer-Kin Outpost: `Mer-kin stashbox` or `Mer-kin trailmap` count rose during the task.
   - Mer-kin Elementary School: encounter is `A Mer-kin Graffiti` or `Halls Passing in the Night`.
   - Mer-kin Gymnasium: `Mer-kin gladiator headguard` or `Mer-kin gladiator thighguard` count rose.
-  A paid NC in a lottery zone is `structural` when `won` is true, else `dice`. `Mysterious Intent`
-  and `Ators Gonna Ate` therefore never resolve from the name alone.
+    A paid NC in a lottery zone is `structural` when `won` is true, else `dice`. `Mysterious Intent`
+    and `Ators Gonna Ate` therefore never resolve from the name alone.
 - `structuralMonsters`: Yog-Urt, Elder Goddess of Hatred; Shub-Jigguwatt, Elder God of Violence;
   The Nautical Seaceress; plus every monster in `freeKillNever` (wild seahorse, Peanut). Any fight
   at Mer-kin Colosseum is structural regardless of monster (Club 'Em is the one free kill there
@@ -137,7 +137,7 @@ misallocations print as warnings.
 ### Storage
 
 - Ledger rows (`_subaqua_ledger`) gain counters: `structural, dice, armed, avoidable, reserved,
-  noResource, luck, unclassified`. Existing rows without them load as 0.
+noResource, luck, unclassified`. Existing rows without them load as 0.
 - Events and free-kill uses append to `subaqua_audit.txt` in the mafia data directory, one line
   each: `t<turncount> | <group> | <task> | <class> | <encounter> | <detail>` and
   `t<turncount> | <group> | USE | <source> | dropSafe=<b> dropsMatter=<b> alt=<b>`. Appending is
@@ -151,29 +151,29 @@ misallocations print as warnings.
 `groupFloor: Record<string, number>` is the number of structural turns each group must pay,
 from `docs/superpowers/research/2026-09-07-structural-floor.md`, in runplan order:
 
-| group             | floor | what                                                         |
-| ----------------- | ----- | ------------------------------------------------------------ |
-| Openers           | 1     | A Sandwich Appears! (guild lane, mid tier route)              |
-| Pellet            | 0     |                                                              |
-| Big Brother       | 1     | Down at the Hatch                                            |
-| Grandpa           | 3     | the three trench NCs                                         |
-| Outpost           | 5     | four colour NCs + the tent hit                               |
-| Currents          | 0     |                                                              |
-| Helmet            | 0     |                                                              |
-| Mom               | 0     |                                                              |
-| Shadow Rift       | 0     |                                                              |
-| Sorceress Dailies | 0     |                                                              |
-| Corral            | 0     |                                                              |
-| Teflon            | 0     |                                                              |
-| School            | 3     | Graffiti + two hallpass NCs                                  |
-| Library           | 2     | Hook, Line and Sinker + one Read Aloud                       |
-| Yog-Urt           | 1     | boss                                                         |
-| Gladiator Gear    | 2     | headguard + thighguard                                       |
-| Skate Park        | 5     | Sickpipe, Picking Sides, Prayer, Rollerbawl, Holey Rollers   |
-| Colosseum         | 10    | 15 rounds minus 5 Club 'Em                                   |
-| Mom Finish        | 1     | Yo' Mama NC; Peanut is waffled                               |
-| Shub              | 1     | boss                                                         |
-| Finale            | 1     | Seaceress                                                    |
+| group             | floor | what                                                       |
+| ----------------- | ----- | ---------------------------------------------------------- |
+| Openers           | 1     | A Sandwich Appears! (guild lane, mid tier route)           |
+| Pellet            | 0     |                                                            |
+| Big Brother       | 1     | Down at the Hatch                                          |
+| Grandpa           | 3     | the three trench NCs                                       |
+| Outpost           | 5     | four colour NCs + the tent hit                             |
+| Currents          | 0     |                                                            |
+| Helmet            | 0     |                                                            |
+| Mom               | 0     |                                                            |
+| Shadow Rift       | 0     |                                                            |
+| Sorceress Dailies | 0     |                                                            |
+| Corral            | 0     |                                                            |
+| Teflon            | 0     |                                                            |
+| School            | 3     | Graffiti + two hallpass NCs                                |
+| Library           | 2     | Hook, Line and Sinker + one Read Aloud                     |
+| Yog-Urt           | 1     | boss                                                       |
+| Gladiator Gear    | 2     | headguard + thighguard                                     |
+| Skate Park        | 5     | Sickpipe, Picking Sides, Prayer, Rollerbawl, Holey Rollers |
+| Colosseum         | 10    | 15 rounds minus 5 Club 'Em                                 |
+| Mom Finish        | 1     | Yo' Mama NC; Peanut is waffled                             |
+| Shub              | 1     | boss                                                       |
+| Finale            | 1     | Seaceress                                                  |
 
 Total 36. `cumulativeFloor` is computed at module load by walking the table in key order:
 Openers 1, Pellet 1, Big Brother 2, Grandpa 5, Outpost through Teflon 10, School 13, Library 15,
@@ -194,8 +194,8 @@ group's `cumulativeFloor`. Abort when `adjusted > checkpoint + args.floorSlack`.
   "unattributed" line.
 - On abort: print the ledger and audit tables and the ladder state in red, then throw
   `FLOOR DEVIATION: <task> paid a turn (<class>: <detail>); adjusted turns <A> vs floor <F> for
-  <group> (slack <S>). <class-specific hint>. Compare against docs/gold-star-run.txt; rerun with
-  floorSlack=N to loosen or floorGuard=false to disable.` The hint is "a free source was held"
+<group> (slack <S>). <class-specific hint>. Compare against docs/gold-star-run.txt; rerun with
+floorSlack=N to loosen or floorGuard=false to disable.` The hint is "a free source was held"
   for `armed`/`avoidable`, "no free source was held; see the ladder state" for `noResource`,
   and "an NC the audit tables do not know" for `unclassified`.
 - Args: `gold` becomes `floorGuard` (boolean, default true); `goldSlack` becomes `floorSlack`
@@ -218,7 +218,7 @@ Printed at engine destruct and written to `subaqua_lastrun.txt`:
    and `floor` are cumulative and `excess` is their difference.
 2. `group | structural | dice | armed | avoidable | reserved | noRes | luck | unclassified`.
 3. Totals: `paid N, dice D, luck L, adjusted N - D + L, floor F, excess E; overage A (armed X,
-   avoidable Y, misallocated charged Z of M)`.
+avoidable Y, misallocated charged Z of M)`.
 4. Every `armed`, `avoidable`, `noResource`, `unclassified` event line and every misallocation,
    verbatim from the audit file, followed by the ladder state (unspent free kills, runs,
    banishes).
@@ -247,8 +247,7 @@ The repo has lint and build only. Before claiming done:
 2. A throwaway script in the session scratchpad replays each paid block from
    `2026-09-02-turn-ledger/ledger.py` on `docs/gold-star-run.txt` through the NC tables (name +
    item-acquired lines) and must report: 36 paid, 0 armed, 0 avoidable, 3 dice (Cut Down in His
-   Prime, two tent visits without the stashbox), 4 luck, 0 unclassified, adjusted 37 vs floor
-   36. The same script on `docs/2026-09-07-run.txt` must class the three paid Mer-kin trainer
+   Prime, two tent visits without the stashbox), 4 luck, 0 unclassified, adjusted 37 vs floor 36. The same script on `docs/2026-09-07-run.txt` must class the three paid Mer-kin trainer
    fights as non-structural and show Gladiator Gear's excess.
 3. `cumulativeFloor` printed by a one-line node check equals the table above.
 4. Live: the next run's `subaqua_lastrun.txt` shows the audit tables and neither guard fired on
