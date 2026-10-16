@@ -89,7 +89,7 @@ import {
   selectFreeKill,
   selectYellowRay,
 } from "../resources/freekill";
-import { selectFreeRun } from "../resources/freerun";
+import { isFreeRunSource, selectFreeRun } from "../resources/freerun";
 import { peridotTargetOffered, setPeridotTargetId } from "../resources/peridot";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
@@ -306,10 +306,14 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         selectFreeRun({ banish, location, exclude }),
       );
       if (source) {
+        const rungs = (): Macro =>
+          (isFreeRunSource(source)
+            ? [source]
+            : killRungLadder(source, freeKillChain({ location, onceDaily: false }))
+          ).reduce((macro, rung) => macro.step(rung.do), new Macro());
         resources.provide("freeRun", {
           prepare: source.prepare,
-          do: () =>
-            Macro.ifNot(freeMonsters, Macro.step(source.do)).step(fallbackMacro({ fish: true })),
+          do: () => Macro.ifNot(freeMonsters, rungs()).step(fallbackMacro({ fish: true })),
         });
       }
     }
@@ -356,13 +360,6 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
           ...freeMonsters,
         ]),
       ];
-      // The rung goes in as a default (non-monster) macro, guarded by monster id, rather than
-      // a per-monster one: grimoire compiles per-monster macros ahead of default macros, and
-      // the tasks register their openers (Recall Facts, the screech, McTwist) through
-      // monsterMacro() as default macros. A per-monster rung therefore ran first and ended
-      // the fight before the opener: 2026-09-05 `:3258` Shattering Punch #2 killed the last
-      // habitat golem with the screech still queued behind it, and the screech then went on
-      // a paid baguette lady. Free monsters never get a rung: they cost no turn to kill.
       const upgradeKill = (monster?: Monster): void => {
         if (monster && freeMonsters.includes(monster)) return;
         const dropsMatter = freeKillTargetDropsMatter(location, monster);
@@ -370,9 +367,6 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         const source = firstEquippable(outfit, (exclude) =>
           selectFreeKill({ location, target: monster, dropsMatter, exclude }),
         );
-        // The selected source may be chance-based (darts): the rest of the worn chain follows
-        // it so a miss falls through to a guaranteed free kill, not the paid kill below. The
-        // ladder compiles after dress(), so the chain reads the gear this task actually wears.
         if (source === undefined && clubRung.components.length === 0) return;
         const ladder = (): Macro =>
           killRungLadder(source, source ? freeKillChain({ location, dropsMatter }) : [])
