@@ -89,7 +89,7 @@ import {
   selectFreeKill,
   selectYellowRay,
 } from "../resources/freekill";
-import { selectFreeRun } from "../resources/freerun";
+import { isFreeRunSource, selectFreeRun } from "../resources/freerun";
 import { peridotTargetOffered, setPeridotTargetId } from "../resources/peridot";
 import { currentPolicy } from "../resources/policy";
 import { forceGranted } from "../resources/saber";
@@ -306,10 +306,17 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
         selectFreeRun({ banish, location, exclude }),
       );
       if (source) {
+        // With no free run left, selectFreeRun falls back to a free kill, which may be the
+        // chance-based darts: the worn chain follows it so a miss is not a paid kill
+        // (2026-10-16 Trench t6/t8: two darts misses, Saucegeyser, two Punches unused).
+        const rungs = (): Macro =>
+          (isFreeRunSource(source)
+            ? [source]
+            : killRungLadder(source, freeKillChain({ location, onceDaily: false }))
+          ).reduce((macro, rung) => macro.step(rung.do), new Macro());
         resources.provide("freeRun", {
           prepare: source.prepare,
-          do: () =>
-            Macro.ifNot(freeMonsters, Macro.step(source.do)).step(fallbackMacro({ fish: true })),
+          do: () => Macro.ifNot(freeMonsters, rungs()).step(fallbackMacro({ fish: true })),
         });
       }
     }
