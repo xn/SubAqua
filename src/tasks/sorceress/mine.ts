@@ -7,6 +7,7 @@ import {
   haveEquipped,
   itemAmount,
   mpCost,
+  print,
   retrieveItem,
   use,
   useSkill,
@@ -30,7 +31,10 @@ import { lassoExpert, requiredFamiliarBreather } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { recover } from "../../lib";
 import { getLucky, luckyObtainable } from "../../lib/lucky";
+import { parseBadOre, planDig, whichOf } from "../../lib/mineplan";
+import { solveDig } from "../../lib/minesolver";
 import { itemDropEffects } from "../../lib/moods";
+import { drinkPotionsTask } from "../../resources/bangdrink";
 import { discretionaryPull, pullSequence } from "../../resources/pulls";
 
 const digpick = $item`Mer-kin digpick`;
@@ -128,52 +132,6 @@ function scaleTrip(): boolean {
 const NO_SCALE_SOURCE = (need: number): string =>
   `Need ${need} more pristine fish scale(s): out of hermitage clovers (3/day) and fewer than 10 rough fish scales for the Madness Reef exchange (choice 311/1 -> 310/2). Get scales (a Lucky! source for the Caliginous Abyss, or rough scales to trade), then rerun.`;
 
-const SHAFT: [number, number][] = [
-  [3, 6],
-  [3, 5],
-  [3, 4],
-  [3, 3],
-  [3, 2],
-  [2, 2],
-  [4, 2],
-  [5, 2],
-];
-
-function stateAt(state: string, col: number, row: number): string {
-  return state.charAt((row - 1) * 6 + (col - 1));
-}
-
-function adjacentBadOre(col: number, row: number): boolean {
-  const layout = get("mineLayout3", "");
-  return [
-    [col - 1, row],
-    [col + 1, row],
-    [col, row - 1],
-    [col, row + 1],
-  ].some(([c, r]) => {
-    const m = new RegExp(`#${r * 8 + c}<img src="[^"]*/([^"]+)\\.gif"`).exec(layout);
-    return m !== null && (m[1].includes("velcroore") || m[1].includes("vinylore"));
-  });
-}
-
-function pickSquare(state: string): [number, number] {
-  const shaft = SHAFT.find(([c, r]) => stateAt(state, c, r) !== "o");
-  if (shaft) return shaft;
-  for (let pass = 0; pass < 2; pass++) {
-    for (let i = 0; i < 36; i++) {
-      if (state.charAt(i) !== "*") continue;
-      const col = (i % 6) + 1;
-      const row = Math.floor(i / 6) + 1;
-      if (row >= 4) continue;
-      if (pass === 0 && adjacentBadOre(col, row)) continue;
-      return [col, row];
-    }
-  }
-  abort(
-    "Generic mining did not find teflon ore; mine Anemone Mine (mine 3) manually. TIP: the ores show up in adjacent veins of 5 (ash G:629-631).",
-  );
-}
-
 const DIG_HP_FLOOR = 760;
 function healForDig(): void {
   const walrus = $skill`Tongue of the Walrus`;
@@ -199,8 +157,38 @@ function mineSquare(): DigResult {
       "mineState3 did not parse (expected 36 chars); visit mining.php?mine=3 manually and rerun.",
     );
   }
-  const [col, row] = pickSquare(state);
-  const which = row * 8 + col;
+  const layout = get("mineLayout3", "");
+  const detection = haveEffect($effect`Object Detection`) > 0;
+  const tag = detection ? " (Object Detection)" : "";
+  // The vein solver (lib/minesolver): exact posterior over the three veins given the wall.
+  // If no vein placement fits what the wall shows, the model is wrong for this wall and the
+  // twinkle planner (lib/mineplan) takes over.
+  const solved = solveDig(state, layout, detection);
+  let square: [number, number];
+  if (solved) {
+    square = solved.square;
+    print(
+      `Mine Teflon: dig (${square[0]},${square[1]}), P(teflon) ${(solved.p * 100).toFixed(0)}%, ` +
+        `score ${solved.score.toFixed(2)}${tag}`,
+      "blue",
+    );
+  } else {
+    const plan = planDig(state, parseBadOre(layout));
+    if (plan.action === "none") {
+      abort(
+        "Generic mining did not find teflon ore and no promising square is reachable; mine Anemone Mine (mine 3) manually. TIP: the ores show up in adjacent veins (ash G:629-631).",
+      );
+    }
+    square = plan.square;
+    const [tc, tr] = plan.target;
+    print(
+      `Mine Teflon: no vein placement fits this wall (solver off); dig (${square[0]},${square[1]}) ` +
+        `toward the twinkle at (${tc},${tr}), ${plan.cost} dig(s) away${tag}`,
+      "olive",
+    );
+  }
+  const [col, row] = square;
+  const which = whichOf(square);
   const response = visitUrl(`mining.php?mine=3&which=${which}`);
   return { col, row, which, response };
 }
@@ -227,6 +215,11 @@ export function mineQuest(): Quest {
           message: "No Mer-kin digpick after 8 turns; pull one manually and rerun.",
         },
       },
+      // Object Detection lights every promising square of the wall, not only the exposed
+      // ones, so the dig walks to a twinkle instead of shafting blind; 36 of 52 logged runs
+      // spent a lodestone pull on that shaft. The engine stops throwing bang potions once
+      // the two costly identities are known, so the detection potion sometimes survives.
+      drinkPotionsTask(() => availableAmount(digpick) > 0 && !oreSecured(), oreSecured),
       {
         name: "Mine Teflon",
         ready: () => availableAmount(digpick) > 0 && !oreSecured(),
