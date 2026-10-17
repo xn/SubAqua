@@ -35,10 +35,11 @@ import {
 
 import { killMacro } from "../../engine/combat";
 import { belowHpFloor, floorClearingHeal, stallSpare } from "../../lib";
+import { killRungLadder } from "../../lib/freekill-ladder";
 import { shubDelevelers, shubDelevelFactor } from "../../lib/shub";
 import { yogDelevelStock } from "../../lib/yog";
-import { freeKillChain } from "../../resources/freekill";
-import { selectFreeRun } from "../../resources/freerun";
+import { FreeKillSource, freeKillChain } from "../../resources/freekill";
+import { FreeRunSource, isFreeRunSource, selectFreeRun } from "../../resources/freerun";
 import { currentPolicy } from "../../resources/policy";
 
 export type CombatFilter = (round: number, monster: Monster, text: string) => string;
@@ -107,7 +108,7 @@ function equipItems(equip: unknown): Item[] {
 export function gymFreeRun(
   target?: Monster,
   opts: { banish?: boolean } = {},
-): { do: Macro } | undefined {
+): FreeRunSource | FreeKillSource | undefined {
   const { banish = true } = opts;
   const exclude = new Set<string>();
   for (;;) {
@@ -129,6 +130,24 @@ export function gymFreeRun(
     if (worn) return source;
     exclude.add(source.name);
   }
+}
+
+// The macro for a gymFreeRun pick. With the runs gone selectFreeRun falls back to a free kill,
+// which may be the chance-based darts: the worn chain follows it, so a miss is not a paid kill
+// (the 2026-10-16 Trench miss, same shape).
+function gymRunMacro(source: FreeRunSource | FreeKillSource): Macro {
+  if (isFreeRunSource(source)) return source.do;
+  return killRungLadder(source, freeKillChain({ location: gymnasium, onceDaily: false })).reduce(
+    (macro, rung) => macro.step(rung.do),
+    new Macro(),
+  );
+}
+
+// Every worn free kill, in order: a darts miss falls through to the next rung.
+function gymKillMacro(): Macro | undefined {
+  const chain = freeKillChain({ location: gymnasium });
+  if (chain.length === 0) return undefined;
+  return chain.reduce((macro, rung) => macro.step(rung.do), new Macro());
 }
 
 export function gymFreeRunGear(): { items: Item[]; familiar?: Familiar } {
@@ -178,12 +197,12 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
         if (!runTried) {
           runTried = true;
           const run = gymFreeRun(monster, { banish: false });
-          if (run) return run.do.toString();
+          if (run) return gymRunMacro(run).toString();
         }
         if (!freeKillTried) {
           freeKillTried = true;
-          const kill = freeKillChain({ location: gymnasium })[0];
-          if (kill) return kill.do.toString();
+          const kill = gymKillMacro();
+          if (kill) return kill.toString();
         }
       }
       return killMacro(false).toString();
@@ -223,7 +242,7 @@ export function gladiatorFilter(opts: { gym?: boolean; warOpen?: boolean } = {})
       if (!runTried) {
         runTried = true;
         const run = gymFreeRun(monster);
-        if (run) return run.do.toString();
+        if (run) return gymRunMacro(run).toString();
       }
     }
 
