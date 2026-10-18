@@ -298,7 +298,7 @@ function initialMomProgress(): number {
 // waffle is the fallback and is thrown by hand before the compiled macro runs, for the reason
 // at corral.ts throwWaffle(): a refused waffle inside a macro ends in "(Macro aborted.)" and
 // kills the whole script. With neither, the kill action pays the turn, as the gold run did
-// (gold-star-run.txt:8369).
+// (docs/superpowers/research/runs/subaqua-2026-09-06-gold.log:8369).
 function peanutRerollPays(): boolean {
   return selectFreeKill({ location: abyss }) !== undefined;
 }
