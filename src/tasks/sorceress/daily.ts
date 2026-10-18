@@ -1,12 +1,7 @@
-import { use } from "kolmafia";
-import { $effect, $item, get, have, SourceTerminal } from "libram";
+import { $effect, get, have, SourceTerminal } from "libram";
 
 import { Quest } from "../../engine/task";
-import { haveAnywhere } from "../../lib";
-import { currentPolicy } from "../../resources/policy";
-import { pullSequence } from "../../resources/pulls";
-
-const pyec = $item`Platinum Yendorian Express Card`;
+import { pyecAvailable, usePyec } from "../../resources/pyec";
 
 export function sourceEnhanceItems(): void {
   if (!SourceTerminal.have()) return;
@@ -22,15 +17,9 @@ export function sorceressDailies(): Quest {
       {
         name: "PYEC",
         ready: () =>
-          currentPolicy().usePyec &&
-          haveAnywhere(pyec) &&
-          (have($effect`Shadow Affinity`) || get("_shadowAffinityToday", false)),
-        completed: () =>
-          get("expressCardUsed", false) || !currentPolicy().usePyec || !haveAnywhere(pyec),
-        do: (): void => {
-          if (!have(pyec)) pullSequence(pyec);
-          if (have(pyec)) use(pyec);
-        },
+          pyecAvailable() && (have($effect`Shadow Affinity`) || get("_shadowAffinityToday", false)),
+        completed: () => !pyecAvailable(),
+        do: () => void usePyec(),
         freeaction: true,
         limit: { tries: 1 },
       },

@@ -11,6 +11,20 @@ export type FishyPullCandidate = {
   usable: boolean;
 };
 
+/** Whether a pull can land the item: owned, in Hagnk's, or buyable under the Fishy ceiling. */
+export function fishyPullObtainable(c: {
+  have: boolean;
+  pulledToday: boolean;
+  stored: number;
+  price: number;
+  /** The last-resort Fishy ceiling (`fishyBuyLimit`), not the general buy limit. */
+  limit: number;
+}): boolean {
+  if (c.have) return true;
+  if (c.pulledToday) return false;
+  return c.stored > 0 || c.price <= c.limit;
+}
+
 export function fishyPullOrder<T extends FishyPullCandidate>(candidates: readonly T[]): T[] {
   return candidates.filter((c) => c.obtainable && c.usable).sort((a, b) => a.cost - b.cost);
 }

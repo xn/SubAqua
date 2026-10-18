@@ -32,6 +32,13 @@ export function buyLimit(): number {
   return args.buyLimit ?? get("autoBuyPriceLimit");
 }
 
+// The run never takes a Fishy-less underwater turn, so its last-resort Fishy item (fish sauce /
+// cuppa Gill tea) is bought up to this ceiling even when it is over the general buy limit
+// (2026-10-17: fish sauce at 21,060 against autoBuyPriceLimit 20,000).
+export function fishyBuyLimit(): number {
+  return Math.max(buyLimit(), args.fishyBuyLimit);
+}
+
 export function haveAnywhere(item: Item): boolean {
   return have(item) || storageAmount(item) > 0;
 }

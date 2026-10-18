@@ -9,6 +9,11 @@ export type ResourcePolicy = {
   catalogCredits: "vhs3" | "skateboard+vhs2";
   whistleOutpostDrops: boolean;
   fishyPullMeal: boolean;
+  // Fishy lapsed with the skate war still on and nothing free left to bridge it (pipe and PYEC
+  // spent): accept doubled turns (6,500 each) until Lutz's free 30 instead of a fish sauce (1 spleen
+  // + ~21,000 meat, ~47,000/day to the farm) or tea. Off: doubled turns are never accepted and the
+  // paid rungs run as before. The PYEC bridge makes either case rare.
+  fishyWaitForLutz: boolean;
   conserveFreeFights: boolean;
   usePyec: boolean;
   shubInsurancePulls: boolean;
@@ -29,6 +34,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "skateboard+vhs2",
     whistleOutpostDrops: true,
     fishyPullMeal: true,
+    fishyWaitForLutz: false,
     conserveFreeFights: false,
     usePyec: true,
     shubInsurancePulls: true,
@@ -44,6 +50,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "skateboard+vhs2",
     whistleOutpostDrops: false,
     fishyPullMeal: false,
+    fishyWaitForLutz: false,
     conserveFreeFights: false,
     usePyec: true,
     shubInsurancePulls: false,
@@ -59,6 +66,7 @@ const policies: Record<Tier, ResourcePolicy> = {
     catalogCredits: "vhs3",
     whistleOutpostDrops: false,
     fishyPullMeal: true,
+    fishyWaitForLutz: false,
     conserveFreeFights: true,
     usePyec: false,
     shubInsurancePulls: false,

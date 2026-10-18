@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { FishyPullCandidate, fishyPullOrder } from "../src/lib/fishypull";
+import { FishyPullCandidate, fishyPullObtainable, fishyPullOrder } from "../src/lib/fishypull";
 
 const sauce: FishyPullCandidate = {
   name: "fish sauce",
@@ -41,4 +41,19 @@ test("a candidate over the buy limit or already pulled today drops out", () => {
     ]),
     [],
   );
+});
+
+test("the last-resort Fishy pull has its own price ceiling above the general buy limit", () => {
+  // 2026-10-17: fish sauce at 21,060 with autoBuyPriceLimit 20,000 would have left the ladder empty.
+  const sauce1017 = { have: false, pulledToday: false, stored: 0, price: 21_060 };
+  assert.equal(fishyPullObtainable({ ...sauce1017, limit: 20_000 }), false);
+  assert.equal(fishyPullObtainable({ ...sauce1017, limit: 50_000 }), true);
+  assert.equal(fishyPullObtainable({ ...sauce1017, price: 60_000, limit: 50_000 }), false);
+});
+
+test("one in Hagnk's or in inventory needs no purchase; one pulled today is gone", () => {
+  const over = { have: false, pulledToday: false, stored: 0, price: 999_999, limit: 50_000 };
+  assert.equal(fishyPullObtainable({ ...over, stored: 1 }), true);
+  assert.equal(fishyPullObtainable({ ...over, have: true }), true);
+  assert.equal(fishyPullObtainable({ ...over, stored: 1, pulledToday: true }), false);
 });
