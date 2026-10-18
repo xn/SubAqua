@@ -31,7 +31,8 @@ export function luckyObtainable(): boolean {
 
 // Buy one clover from the hermit, fishing a worthless item out of the sewer with gum first.
 // Gum is a use, not an adventure, and the sewer hands out class starter gear alongside the
-// worthless items (docs/gold-star-run.txt:1312), so the loop keeps chewing until one lands.
+// worthless items (docs/superpowers/research/runs/subaqua-2026-09-06-gold.log:1312), so the
+// loop keeps chewing until one lands.
 function acquireHermitClover(): boolean {
   const before = itemAmount(clover);
   while (itemAmount(clover) === before && get("_cloversPurchased", 0) < 3) {

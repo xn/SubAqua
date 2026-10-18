@@ -1,34 +1,7 @@
 import { bufferToFile, myTurncount, print } from "kolmafia";
 import { get, set } from "libram";
 
-export const GOLD_RUN = "SubAqua 2026-09-06 (36 turns)";
-
-// Turncount at which each group finished in the gold run (docs/gold-star-run.txt, the final
-// _subaqua_ledger table at the end of the log). The gold run is this script, so the groups
-// land in runplan order and the checkpoints apply as-is.
-export const goldTurncounts: Record<string, number> = {
-  Openers: 2,
-  Pellet: 2,
-  "Big Brother": 3,
-  Grandpa: 6,
-  Outpost: 13,
-  Currents: 13,
-  Helmet: 13,
-  Mom: 13,
-  "Shadow Rift": 13,
-  "Sorceress Dailies": 13,
-  Corral: 13,
-  Teflon: 13,
-  School: 16,
-  Library: 18,
-  "Yog-Urt": 18,
-  "Gladiator Gear": 25,
-  "Skate Park": 25,
-  Colosseum: 32,
-  "Mom Finish": 34,
-  Shub: 35,
-  Finale: 36,
-};
+import { GOLD_RUN, goldTurncounts } from "./goldrun";
 
 const FLOATING = new Set(["Mom/Banish Constructs"]);
 
