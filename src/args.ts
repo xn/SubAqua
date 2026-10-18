@@ -26,6 +26,10 @@ export const args = Args.create(
     buyLimit: Args.number({
       help: "Max meat per mall purchase; defaults to your autoBuyPriceLimit mafia preference.",
     }),
+    fishyBuyLimit: Args.number({
+      help: "Max meat for the last-resort Fishy pull (fish sauce / cuppa Gill tea) when no free Fishy source is left; the run never takes a Fishy-less underwater turn. Never below buyLimit.",
+      default: 50000,
+    }),
     postloopCommand: Args.string({
       help: "CLI command to run once the route completes (e.g. a farming script). Empty = skip.",
       default: "",
