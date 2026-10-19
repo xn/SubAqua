@@ -24,7 +24,9 @@ import {
   Macro,
 } from "libram";
 
+import { affordableCasts } from "../lib/bcz";
 import { haveGem, wornOrMounted } from "../lib/codpiece";
+import { poolCoversHolders } from "../lib/freekill-ladder";
 
 import { currentPolicy } from "./policy";
 import { activeHolders, ChargeReservation } from "./reservation";
@@ -41,16 +43,23 @@ export type FreeKillSource = CombatResource & {
 
 // libram's availableCasts wants the BCZ in inventory; a mounted gem is out of inventory but
 // still casts through the worn codpiece, so the affordability check is redone here.
-export function bczAffordable(skill: Skill, mainstatFloor: number): boolean {
-  if (!haveGem($item`blood cubic zirconia`)) return false;
+export function bczAvailableCasts(skill: Skill, mainstatFloor: number): number {
+  if (!haveGem($item`blood cubic zirconia`)) return 0;
   const substat = BloodCubicZirconia.substatUsed(skill);
-  if (!substat) return false;
-  return myBasestat(substat) - BloodCubicZirconia.skillCost(skill) >= mainstatFloor ** 2;
+  if (!substat) return 0;
+  return affordableCasts({
+    substats: myBasestat(substat),
+    timesCast: BloodCubicZirconia.timesCast(skill),
+    floorSq: mainstatFloor ** 2,
+    cost: (castNumber) => BloodCubicZirconia.skillCost(skill, castNumber),
+  });
 }
 
-function bczSweatBulletsAffordable(): boolean {
-  return bczAffordable($skill`BCZ: Sweat Bullets`, 150);
+export function bczAffordable(skill: Skill, mainstatFloor: number): boolean {
+  return bczAvailableCasts(skill, mainstatFloor) > 0;
 }
+
+const sweatBulletsFloor = 150;
 
 const sheriffZones = $locations`An Octopus's Garden, Mer-kin Gymnasium, The Caliginous Abyss`;
 const sheriffOutfit = $items`Sheriff moustache, Sheriff badge, Sheriff pistol`;
@@ -102,8 +111,8 @@ export const freeKillSources: FreeKillSource[] = [
   },
   {
     name: "BCZ: Sweat Bullets",
-    available: bczSweatBulletsAffordable,
-    remaining: () => (bczSweatBulletsAffordable() ? 1 : 0),
+    available: () => bczAffordable($skill`BCZ: Sweat Bullets`, sweatBulletsFloor),
+    remaining: () => bczAvailableCasts($skill`BCZ: Sweat Bullets`, sweatBulletsFloor),
     equip: $item`blood cubic zirconia`,
     do: Macro.trySkill($skill`BCZ: Sweat Bullets`),
     colosseumSafe: false,
@@ -223,10 +232,10 @@ function freeKillBudgetAllows(source: FreeKillSource, location?: Location): bool
   const inPool = (candidate: FreeKillSource): boolean =>
     heldSites.some((site) => usableFreeKill(candidate, { location: site, dropsMatter: true }));
   if (!inPool(source)) return true;
-  const pool = freeKillSources
-    .filter(inPool)
-    .reduce((total, candidate) => total + candidate.remaining(), 0);
-  return pool > holders.reduce((total, reservation) => total + reservation.count, 0);
+  return poolCoversHolders(
+    freeKillSources.filter(inPool).map((candidate) => candidate.remaining()),
+    holders.reduce((total, reservation) => total + reservation.count, 0),
+  );
 }
 
 export function selectFreeKill(
