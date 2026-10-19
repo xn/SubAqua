@@ -11,6 +11,7 @@ import {
   fullnessLimit,
   getCampground,
   getFuel,
+  haveEffect,
   Item,
   mallPrice,
   myAdventures,
@@ -28,11 +29,13 @@ import {
 } from "kolmafia";
 import { $effect, $item, $items, $skill, AsdonMartin, get, have } from "libram";
 
-import { buyLimit } from "../lib";
-import { FishyPullCandidate, fishyPullOrder } from "../lib/fishypull";
+import { debug, fishyBuyLimit, haveAnywhere } from "../lib";
+import { FishyLadderState, fishyStep } from "../lib/fishyladder";
+import { FishyPullCandidate, fishyPullObtainable, fishyPullOrder } from "../lib/fishypull";
 
 import { currentPolicy } from "./policy";
 import { pulledToday, pullSequence } from "./pulls";
+import { pyecAvailable, usePyec } from "./pyec";
 
 const fishy = $effect`Fishy`;
 
@@ -279,10 +282,28 @@ function useFishySource(source: Fishysource): boolean {
   return have(fishy);
 }
 
-export function maintainFishy(): void {
-  if (have(fishy)) return;
+function fishyState(): FishyLadderState {
+  return {
+    fishyTurns: haveEffect(fishy),
+    pipe: !get("_fishyPipeUsed") && haveAnywhere($item`fishy pipe`),
+    mapPurchased: get("mapToTheSkateParkPurchased"),
+    parkStatus: get("skateParkStatus"),
+    lutzClaimed: get("_skateBuff1"),
+    pyecReady: pyecAvailable(),
+    waitForLutz: currentPolicy().fishyWaitForLutz,
+  };
+}
 
-  if (!get("_fishyPipeUsed") && (have($item`fishy pipe`) || storageAmount($item`fishy pipe`) > 0)) {
+export function maintainFishy(): void {
+  const step = fishyStep(fishyState());
+  if (step === "keep") return;
+  if (step === "pyec") {
+    debug("Fishy's last turn with the pipe spent and Lutz pending: using the PYEC for its +5");
+    usePyec();
+    return;
+  }
+
+  if (step === "pipe") {
     if (!have($item`fishy pipe`)) pullSequence($item`fishy pipe`);
     if (have($item`fishy pipe`)) use($item`fishy pipe`);
     if (have(fishy)) return;
@@ -291,6 +312,15 @@ export function maintainFishy(): void {
   if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
     cliExecute("skate lutz");
     if (have(fishy)) return;
+  }
+
+  // The pipe and Lutz rungs have had their turn; anything below costs the farm more than the
+  // doubled turns until the war ends (policy fishyWaitForLutz).
+  if (fishyStep({ ...fishyState(), pipe: false }) === "wait") {
+    debug(
+      "Fishy lapsed; Lutz's free 30 is coming once the skate war ends, so no fish sauce or tea",
+    );
+    return;
   }
 
   const source = cheapestFishySource();
@@ -309,7 +339,7 @@ export function maintainFishy(): void {
   }
 
   for (const { item } of fishyPulls()) {
-    if (have(item) || pullSequence(item)) {
+    if (have(item) || pullSequence(item, fishyBuyLimit())) {
       if (item.spleen > 0) chew(1, item);
       else use(1, item);
     }
@@ -321,14 +351,14 @@ export function maintainFishy(): void {
   const prices = fishyPullItems.map((item) => `${item.name} ${mallPrice(item)}`).join(", ");
   abort(
     "Could not acquire Fishy (pipe, pull-meal, fish sauce / cuppa Gill tea pull, and sushi all failed). " +
-      `Mall prices: ${prices}; buy limit ${buyLimit()} (a pull over it needs buyLimit= raised or the item in Hagnk's). ` +
+      `Mall prices: ${prices}; Fishy buy limit ${fishyBuyLimit()} (a pull over it needs fishyBuyLimit= raised or the item in Hagnk's). ` +
       "Get Fishy manually (fishy pipe / eat sea sushi / chew fish sauce / cuppa Gill tea), then rerun.",
   );
 }
 
 const fishyPullItems = $items`fish sauce, cuppa Gill tea`;
 
-// A candidate over the buy limit is skipped here rather than handed to pullSequence, which would
+// A candidate over the Fishy buy limit is skipped here rather than handed to pullSequence, which would
 // abort before the other candidate or the sushi got a turn.
 function fishyPulls(): (FishyPullCandidate & { item: Item })[] {
   return fishyPullOrder(
@@ -336,9 +366,13 @@ function fishyPulls(): (FishyPullCandidate & { item: Item })[] {
       item,
       name: item.name,
       cost: fishyOpportunityCost(item),
-      obtainable:
-        have(item) ||
-        (!pulledToday(item) && (storageAmount(item) > 0 || mallPrice(item) <= buyLimit())),
+      obtainable: fishyPullObtainable({
+        have: have(item),
+        pulledToday: pulledToday(item),
+        stored: storageAmount(item),
+        price: mallPrice(item),
+        limit: fishyBuyLimit(),
+      }),
       usable: mySpleenUse() + item.spleen <= spleenLimit(),
     })),
   );

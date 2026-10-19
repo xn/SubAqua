@@ -23,6 +23,7 @@ import {
 } from "../../engine/outfit";
 import { Quest } from "../../engine/task";
 import { buyLimit, recover } from "../../lib";
+import { claimIceBuffWith } from "../../lib/icebuff";
 import { forceNextNoncombat } from "../../resources/ncforce";
 import { pullBudgetAllows, pulledToday, pullSequence } from "../../resources/pulls";
 
@@ -66,21 +67,33 @@ function latePulls(): void {
 
 let lastRefreshedTurn = -1;
 
-export function skateWarOpen(): boolean {
-  if (!get("mapToTheSkateParkPurchased")) return false;
+// One park page visit per turn keeps skateParkStatus current for every reader this turn.
+function refreshSkatePark(): void {
   const now = turnsPlayed();
   if (lastRefreshedTurn !== now) {
     lastRefreshedTurn = now;
     visitUrl("sea_skatepark.php");
   }
+}
+
+export function skateWarOpen(): boolean {
+  if (!get("mapToTheSkateParkPurchased")) return false;
+  refreshSkatePark();
   return get("skateParkStatus") === "war";
 }
 
+// Runs inside `do` right after the adventure, before `completed` refreshes the park: the
+// war-ending turn still reads "war" here, so the refresh happens inside (lib/icebuff).
 export function claimIceBuff(): void {
-  if (get("skateParkStatus") === "ice" && !get("_skateBuff1")) {
-    ensureHelperBreathing("the Skate Park ice buff");
-    visitUrl("sea_skatepark.php?action=state2buff1");
-  }
+  claimIceBuffWith({
+    status: () => get("skateParkStatus"),
+    refresh: refreshSkatePark,
+    claimed: () => get("_skateBuff1"),
+    claim: () => {
+      ensureHelperBreathing("the Skate Park ice buff");
+      cliExecute("skate lutz");
+    },
+  });
 }
 
 export function skateParkTurn(): void {

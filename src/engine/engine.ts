@@ -72,6 +72,7 @@ import { backupCamera, backupMacro, backupTarget, freeMonsters } from "../resour
 import {
   bangPotionMacro,
   bangPotionNever,
+  bangThrowWanted,
   unidentifiedBangPotions,
 } from "../resources/bangpotions";
 import { banishChainMacro, pickBanishSource, sourceMacro } from "../resources/banish";
@@ -235,7 +236,8 @@ export class SubAquaEngine extends BaseEngine<CombatActions, Task> {
       !combat.can("forceItems") &&
       !combat.can("killFree") &&
       !combat.can("yellowRay") &&
-      unidentifiedBangPotions().length > 0
+      unidentifiedBangPotions().length > 0 &&
+      bangThrowWanted()
     ) {
       combat.startingMacro(Macro.ifNot(bangPotionNever, bangPotionMacro()));
     }

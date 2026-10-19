@@ -337,6 +337,13 @@ export function candidateSeeds(): number[] | undefined {
   return result;
 }
 
+/** Each candidate seed's potion string (letters by item id), for the bang potion drink plan. */
+export function candidateBangStrings(): string[] | undefined {
+  const seeds = candidateSeeds();
+  if (seeds === undefined || seeds.length === 0) return undefined;
+  return seeds.map(calculateBangPotions);
+}
+
 export function dreadSeedCheck(): void {
   const seeds = candidateSeeds();
   if (seeds === undefined) return;

@@ -307,8 +307,9 @@ export function initQuest(): Quest {
             // and only a SCUBA tank breathes under them; without one the first underwater
             // training task throws, so the tank is pulled at every tier (low included).
             // With an Asdon in the workshed, Driving Waterproofly is the breather instead
-            // (engine.ts maintainWaterproofly before every underwater task; the gold run pulled
-            // the tank and never wore it, gold-star-run.txt:954), so the slot is kept.
+            // (engine.ts maintainWaterproofly before every underwater task; the 09-06 gold run
+            // pulled the tank and never wore it, docs/superpowers/research/runs/
+            // subaqua-2026-09-06-gold.log:954), so the slot is kept.
             if (it === $item`Elf Guard SCUBA tank`) {
               if (AsdonMartin.installed()) continue;
               if (!scubaTanks.some((tank) => have(tank))) {

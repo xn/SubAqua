@@ -35,15 +35,15 @@ export function pulledToday(item: Item): boolean {
   return `,${get("_roninStoragePulls")},`.includes(`,${toInt(item)},`);
 }
 
-export function pullSequence(item: Item): boolean {
+export function pullSequence(item: Item, priceLimit = buyLimit()): boolean {
   if (!pullable(item)) return false;
   if (pullsRemaining() === 0) return false;
   if (pulledToday(item)) return false;
   if (storageAmount(item) === 0) {
     const price = mallPrice(item);
-    if (price > buyLimit()) {
+    if (price > priceLimit) {
       abort(
-        `${item.name} costs ${price} meat in the mall, over your buy limit of ${buyLimit()}. ` +
+        `${item.name} costs ${price} meat in the mall, over your buy limit of ${priceLimit}. ` +
           `Raise buyLimit= (or autoBuyPriceLimit), or put one in Hagnk's yourself, then rerun.`,
       );
     }

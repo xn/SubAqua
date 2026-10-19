@@ -1,0 +1,397 @@
+[
+  {
+    "state": "Xoo*XXX*o*XXX*o*XXX*o*XXXXoXXXX*oXXX",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >#11<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260801.txt"
+  },
+  {
+    "state": "*o**o*ooooo***oXXXXXo*XXXXo*XXXXo***",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#13<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#17<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260802.txt"
+  },
+  {
+    "state": "ooooo*ooooo*XooX*XX*o*XXXXoXXX*XoX*X",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#17<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#26<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#11<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#9<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#12<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#13<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260803.txt"
+  },
+  {
+    "state": "XXXXXX*oo*XXX*o*XXX*o*XXXXoXXXXXoX*X",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260804.txt"
+  },
+  {
+    "state": "X***XX*ooo*XXXo*XXX*oXXXX*oXXX*XoX*X",
+    "layout": "#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260805.txt"
+  },
+  {
+    "state": "XXXXXXX*o*XXX*o*XXX*oXXXXXo*XXXXoX*X",
+    "layout": "#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260806.txt"
+  },
+  {
+    "state": "XXXXXXXX*XXXX*o*XXXXoXXXXXoXXX**o**X",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260807.txt"
+  },
+  {
+    "state": "X**XXX*ooXXXX*oXXXXXo*XXX*oXXXXXoXXX",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260808.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*o*XXXXo*XXXXoXXXXXoXXX",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260809.txt"
+  },
+  {
+    "state": "X**XXX*oo*XXXXoXXXX*oXXXXXoXXX*Xo*XX",
+    "layout": "#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260810.txt"
+  },
+  {
+    "state": "*oo*oo*oooooXXoXoXXXoXXXXXooXXXXoXoo",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#29<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#22<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#13<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#14<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#11<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#44<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#53<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#54<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260811.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXo*XXXXoXXXX*o*XX*XoX*X",
+    "layout": "#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260812.txt"
+  },
+  {
+    "state": "*o*Xo*ooooo***o*XXXXoXXXX*o*XXXXo*XX",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#13<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#17<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260813.txt"
+  },
+  {
+    "state": "X*o**X*oooo**oo*XXXooXXXXXoXX*XooXoo",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#11<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#50<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#53<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#54<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#34<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#26<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260814.txt"
+  },
+  {
+    "state": "X**XXXXoo*XXX*o*XXXXo*XXXXoXXXXXoX**",
+    "layout": "#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260815.txt"
+  },
+  {
+    "state": "*X***Xooooo**XoX*XXXo*XXXXoXXX*XoXX*",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#17<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260816.txt"
+  },
+  {
+    "state": "*o***X*oooo*XXo**XX*oXXXXXoXXXXXoXXX",
+    "layout": "#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260817.txt"
+  },
+  {
+    "state": "*oXo*o*oooooXXoooXXXooXXXXooXXXXoXoX",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#53<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#44<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#36<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#28<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#29<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#22<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#14<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#12<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#10<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260818.txt"
+  },
+  {
+    "state": "X**XXX*ooXXXX*oXXXXXoXXXXXoXXX**oXX*",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260819.txt"
+  },
+  {
+    "state": "X****X*ooooXX*oXXXXXo*XXXXo*XX*XoX*X",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260820.txt"
+  },
+  {
+    "state": "X*XXXXXoo*XXX*o*XXXXoXXXXXo*XX*XoX*X",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260821.txt"
+  },
+  {
+    "state": "XXXXXXXX*XXXX*oXXXX*oXXXXXoXXXX*oX*X",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260822.txt"
+  },
+  {
+    "state": "X***XX*ooo*XXXo*XXXXo*XXXXo*XX*XoXXX",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260823.txt"
+  },
+  {
+    "state": "X**XXXXooXXXX*o*XXXXoXXXXXoXXX*Xo*XX",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260824.txt"
+  },
+  {
+    "state": "XXXXXX*XXXXXo*XXXXoXXXXXoXXXXXoXXXXX",
+    "layout": "#49<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#41<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#33<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#25<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260825.txt"
+  },
+  {
+    "state": "XX*XXXXXo*XXXXoXXXXXoXXXX*oXXXXXoX*X",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260826.txt"
+  },
+  {
+    "state": "XXXXXXXXXXXXX*o*XXX*oXXXXXo*XXX*oX*X",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260827.txt"
+  },
+  {
+    "state": "XX**o**oooooX*oXX*XXoXXXX*oXXXXXoXXX",
+    "layout": "#51<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#13<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#22<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260828.txt"
+  },
+  {
+    "state": "X****X*oooo*X*oX*XXXoXXXX*oXXXXXoXX*",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260829.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*o*XXXXo*XXXXoXXXXXo*X*",
+    "layout": "#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260830.txt"
+  },
+  {
+    "state": "X**XXXXoooo*X*o**XXXoXXXX*oXXXX*oXX*",
+    "layout": "#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260831.txt"
+  },
+  {
+    "state": "XXXXXXX*o*XXX*o*XXXXo*XXXXo*XXXXo***",
+    "layout": "#43<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260901.txt"
+  },
+  {
+    "state": "X***XX*ooo*XX*o*XXXXoXXXXXoXXXXXoXX*",
+    "layout": "#35<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260902.txt"
+  },
+  {
+    "state": "X**XXX*oo*XXXXoXXXX*o*XXX*oXXXXXo*X*",
+    "layout": "#19<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://d2uyhvukfffg5a.cloudfront.net/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260903.txt"
+  },
+  {
+    "state": "*o***X*ooooXX*oXXXXXo*XXXXo*XX**oXX*",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#10<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260904.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXoXXXXXo*XXXXoXXXXXo*X*",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260905.txt"
+  },
+  {
+    "state": "X**X*X*oooo*X*o**XX*oXXXXXo*XX*Xo*XX",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260906.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*o*XXX*oXXXXXoXXXXXoXXX",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260907.txt"
+  },
+  {
+    "state": "XXXXXX*oo*XXX*o*XXXXo*XXXXoXXXX*oXXX",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260908.txt"
+  },
+  {
+    "state": "X****X*oooo*XXo**XXXoXXXXXoXXXX*oX*X",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#43<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#35<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260909.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*o*XXX*oXXXX*oXXXX*o*XX",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260910.txt"
+  },
+  {
+    "state": "X***XX*ooo*XXXo*XXXXo*XXX*oXXXXXoXXX",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260911.txt"
+  },
+  {
+    "state": "X**XXX*oooo*X*oX*XX*o*XXXXo*XXX*oXX*",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260912.txt"
+  },
+  {
+    "state": "XXXXXXXX*XXXX*o*XXXXoXXXXXo*XXXXo*X*",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260913.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*oXXXX*oXXXXXo*XX*XoX*X",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260914.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXoXXXXXo*XXXXoXXX*Xo*X*",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260915.txt"
+  },
+  {
+    "state": "X**XXXXoo*XXXXo*XXXXo*XXXXo*XXX*oXXX",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260916.txt"
+  },
+  {
+    "state": "XX**XX*ooo*XX*o*XXXXoXXXXXo*XXXXo*XX",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260917.txt"
+  },
+  {
+    "state": "X*X*XX*ooo*XX*oXXXX*oXXXX*oXXXXXoXXX",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260918.txt"
+  },
+  {
+    "state": "*o**o**oooooXXoXX*XXooXXXXo*XXXXoX**",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#10<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#13<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#36<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#22<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260919.txt"
+  },
+  {
+    "state": "XXXXXXXX*XXXX*o*XXX*oXXXX*oXXX*XoXXX",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260920.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXo*XXXXo*XXX*oXXXX*oX*X",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260921.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*o*XXXXoXXXXXoXXX*XoXXX",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#43<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260922.txt"
+  },
+  {
+    "state": "*o*X*X*oooo*XXo*XXXXoXXXX*o*XXXXoX*X",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#10<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260923.txt"
+  },
+  {
+    "state": "X****X*ooooXXXo**XXXo*XXX*oXXXXXoXX*",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260924.txt"
+  },
+  {
+    "state": "X***XX*ooo*XXXo*XXXXo*XXX*oXXX*XoXXX",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260925.txt"
+  },
+  {
+    "state": "X****X*oooo*XXoX*XXXoXXXXXoXXXX*o*X*",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260926.txt"
+  },
+  {
+    "state": "XooXo*ooooo*XXo*o*XXoXXXXXo*XX**oXXX",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#10<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#11<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#17<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#29<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#13<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260927.txt"
+  },
+  {
+    "state": "X***XXXooo*XXXo*XXXXoXXXXXo*XX*XoXXX",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260928.txt"
+  },
+  {
+    "state": "XX*XXX*oo*XXXXo*XXXXoXXXXXoXXXX*oX**",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260929.txt"
+  },
+  {
+    "state": "XXXXXX*ooo*XXXo*XXXXo*XXXXo*XXXXo*XX",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20260930.txt"
+  },
+  {
+    "state": "X**Xo**oooo*XXo*XXXXo*XXXXoXXXXXoXXX",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#13<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261001.txt"
+  },
+  {
+    "state": "XXXXXX*oo*XXX*oXXXXXo*XXXXo*XXXXo*XX",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261002.txt"
+  },
+  {
+    "state": "*o***X*ooooXXXo*XXXXo*XXXXo*XXXXoX**",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#10<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261003.txt"
+  },
+  {
+    "state": "X***XX*ooo*XX*o*XXXXoXXXX*oXXXXXo*X*",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261004.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXoXXXXXo*XXXXoXXXX*o**X",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261005.txt"
+  },
+  {
+    "state": "X****X*oooo*XXoX*XXXoXXXX*o*XXX*o*XX",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261006.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXX*oXXXX*o*XXXXoXXX**oX*X",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261007.txt"
+  },
+  {
+    "state": "XXXXXX*ooo*XXXo*XXXXoXXXXXoXXXXXoXX*",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261008.txt"
+  },
+  {
+    "state": "XXXXXXX*o*XXX*o*XXXXoXXXXXoXXXX*o*XX",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261009.txt"
+  },
+  {
+    "state": "X*X**X*oooo*XXo*XXX*oXXXXXoXXX**o*XX",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261010.txt"
+  },
+  {
+    "state": "X***XX*ooo*XX*o*XXX*oXXXXXoXXX*XoXXX",
+    "layout": "#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261011.txt"
+  },
+  {
+    "state": "XX*XXXX*o*XXXXo*XXX*oXXXX*oXXXX*oXX*",
+    "layout": "#19<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261012.txt"
+  },
+  {
+    "state": "X**XXX*oo*XXXXo*XXX*oXXXXXoXXXXXoX**",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261013.txt"
+  },
+  {
+    "state": "X**XXXXoo*XXXXo*XXXXoXXXXXo*XXX*oX**",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261014.txt"
+  },
+  {
+    "state": "X****XXoooo*X*o*XXXXo*XXXXo*XXXXoX*X",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261015.txt"
+  },
+  {
+    "state": "X**Xo**oooo*X*o*XXXXoXXXXXoXXXXXoXXX",
+    "layout": "#51<img src=\"https://images.kingdomofloathing.com/itemimages/aquamarine.gif\" alt=\"marine aquamarine\" title=\"marine aquamarine\" class=hand onClick='descitem(374383060)' >#43<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#27<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#13<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261016.txt"
+  },
+  {
+    "state": "*o***X*oooo*XXo**XXXo*XXX*oXXXXXoX*X",
+    "layout": "#35<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#27<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#19<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#20<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#10<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261017.txt"
+  },
+  {
+    "state": "X****X*oooo*X*oX*XXXoXXXXXo*XX*XoXXX",
+    "layout": "#43<img src=\"https://images.kingdomofloathing.com/itemimages/hp.gif\" height=30 width=30>#35<img src=\"https://images.kingdomofloathing.com/itemimages/meatstack.gif\" alt=\"dense meat stack\" title=\"dense meat stack\" class=hand onClick='descitem(964766953)' >#19<img src=\"https://images.kingdomofloathing.com/itemimages/velcroore.gif\" alt=\"velcro ore\" title=\"velcro ore\" class=hand onClick='descitem(773082525)' >#18<img src=\"https://images.kingdomofloathing.com/itemimages/vinylore.gif\" alt=\"vinyl ore\" title=\"vinyl ore\" class=hand onClick='descitem(680710697)' >#21<img src=\"https://images.kingdomofloathing.com/itemimages/teflonore.gif\" alt=\"teflon ore\" title=\"teflon ore\" class=hand onClick='descitem(900934321)' >",
+    "source": "chartreusenator_20261017.txt"
+  }
+]

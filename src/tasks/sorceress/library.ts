@@ -29,6 +29,7 @@ import {
 } from "../../lib/dreadscroll";
 import { itemDropEffects, sneakEffects } from "../../lib/moods";
 import { backupUsesLeft, freeMonsters, lastCopyableMonster } from "../../resources/backup";
+import { drinkPotionsTask } from "../../resources/bangdrink";
 import { eatSushi } from "../../resources/fishy";
 import { selectFreeRun } from "../../resources/freerun";
 import { currentPolicy } from "../../resources/policy";
@@ -181,6 +182,12 @@ export function libraryQuest(): Quest {
     name: "Library",
     completed: () => get("isMerkinHighPriest", false),
     tasks: [
+      // Any bang potion the throws had not settled by the mine: identify it here, for free,
+      // before the seed lane reads the candidates.
+      drinkPotionsTask(
+        () => true,
+        () => get("isMerkinHighPriest", false),
+      ),
       {
         // A free clue ahead of the purchasable ones: the Daily Dungeon room order is seeded
         // with the dreadscroll, and the room the counter points at costs nothing to look at
