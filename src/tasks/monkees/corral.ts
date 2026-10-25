@@ -74,7 +74,6 @@ const cowbell = $item`sea cowbell`;
 const lasso = $item`sea lasso`;
 const waffle = $item`waffle`;
 const tumbleweed = $monster`tumbleweed`;
-const tearaway = $item`tearaway pants`;
 const draws = [rustler, cowboy, cow];
 const sword = $familiar`Sword of S Words`;
 const boots = $familiar`Pair of Stomping Boots`;
@@ -155,10 +154,14 @@ function drawBanishable(target: Monster): boolean {
 }
 
 // The seahorse lottery. The waffle re-roll is thrown by hand before this macro runs
-// (tameSeahorseAdventure). A tumbleweed (the filler once every draw is banished) gets Tear Away
-// your Pants! for its adventure refund, then Talk to Some Fish for the scale, then the free
-// runs. Any other draw is banished while a banish is held and it is safe to banish, else run
-// from; whatever is left falls to the kill action, where the engine's free kill ends it.
+// (tameSeahorseAdventure). A tumbleweed (the filler once every draw is banished) goes straight
+// to the free runs: it has 10 HP and the Stomping Boots stomp a third of rounds for 19-40, so
+// every round spent on it before the runaway is a stomp window that turns the free fight into a
+// paid kill (2026-10-23 log 115452/115488/115645: three of six; 5 of 19 across the logs). Tear
+// Away your Pants! refunds an adventure to the pool on a plant, never a turn spent, and Talk to
+// Some Fish before a runaway collects nothing, so neither earns its round here. Any other draw
+// is banished while a banish is held and it is safe to banish, else run from; whatever is left
+// falls to the kill action, where the engine's free kill ends it.
 function tamingRegimeMacro(): Macro {
   armedPrev = armedNow;
   armedNow = draws.filter(drawBanishable);
@@ -168,12 +171,8 @@ function tamingRegimeMacro(): Macro {
   const exclude = new Set(handPlanKicks() ? ["Spring Kick"] : []);
   const chain = banishChainMacro(corral, { paid: true, exclude });
   const runs = freeRunChainMacro({ location: corral });
-  const macro = new Macro().if_(
-    tumbleweed,
-    Macro.trySkill($skill`Tear Away your Pants!`)
-      .trySkill(talkToFish)
-      .step(runs),
-  );
+  const macro = new Macro();
+  if (runs.components.length > 0) macro.if_(tumbleweed, runs);
   if (chain.components.length > 0) for (const target of armed) macro.if_(target, chain);
   if (runs.components.length > 0) macro.ifNot([seahorse, tumbleweed], runs);
   return macro;
@@ -575,10 +574,6 @@ export function corralQuest(opts: { opener: boolean; swordLane: boolean }): Ques
           const top = pickBanishSource(corral, new Set(handPlanKicks() ? ["Spring Kick"] : []));
           if (top?.equip) equip.push(gemMounted(top.equip) ? codpiece : top.equip);
           if (handPlanKicks()) equip.push(springShoes);
-          if (draws.every(banishActive)) {
-            if (have(tearaway)) equip.push(tearaway);
-            if (have(monodent)) equip.push(monodent);
-          }
           equip.push(...mountedCodpiece());
           return {
             modifier: "initiative",
